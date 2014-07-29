@@ -22,11 +22,11 @@ var manager *cmd.Manager
 func (s *S) SetUpSuite(c *gocheck.C) {
 	var stdout, stderr bytes.Buffer
 	manager = cmd.NewManager("glb", version, header, &stdout, &stderr, os.Stdin, nil)
-	s.recover = tTesting.SetTargetFile(c)
+	s.recover = tTesting.SetTargetFile(c, []byte("http://localhost"))
 }
 
 func (s *S) TearDownSuite(c *gocheck.C) {
-	tTesting.RollbackTargetFile(s.recover)
+	tTesting.RollbackFile(s.recover)
 }
 
 var _ = gocheck.Suite(&S{})
