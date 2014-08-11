@@ -103,3 +103,34 @@ func (p *platformUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 	fmt.Fprintf(context.Stdout, "Platform successfully updated!\n")
 	return nil
 }
+
+type platformRemove struct {
+	name string
+}
+
+func (p *platformRemove) Info() *cmd.Info {
+	return &cmd.Info{
+		Name:    "platform-remove",
+		Usage:   "platform-remove <platform name>",
+		Desc:    "Remove a platform from tsuru.",
+		MinArgs: 1,
+	}
+}
+
+func (p *platformRemove) Run(context *cmd.Context, client *cmd.Client) error {
+	name := context.Args[0]
+	url, err := cmd.GetURL("/platforms/" + name)
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	_, err = client.Do(request)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(context.Stdout, "Platform successfully removed!\n")
+	return nil
+}

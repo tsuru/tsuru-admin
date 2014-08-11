@@ -118,3 +118,35 @@ func (s *S) TestPlatformUpdateRun(c *gocheck.C) {
 	c.Assert(err, gocheck.IsNil)
 	c.Assert(stdout.String(), gocheck.Equals, expected)
 }
+
+func (s *S) TestPlatformRemoveRun(c *gocheck.C) {
+	var stdout, stderr bytes.Buffer
+	name := "teste"
+	context := cmd.Context{
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Args:   []string{name},
+	}
+	expected := "Platform successfully removed!\n"
+	trans := &testing.ConditionalTransport{
+		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			return req.URL.Path == "/platforms/"+name && req.Method == "DELETE"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := platformRemove{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	c.Assert(stdout.String(), gocheck.Equals, expected)
+}
+
+func (s *S) TestPlatformRemoveInfo(c *gocheck.C) {
+	expected := &cmd.Info{
+		Name:    "platform-remove",
+		Usage:   "platform-remove <platform name>",
+		Desc:    "Remove a platform from tsuru.",
+		MinArgs: 1,
+	}
+	c.Assert((&platformRemove{}).Info(), gocheck.DeepEquals, expected)
+}
