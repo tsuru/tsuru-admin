@@ -80,7 +80,7 @@
 		},
 		{
 			"ImportPath": "github.com/tsuru/go-gandalfclient",
-			"Rev": "874ca26886fc17186993bb02d66655145e0e1c0b"
+			"Rev": "6805596abf1c1bd4ab6dc871384d4ed8148a638e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/action",
