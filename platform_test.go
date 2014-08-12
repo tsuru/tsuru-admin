@@ -30,22 +30,18 @@ func (s *S) TestPlatformAddRun(c *gocheck.C) {
 		Stderr: &stderr,
 		Args:   []string{"teste"},
 	}
-
-	expected := "Platform successfully added!\n"
+	expected := "\nOK!\nPlatform successfully added!\n"
 	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+		Transport: testing.Transport{Message: "\nOK!\n", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			c.Assert(req.Header.Get("Content-Type"), gocheck.Equals, "application/x-www-form-urlencoded")
 			return req.URL.Path == "/platforms" && req.Method == "POST"
 		},
 	}
-
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := platformAdd{}
 	command.Flags().Parse(true, []string{"--dockerfile", "http://localhost/Dockerfile"})
-
 	err := command.Run(&context, client)
-
 	c.Assert(err, gocheck.IsNil)
 	c.Assert(stdout.String(), gocheck.Equals, expected)
 }

@@ -5,6 +5,8 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"github.com/tsuru/tsuru/cmd"
 	"io"
@@ -42,10 +44,14 @@ func (p *platformAdd) Run(context *cmd.Context, client *cmd.Client) error {
 		return err
 	}
 	defer response.Body.Close()
-	for n := int64(1); n > 0 && err == nil; n, err = io.Copy(context.Stdout, response.Body) {
+	var buf bytes.Buffer
+	for n := int64(1); n > 0 && err == nil; n, err = io.Copy(io.MultiWriter(&buf, context.Stdout), response.Body) {
 	}
-	fmt.Fprintf(context.Stdout, "Platform successfully added!\n")
-	return nil
+	if strings.HasSuffix(buf.String(), "\nOK!\n") {
+		fmt.Fprintf(context.Stdout, "Platform successfully added!\n")
+		return nil
+	}
+	return errors.New("Failed to add new platform.\n")
 }
 
 func (p *platformAdd) Flags() *gnuflag.FlagSet {
