@@ -98,9 +98,9 @@ func (s *S) TestPlatformUpdateRun(c *gocheck.C) {
 		Stderr: &stderr,
 		Args:   []string{name},
 	}
-	expected := "Platform successfully updated!\n"
+	expected := "\nOK!\nPlatform successfully updated!\n"
 	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+		Transport: testing.Transport{Message: "\nOK!\n", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			c.Assert(req.Header.Get("Content-Type"), gocheck.Equals, "application/x-www-form-urlencoded")
 			c.Assert(req.FormValue("dockerfile"), gocheck.Equals, "http://localhost/Dockerfile")
