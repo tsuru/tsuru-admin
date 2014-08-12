@@ -139,6 +139,7 @@ func (p *platformRemove) Run(context *cmd.Context, client *cmd.Client) error {
 	}
 	_, err = client.Do(request)
 	if err != nil {
+		fmt.Fprintf(context.Stdout, "Failed to remove platform!\n")
 		return err
 	}
 	fmt.Fprintf(context.Stdout, "Platform successfully removed!\n")
