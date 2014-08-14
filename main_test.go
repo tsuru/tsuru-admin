@@ -74,6 +74,13 @@ func (s *S) TestShouldRegisterAllCommandsFromProvisioners(c *gocheck.C) {
 	c.Assert(fake, gocheck.FitsTypeOf, &FakeAdminCommand{})
 }
 
+func (s *S) TestViewUserQuotaIsRegistered(c *gocheck.C) {
+	manager := buildManager("tsuru-admin")
+	viewQuota, ok := manager.Commands["view-user-quota"]
+	c.Assert(ok, gocheck.Equals, true)
+	c.Assert(viewQuota, gocheck.FitsTypeOf, viewUserQuota{})
+}
+
 func (s *S) TestChangeUserQuotaiIsRegistered(c *gocheck.C) {
 	manager := buildManager("tsuru-admin")
 	changeQuota, ok := manager.Commands["change-user-quota"]

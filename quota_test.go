@@ -13,6 +13,54 @@ import (
 	"net/http"
 )
 
+func (s *S) TestViewUserQuotaInfo(c *gocheck.C) {
+	expected := &cmd.Info{
+		Name:    "view-user-quota",
+		MinArgs: 1,
+		Usage:   "view-user-quota <user-email>",
+		Desc:    "Displays the current usage and limit of the user",
+	}
+	c.Assert(viewUserQuota{}.Info(), gocheck.DeepEquals, expected)
+}
+
+func (s *S) TestViewUserQuotaRun(c *gocheck.C) {
+	result := `{"inuse":3,"limit":4}`
+	var called bool
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Args:   []string{"fss@corp.globo.com"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
+	trans := testing.ConditionalTransport{
+		Transport: testing.Transport{Message: result, Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			called = true
+			return req.Method == "GET" && req.URL.Path == "/users/fss@corp.globo.com/quota"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	command := viewUserQuota{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	expected := `User: fss@corp.globo.com
+Apps owned: 3
+Limit of apps: 4
+`
+	c.Assert(stdout.String(), gocheck.Equals, expected)
+}
+
+func (s *S) TestViewUserQuotaRunFailure(c *gocheck.C) {
+	context := cmd.Context{Args: []string{"fss@corp.globo.com"}}
+	trans := testing.Transport{Message: "user not found", Status: http.StatusNotFound}
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	command := viewUserQuota{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.NotNil)
+	c.Assert(err.Error(), gocheck.Equals, "user not found")
+}
+
 func (s *S) TestChangeUserQuotaInfo(c *gocheck.C) {
 	desc := `Changes the limit of apps that a user can create
 

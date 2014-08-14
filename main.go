@@ -30,6 +30,7 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(&platformRemove{})
 	m.Register(&machinesList{})
 	m.Register(&machineDestroy{})
+	m.Register(viewUserQuota{})
 	m.Register(changeUserQuota{})
 	m.Register(changeAppQuota{})
 	registerProvisionersCommands(m)

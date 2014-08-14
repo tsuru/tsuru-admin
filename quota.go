@@ -6,12 +6,47 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/tsuru/tsuru/cmd"
+	"github.com/tsuru/tsuru/quota"
 	"net/http"
 	"strconv"
 )
+
+type viewUserQuota struct{}
+
+func (viewUserQuota) Info() *cmd.Info {
+	return &cmd.Info{
+		Name:    "view-user-quota",
+		MinArgs: 1,
+		Usage:   "view-user-quota <user-email>",
+		Desc:    "Displays the current usage and limit of the user",
+	}
+}
+
+func (viewUserQuota) Run(context *cmd.Context, client *cmd.Client) error {
+	url, err := cmd.GetURL("/users/" + context.Args[0] + "/quota")
+	if err != nil {
+		return err
+	}
+	request, _ := http.NewRequest("GET", url, nil)
+	resp, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	var quota quota.Quota
+	err = json.NewDecoder(resp.Body).Decode(&quota)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(context.Stdout, "User: %s\n", context.Args[0])
+	fmt.Fprintf(context.Stdout, "Apps owned: %d\n", quota.InUse)
+	fmt.Fprintf(context.Stdout, "Limit of apps: %d\n", quota.Limit)
+	return nil
+}
 
 type changeUserQuota struct{}
 
