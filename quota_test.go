@@ -1,0 +1,111 @@
+// Copyright 2014 tsuru-admin authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+package main
+
+import (
+	"bytes"
+	"github.com/tsuru/tsuru/cmd"
+	"github.com/tsuru/tsuru/cmd/testing"
+	"io/ioutil"
+	"launchpad.net/gocheck"
+	"net/http"
+)
+
+func (s *S) TestChangeUserQuotaInfo(c *gocheck.C) {
+	desc := `Changes the limit of apps that a user can create
+
+The new limit must be an integer, it may also be "unlimited".`
+	expected := &cmd.Info{
+		Name:    "change-user-quota",
+		MinArgs: 2,
+		Usage:   "change-user-quota <user-email> <new-limit>",
+		Desc:    desc,
+	}
+	c.Assert(changeUserQuota{}.Info(), gocheck.DeepEquals, expected)
+}
+
+func (s *S) TestChangeUserQuotaRun(c *gocheck.C) {
+	var called bool
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Args:   []string{"fss@corp.globo.com", "5"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
+	trans := testing.ConditionalTransport{
+		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			called = true
+			defer req.Body.Close()
+			body, err := ioutil.ReadAll(req.Body)
+			c.Assert(err, gocheck.IsNil)
+			c.Assert(string(body), gocheck.Equals, `limit=5`)
+			return req.Method == "POST" && req.URL.Path == "/users/fss@corp.globo.com/quota"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	command := changeUserQuota{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	c.Assert(stdout.String(), gocheck.Equals, "Quota successfully updated.\n")
+	c.Assert(called, gocheck.Equals, true)
+}
+
+func (s *S) TestChangeUserQuotaRunUnlimited(c *gocheck.C) {
+	var called bool
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Args:   []string{"fss@corp.globo.com", "unlimited"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
+	trans := testing.ConditionalTransport{
+		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			called = true
+			defer req.Body.Close()
+			body, err := ioutil.ReadAll(req.Body)
+			c.Assert(err, gocheck.IsNil)
+			c.Assert(string(body), gocheck.Equals, "limit=-1")
+			c.Assert(req.Header.Get("Content-Type"), gocheck.Equals, "application/x-www-form-urlencoded")
+			return req.Method == "POST" && req.URL.Path == "/users/fss@corp.globo.com/quota"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	command := changeUserQuota{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	c.Assert(stdout.String(), gocheck.Equals, "Quota successfully updated.\n")
+	c.Assert(called, gocheck.Equals, true)
+}
+
+func (s *S) TestChangeUserQuotaRunInvalidLimit(c *gocheck.C) {
+	context := cmd.Context{Args: []string{"fss@corp.globo.com", "unlimiteddd"}}
+	command := changeUserQuota{}
+	err := command.Run(&context, nil)
+	c.Assert(err, gocheck.NotNil)
+	c.Assert(err.Error(), gocheck.Equals, `invalid limit. It must be either an integer or "unlimited"`)
+}
+
+func (s *S) TestChangeUserQuotaFailure(c *gocheck.C) {
+	var stdout, stderr bytes.Buffer
+	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
+	trans := &testing.Transport{
+		Message: "user not found",
+		Status:  http.StatusNotFound,
+	}
+	context := cmd.Context{
+		Args:   []string{"fss@corp.globo.com", "5"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := changeUserQuota{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.NotNil)
+	c.Assert(err.Error(), gocheck.Equals, "user not found")
+}
