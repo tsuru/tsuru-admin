@@ -81,14 +81,21 @@ func (s *S) TestViewUserQuotaIsRegistered(c *gocheck.C) {
 	c.Assert(viewQuota, gocheck.FitsTypeOf, viewUserQuota{})
 }
 
-func (s *S) TestChangeUserQuotaiIsRegistered(c *gocheck.C) {
+func (s *S) TestChangeUserQuotaIsRegistered(c *gocheck.C) {
 	manager := buildManager("tsuru-admin")
 	changeQuota, ok := manager.Commands["change-user-quota"]
 	c.Assert(ok, gocheck.Equals, true)
 	c.Assert(changeQuota, gocheck.FitsTypeOf, changeUserQuota{})
 }
 
-func (s *S) TestChangeAppQuotaiIsRegistered(c *gocheck.C) {
+func (s *S) TestViewAppQuotaIsRegistered(c *gocheck.C) {
+	manager := buildManager("tsuru-admin")
+	viewQuota, ok := manager.Commands["view-app-quota"]
+	c.Assert(ok, gocheck.Equals, true)
+	c.Assert(viewQuota, gocheck.FitsTypeOf, viewAppQuota{})
+}
+
+func (s *S) TestChangeAppQuotaIsRegistered(c *gocheck.C) {
 	manager := buildManager("tsuru-admin")
 	changeQuota, ok := manager.Commands["change-app-quota"]
 	c.Assert(ok, gocheck.Equals, true)

@@ -25,7 +25,6 @@ func (s *S) TestViewUserQuotaInfo(c *gocheck.C) {
 
 func (s *S) TestViewUserQuotaRun(c *gocheck.C) {
 	result := `{"inuse":3,"limit":4}`
-	var called bool
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Args:   []string{"fss@corp.globo.com"},
@@ -36,7 +35,6 @@ func (s *S) TestViewUserQuotaRun(c *gocheck.C) {
 	trans := testing.ConditionalTransport{
 		Transport: testing.Transport{Message: result, Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			called = true
 			return req.Method == "GET" && req.URL.Path == "/users/fss@corp.globo.com/quota"
 		},
 	}
@@ -156,6 +154,51 @@ func (s *S) TestChangeUserQuotaFailure(c *gocheck.C) {
 	err := command.Run(&context, client)
 	c.Assert(err, gocheck.NotNil)
 	c.Assert(err.Error(), gocheck.Equals, "user not found")
+}
+
+func (s *S) TestViewAppQuotaInfo(c *gocheck.C) {
+	expected := &cmd.Info{
+		Name:    "view-app-quota",
+		MinArgs: 1,
+		Usage:   "view-app-quota <app-name>",
+		Desc:    "Displays the current usage and limit of the given app",
+	}
+	c.Assert(viewAppQuota{}.Info(), gocheck.DeepEquals, expected)
+}
+
+func (s *S) TestViewAppQuotaRun(c *gocheck.C) {
+	result := `{"inuse":3,"limit":4}`
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Args:   []string{"hibria"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
+	trans := testing.ConditionalTransport{
+		Transport: testing.Transport{Message: result, Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			return req.Method == "GET" && req.URL.Path == "/apps/hibria/quota"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	command := viewAppQuota{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	expected := `App: hibria
+Units usage: 3/4
+`
+	c.Assert(stdout.String(), gocheck.Equals, expected)
+}
+
+func (s *S) TestViewAppQuotaRunFailure(c *gocheck.C) {
+	context := cmd.Context{Args: []string{"hybria"}}
+	trans := testing.Transport{Message: "app not found", Status: http.StatusNotFound}
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	command := viewAppQuota{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.NotNil)
+	c.Assert(err.Error(), gocheck.Equals, "app not found")
 }
 
 func (s *S) TestChangeAppQuotaInfo(c *gocheck.C) {

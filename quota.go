@@ -82,6 +82,38 @@ func (changeUserQuota) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
+type viewAppQuota struct{}
+
+func (viewAppQuota) Info() *cmd.Info {
+	return &cmd.Info{
+		Name:    "view-app-quota",
+		MinArgs: 1,
+		Usage:   "view-app-quota <app-name>",
+		Desc:    "Displays the current usage and limit of the given app",
+	}
+}
+
+func (viewAppQuota) Run(context *cmd.Context, client *cmd.Client) error {
+	url, err := cmd.GetURL("/apps/" + context.Args[0] + "/quota")
+	if err != nil {
+		return err
+	}
+	request, _ := http.NewRequest("GET", url, nil)
+	resp, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	var quota quota.Quota
+	err = json.NewDecoder(resp.Body).Decode(&quota)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(context.Stdout, "App: %s\n", context.Args[0])
+	fmt.Fprintf(context.Stdout, "Units usage: %d/%d\n", quota.InUse, quota.Limit)
+	return nil
+}
+
 type changeAppQuota struct{}
 
 func (changeAppQuota) Info() *cmd.Info {
