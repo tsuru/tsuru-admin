@@ -43,8 +43,7 @@ func (s *S) TestViewUserQuotaRun(c *gocheck.C) {
 	err := command.Run(&context, client)
 	c.Assert(err, gocheck.IsNil)
 	expected := `User: fss@corp.globo.com
-Apps owned: 3
-Limit of apps: 4
+Apps usage: 3/4
 `
 	c.Assert(stdout.String(), gocheck.Equals, expected)
 }

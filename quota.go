@@ -43,8 +43,7 @@ func (viewUserQuota) Run(context *cmd.Context, client *cmd.Client) error {
 		return err
 	}
 	fmt.Fprintf(context.Stdout, "User: %s\n", context.Args[0])
-	fmt.Fprintf(context.Stdout, "Apps owned: %d\n", quota.InUse)
-	fmt.Fprintf(context.Stdout, "Limit of apps: %d\n", quota.Limit)
+	fmt.Fprintf(context.Stdout, "Apps usage: %d/%d\n", quota.InUse, quota.Limit)
 	return nil
 }
 
