@@ -109,3 +109,100 @@ func (s *S) TestChangeUserQuotaFailure(c *gocheck.C) {
 	c.Assert(err, gocheck.NotNil)
 	c.Assert(err.Error(), gocheck.Equals, "user not found")
 }
+
+func (s *S) TestChangeAppQuotaInfo(c *gocheck.C) {
+	desc := `Changes the limit of units that an app can have
+
+The new limit must be an integer, it may also be "unlimited".`
+	expected := &cmd.Info{
+		Name:    "change-app-quota",
+		MinArgs: 2,
+		Usage:   "change-app-quota <user-email> <new-limit>",
+		Desc:    desc,
+	}
+	c.Assert(changeAppQuota{}.Info(), gocheck.DeepEquals, expected)
+}
+
+func (s *S) TestChangeAppQuotaRun(c *gocheck.C) {
+	var called bool
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Args:   []string{"myapp", "5"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
+	trans := testing.ConditionalTransport{
+		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			called = true
+			defer req.Body.Close()
+			body, err := ioutil.ReadAll(req.Body)
+			c.Assert(err, gocheck.IsNil)
+			c.Assert(string(body), gocheck.Equals, `limit=5`)
+			return req.Method == "POST" && req.URL.Path == "/apps/myapp/quota"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	command := changeAppQuota{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	c.Assert(stdout.String(), gocheck.Equals, "Quota successfully updated.\n")
+	c.Assert(called, gocheck.Equals, true)
+}
+
+func (s *S) TestChangeAppQuotaRunUnlimited(c *gocheck.C) {
+	var called bool
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Args:   []string{"myapp", "unlimited"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
+	trans := testing.ConditionalTransport{
+		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			called = true
+			defer req.Body.Close()
+			body, err := ioutil.ReadAll(req.Body)
+			c.Assert(err, gocheck.IsNil)
+			c.Assert(string(body), gocheck.Equals, "limit=-1")
+			c.Assert(req.Header.Get("Content-Type"), gocheck.Equals, "application/x-www-form-urlencoded")
+			return req.Method == "POST" && req.URL.Path == "/apps/myapp/quota"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	command := changeAppQuota{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	c.Assert(stdout.String(), gocheck.Equals, "Quota successfully updated.\n")
+	c.Assert(called, gocheck.Equals, true)
+}
+
+func (s *S) TestChangeAppQuotaRunInvalidLimit(c *gocheck.C) {
+	context := cmd.Context{Args: []string{"myapp", "unlimiteddd"}}
+	command := changeAppQuota{}
+	err := command.Run(&context, nil)
+	c.Assert(err, gocheck.NotNil)
+	c.Assert(err.Error(), gocheck.Equals, `invalid limit. It must be either an integer or "unlimited"`)
+}
+
+func (s *S) TestChangeAppQuotaFailure(c *gocheck.C) {
+	var stdout, stderr bytes.Buffer
+	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
+	trans := &testing.Transport{
+		Message: "app not found",
+		Status:  http.StatusNotFound,
+	}
+	context := cmd.Context{
+		Args:   []string{"myapp", "5"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := changeAppQuota{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.NotNil)
+	c.Assert(err.Error(), gocheck.Equals, "app not found")
+}

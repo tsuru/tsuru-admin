@@ -47,6 +47,40 @@ func (changeUserQuota) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
+type changeAppQuota struct{}
+
+func (changeAppQuota) Info() *cmd.Info {
+	desc := `Changes the limit of units that an app can have
+
+The new limit must be an integer, it may also be "unlimited".`
+	return &cmd.Info{
+		Name:    "change-app-quota",
+		MinArgs: 2,
+		Usage:   "change-app-quota <user-email> <new-limit>",
+		Desc:    desc,
+	}
+}
+
+func (changeAppQuota) Run(context *cmd.Context, client *cmd.Client) error {
+	url, err := cmd.GetURL("/apps/" + context.Args[0] + "/quota")
+	if err != nil {
+		return err
+	}
+	limit, err := parseLimit(context.Args[1])
+	if err != nil {
+		return err
+	}
+	body := bytes.NewBufferString("limit=" + limit)
+	request, _ := http.NewRequest("POST", url, body)
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	_, err = client.Do(request)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(context.Stdout, "Quota successfully updated.")
+	return nil
+}
+
 func parseLimit(value string) (string, error) {
 	if value == "unlimited" {
 		return "-1", nil

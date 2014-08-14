@@ -80,3 +80,10 @@ func (s *S) TestChangeUserQuotaiIsRegistered(c *gocheck.C) {
 	c.Assert(ok, gocheck.Equals, true)
 	c.Assert(changeQuota, gocheck.FitsTypeOf, changeUserQuota{})
 }
+
+func (s *S) TestChangeAppQuotaiIsRegistered(c *gocheck.C) {
+	manager := buildManager("tsuru-admin")
+	changeQuota, ok := manager.Commands["change-app-quota"]
+	c.Assert(ok, gocheck.Equals, true)
+	c.Assert(changeQuota, gocheck.FitsTypeOf, changeAppQuota{})
+}
