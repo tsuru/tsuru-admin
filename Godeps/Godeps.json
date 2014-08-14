@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/tsuru/tsuru-admin",
-	"GoVersion": "devel +bfe2cc97b9e1 Fri Aug 01 06:21:08 2014 -0700",
+	"GoVersion": "devel +2cc71cd8fe3e Wed Aug 13 14:56:58 2014 -0700",
 	"Deps": [
 		{
 			"ImportPath": "code.google.com/p/go.crypto/bcrypt",
@@ -21,10 +21,6 @@
 			"ImportPath": "code.google.com/p/goauth2/oauth",
 			"Comment": "weekly-48",
 			"Rev": "6a3615e294b534a1c24cb5d3d7570fa8bbc30c99"
-		},
-		{
-			"ImportPath": "github.com/bmizerany/pat",
-			"Rev": "51b7af73e39f6dc59846b22d56ca886d105ef0c3"
 		},
 		{
 			"ImportPath": "github.com/bradfitz/go-smtpd/smtpd",
