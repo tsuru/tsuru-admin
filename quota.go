@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/quota"
 	"net/http"
 	"strconv"
+
+	"github.com/tsuru/tsuru/cmd"
+	"github.com/tsuru/tsuru/quota"
 )
 
 type viewUserQuota struct{}

@@ -7,11 +7,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/iaas"
 	"net/http"
 	"sort"
 	"strings"
+
+	"github.com/tsuru/tsuru/cmd"
+	"github.com/tsuru/tsuru/iaas"
 )
 
 type machinesList struct{}

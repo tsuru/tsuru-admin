@@ -6,9 +6,10 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/tsuru-base"
-	"net/http"
 )
 
 type logRemove struct {

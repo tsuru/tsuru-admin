@@ -7,11 +7,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/testing"
 	"github.com/tsuru/tsuru/iaas"
 	"launchpad.net/gocheck"
-	"net/http"
 )
 
 func (s *S) TestMachinesListInfo(c *gocheck.C) {

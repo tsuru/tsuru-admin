@@ -6,11 +6,12 @@ package main
 
 import (
 	"bytes"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/testing"
-	"io/ioutil"
 	"launchpad.net/gocheck"
-	"net/http"
 )
 
 func (s *S) TestTokenGen(c *gocheck.C) {

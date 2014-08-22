@@ -7,10 +7,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tsuru/tsuru/cmd"
-	"launchpad.net/gnuflag"
 	"net/http"
 	"strings"
+
+	"github.com/tsuru/tsuru/cmd"
+	"launchpad.net/gnuflag"
 )
 
 type tokenGen struct {

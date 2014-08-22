@@ -8,11 +8,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/tsuru/tsuru/cmd"
 	"io"
-	"launchpad.net/gnuflag"
 	"net/http"
 	"strings"
+
+	"github.com/tsuru/tsuru/cmd"
+	"launchpad.net/gnuflag"
 )
 
 type platformAdd struct {

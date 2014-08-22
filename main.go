@@ -6,11 +6,12 @@
 package main
 
 import (
+	"os"
+
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/tsuru-base"
 	"github.com/tsuru/tsuru/provision"
 	_ "github.com/tsuru/tsuru/provision/docker"
-	"os"
 )
 
 const (
