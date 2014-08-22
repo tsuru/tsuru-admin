@@ -16,6 +16,7 @@ import (
 type appLockDelete struct {
 	tsuru.GuessingCommand
 	tsuru.ConfirmationCommand
+	fs *gnuflag.FlagSet
 }
 
 func (c *appLockDelete) Info() *cmd.Info {
@@ -53,8 +54,11 @@ func (c *appLockDelete) Run(ctx *cmd.Context, client *cmd.Client) error {
 }
 
 func (c *appLockDelete) Flags() *gnuflag.FlagSet {
-	return cmd.MergeFlagSet(
-		c.GuessingCommand.Flags(),
-		c.ConfirmationCommand.Flags(),
-	)
+	if c.fs == nil {
+		c.fs = cmd.MergeFlagSet(
+			c.GuessingCommand.Flags(),
+			c.ConfirmationCommand.Flags(),
+		)
+	}
+	return c.fs
 }
