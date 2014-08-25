@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"net/http"
+	"strings"
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/testing"
@@ -133,6 +134,7 @@ func (s *S) TestPlatformRemoveRun(c *gocheck.C) {
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := platformRemove{}
+	command.Flags().Parse(true, []string{"-y"})
 	err := command.Run(&context, client)
 	c.Assert(err, gocheck.IsNil)
 	c.Assert(stdout.String(), gocheck.Equals, expected)
@@ -141,9 +143,22 @@ func (s *S) TestPlatformRemoveRun(c *gocheck.C) {
 func (s *S) TestPlatformRemoveInfo(c *gocheck.C) {
 	expected := &cmd.Info{
 		Name:    "platform-remove",
-		Usage:   "platform-remove <platform name>",
+		Usage:   "platform-remove <platform name> [-y]",
 		Desc:    "Remove a platform from tsuru.",
 		MinArgs: 1,
 	}
 	c.Assert((&platformRemove{}).Info(), gocheck.DeepEquals, expected)
+}
+
+func (s *S) TestPlatformRemoveConfirmation(c *gocheck.C) {
+	var stdout bytes.Buffer
+	context := cmd.Context{
+		Stdout: &stdout,
+		Stdin:  strings.NewReader("n\n"),
+		Args:   []string{"something"},
+	}
+	command := platformRemove{}
+	err := command.Run(&context, nil)
+	c.Assert(err, gocheck.IsNil)
+	c.Assert(stdout.String(), gocheck.Equals, "Are you sure you want to remove \"something\" platform? (y/n) Abort.\n")
 }

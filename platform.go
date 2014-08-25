@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/tsuru/tsuru/cmd"
+	"github.com/tsuru/tsuru/cmd/tsuru-base"
 	"launchpad.net/gnuflag"
 )
 
@@ -116,13 +117,13 @@ func (p *platformUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 }
 
 type platformRemove struct {
-	name string
+	tsuru.ConfirmationCommand
 }
 
 func (p *platformRemove) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "platform-remove",
-		Usage:   "platform-remove <platform name>",
+		Usage:   "platform-remove <platform name> [-y]",
 		Desc:    "Remove a platform from tsuru.",
 		MinArgs: 1,
 	}
@@ -130,6 +131,9 @@ func (p *platformRemove) Info() *cmd.Info {
 
 func (p *platformRemove) Run(context *cmd.Context, client *cmd.Client) error {
 	name := context.Args[0]
+	if !p.Confirm(context, fmt.Sprintf(`Are you sure you want to remove "%s" platform?`, name)) {
+		return nil
+	}
 	url, err := cmd.GetURL("/platforms/" + name)
 	if err != nil {
 		return err
