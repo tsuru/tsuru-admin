@@ -19,20 +19,6 @@ func (s *S) TestAppListIsRegistered(c *gocheck.C) {
 	c.Assert(list, gocheck.FitsTypeOf, tsuru.AppList{})
 }
 
-func (s *S) TestSetCNameIsRegistered(c *gocheck.C) {
-	manager := buildManager("tsuru-admin")
-	cname, ok := manager.Commands["set-cname"]
-	c.Assert(ok, gocheck.Equals, true)
-	c.Assert(cname, gocheck.FitsTypeOf, &tsuru.SetCName{})
-}
-
-func (s *S) TestUnsetCNameIsRegistered(c *gocheck.C) {
-	manager := buildManager("tsuru-admin")
-	cname, ok := manager.Commands["unset-cname"]
-	c.Assert(ok, gocheck.Equals, true)
-	c.Assert(cname, gocheck.FitsTypeOf, &tsuru.UnsetCName{})
-}
-
 func (s *S) TestTokenGenIsRegistered(c *gocheck.C) {
 	manager := buildManager("tsuru-admin")
 	token, ok := manager.Commands["token-gen"]
