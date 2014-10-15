@@ -9,13 +9,12 @@ import (
 	"net/http"
 
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/tsuru-base"
 	"launchpad.net/gnuflag"
 )
 
 type appLockDelete struct {
-	tsuru.GuessingCommand
-	tsuru.ConfirmationCommand
+	cmd.GuessingCommand
+	cmd.ConfirmationCommand
 	fs *gnuflag.FlagSet
 }
 

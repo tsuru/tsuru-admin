@@ -9,11 +9,10 @@ import (
 	"net/http"
 
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/tsuru-base"
 )
 
 type logRemove struct {
-	tsuru.GuessingCommand
+	cmd.GuessingCommand
 }
 
 func (c *logRemove) Info() *cmd.Info {

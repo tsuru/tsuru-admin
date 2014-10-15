@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/tsuru-base"
 	"launchpad.net/gnuflag"
 )
 
@@ -117,7 +116,7 @@ func (p *platformUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 }
 
 type platformRemove struct {
-	tsuru.ConfirmationCommand
+	cmd.ConfirmationCommand
 }
 
 func (p *platformRemove) Info() *cmd.Info {

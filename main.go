@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/tsuru-base"
 	"github.com/tsuru/tsuru/provision"
 	_ "github.com/tsuru/tsuru/provision/docker"
 )
@@ -21,7 +20,6 @@ const (
 
 func buildManager(name string) *cmd.Manager {
 	m := cmd.BuildBaseManager(name, version, header, nil)
-	m.Register(tsuru.AppList{})
 	m.Register(&tokenGen{})
 	m.Register(&logRemove{})
 	m.Register(&platformAdd{})
@@ -36,7 +34,6 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(changeAppQuota{})
 	m.Register(&planCreate{})
 	m.Register(&planRemove{})
-	m.Register(&tsuru.PlanList{})
 	registerProvisionersCommands(m)
 	return m
 }

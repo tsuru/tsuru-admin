@@ -6,18 +6,10 @@ package main
 
 import (
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/tsuru-base"
 	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/testing"
 	"launchpad.net/gocheck"
 )
-
-func (s *S) TestAppListIsRegistered(c *gocheck.C) {
-	manager := buildManager("tsuru")
-	list, ok := manager.Commands["app-list"]
-	c.Assert(ok, gocheck.Equals, true)
-	c.Assert(list, gocheck.FitsTypeOf, tsuru.AppList{})
-}
 
 func (s *S) TestTokenGenIsRegistered(c *gocheck.C) {
 	manager := buildManager("tsuru-admin")
