@@ -15,18 +15,18 @@ import (
 	"github.com/tsuru/tsuru/iaas"
 )
 
-type machinesList struct{}
+type machineList struct{}
 
-func (c *machinesList) Info() *cmd.Info {
+func (c *machineList) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "machines-list",
-		Usage:   "machines-list",
+		Name:    "machine-list",
+		Usage:   "machine-list",
 		Desc:    "List all machines created using a IaaS.",
 		MinArgs: 0,
 	}
 }
 
-func (c *machinesList) Run(context *cmd.Context, client *cmd.Client) error {
+func (c *machineList) Run(context *cmd.Context, client *cmd.Client) error {
 	url, err := cmd.GetURL("/iaas/machines")
 	if err != nil {
 		return err

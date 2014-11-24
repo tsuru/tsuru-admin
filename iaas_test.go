@@ -15,17 +15,17 @@ import (
 	"launchpad.net/gocheck"
 )
 
-func (s *S) TestMachinesListInfo(c *gocheck.C) {
+func (s *S) TestMachineListInfo(c *gocheck.C) {
 	expected := &cmd.Info{
-		Name:    "machines-list",
-		Usage:   "machines-list",
+		Name:    "machine-list",
+		Usage:   "machine-list",
 		Desc:    "List all machines created using a IaaS.",
 		MinArgs: 0,
 	}
-	c.Assert((&machinesList{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&machineList{}).Info(), gocheck.DeepEquals, expected)
 }
 
-func (s *S) TestMachinesListRun(c *gocheck.C) {
+func (s *S) TestMachineListRun(c *gocheck.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -56,7 +56,7 @@ func (s *S) TestMachinesListRun(c *gocheck.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := machinesList{}
+	command := machineList{}
 	err = command.Run(&context, client)
 	c.Assert(err, gocheck.IsNil)
 	c.Assert(stdout.String(), gocheck.Equals, expected)
