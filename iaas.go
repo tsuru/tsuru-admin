@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -130,5 +131,50 @@ func (c *templateList) Run(context *cmd.Context, client *cmd.Client) error {
 	}
 	table.Sort()
 	context.Stdout.Write(table.Bytes())
+	return nil
+}
+
+type templateAdd struct{}
+
+func (c *templateAdd) Info() *cmd.Info {
+	return &cmd.Info{
+		Name:    "machine-template-add",
+		Usage:   "machine-template-add <name> <iaas> <param>=<value>...",
+		Desc:    "List all machine templates.",
+		MinArgs: 3,
+	}
+}
+
+func (c *templateAdd) Run(context *cmd.Context, client *cmd.Client) error {
+	var template iaas.Template
+	template.Name = context.Args[0]
+	template.IaaSName = context.Args[1]
+	for _, param := range context.Args[2:] {
+		if strings.Contains(param, "=") {
+			keyValue := strings.SplitN(param, "=", 2)
+			template.Data = append(template.Data, iaas.TemplateData{
+				Name:  keyValue[0],
+				Value: keyValue[1],
+			})
+		}
+	}
+	templateBytes, err := json.Marshal(template)
+	if err != nil {
+		return err
+	}
+	url, err := cmd.GetURL("/iaas/templates")
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(templateBytes))
+	if err != nil {
+		return err
+	}
+	_, err = client.Do(request)
+	if err != nil {
+		context.Stderr.Write([]byte("Failed to add template.\n"))
+		return err
+	}
+	context.Stdout.Write([]byte("Template successfully added.\n"))
 	return nil
 }

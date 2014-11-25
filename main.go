@@ -35,6 +35,7 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(&planCreate{})
 	m.Register(&planRemove{})
 	m.Register(&templateList{})
+	m.Register(&templateAdd{})
 	registerProvisionersCommands(m)
 	return m
 }

@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/tsuru/tsuru/cmd"
@@ -139,4 +140,36 @@ func (s *S) TestTemplateListRun(c *gocheck.C) {
 	err = command.Run(&context, client)
 	c.Assert(err, gocheck.IsNil)
 	c.Assert(stdout.String(), gocheck.Equals, expected)
+}
+
+func (s *S) TestTemplateAddCmdInfo(c *gocheck.C) {
+	expected := cmd.Info{
+		Name:    "machine-template-add",
+		Usage:   "machine-template-add <name> <iaas> <param>=<value>...",
+		Desc:    "List all machine templates.",
+		MinArgs: 3,
+	}
+	cmd := templateAdd{}
+	c.Assert(cmd.Info(), gocheck.DeepEquals, &expected)
+}
+
+func (s *S) TestTemplateAddCmdRun(c *gocheck.C) {
+	var buf bytes.Buffer
+	context := cmd.Context{Args: []string{"my-tpl", "ec2", "zone=xyz", "image=ami-something"}, Stdout: &buf}
+	expectedBody := `{"Name":"my-tpl","IaaSName":"ec2",` +
+		`"Data":[{"Name":"zone","Value":"xyz"},{"Name":"image","Value":"ami-something"}]}`
+	trans := &testing.ConditionalTransport{
+		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			body, _ := ioutil.ReadAll(req.Body)
+			c.Assert(string(body), gocheck.DeepEquals, expectedBody)
+			return req.URL.Path == "/iaas/templates" && req.Method == "POST"
+		},
+	}
+	manager := cmd.Manager{}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
+	cmd := templateAdd{}
+	err := cmd.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	c.Assert(buf.String(), gocheck.Equals, "Template successfully added.\n")
 }
