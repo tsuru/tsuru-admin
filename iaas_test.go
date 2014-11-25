@@ -146,7 +146,7 @@ func (s *S) TestTemplateAddCmdInfo(c *gocheck.C) {
 	expected := cmd.Info{
 		Name:    "machine-template-add",
 		Usage:   "machine-template-add <name> <iaas> <param>=<value>...",
-		Desc:    "List all machine templates.",
+		Desc:    "Add a new machine template.",
 		MinArgs: 3,
 	}
 	cmd := templateAdd{}
@@ -172,4 +172,32 @@ func (s *S) TestTemplateAddCmdRun(c *gocheck.C) {
 	err := cmd.Run(&context, client)
 	c.Assert(err, gocheck.IsNil)
 	c.Assert(buf.String(), gocheck.Equals, "Template successfully added.\n")
+}
+
+func (s *S) TestTemplateRemoveCmdInfo(c *gocheck.C) {
+	expected := cmd.Info{
+		Name:    "machine-template-remove",
+		Usage:   "machine-template-remove <name>",
+		Desc:    "Remove an existing machine template.",
+		MinArgs: 1,
+	}
+	cmd := templateRemove{}
+	c.Assert(cmd.Info(), gocheck.DeepEquals, &expected)
+}
+
+func (s *S) TestTemplateRemoveCmdRun(c *gocheck.C) {
+	var buf bytes.Buffer
+	context := cmd.Context{Args: []string{"my-tpl"}, Stdout: &buf, Stderr: &buf}
+	trans := &testing.ConditionalTransport{
+		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			return req.URL.Path == "/iaas/templates/my-tpl" && req.Method == "DELETE"
+		},
+	}
+	manager := cmd.Manager{}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
+	cmd := templateRemove{}
+	err := cmd.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	c.Assert(buf.String(), gocheck.Equals, "Template successfully removed.\n")
 }

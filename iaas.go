@@ -140,7 +140,7 @@ func (c *templateAdd) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "machine-template-add",
 		Usage:   "machine-template-add <name> <iaas> <param>=<value>...",
-		Desc:    "List all machine templates.",
+		Desc:    "Add a new machine template.",
 		MinArgs: 3,
 	}
 }
@@ -176,5 +176,34 @@ func (c *templateAdd) Run(context *cmd.Context, client *cmd.Client) error {
 		return err
 	}
 	context.Stdout.Write([]byte("Template successfully added.\n"))
+	return nil
+}
+
+type templateRemove struct{}
+
+func (c *templateRemove) Info() *cmd.Info {
+	return &cmd.Info{
+		Name:    "machine-template-remove",
+		Usage:   "machine-template-remove <name>",
+		Desc:    "Remove an existing machine template.",
+		MinArgs: 1,
+	}
+}
+
+func (c *templateRemove) Run(context *cmd.Context, client *cmd.Client) error {
+	url, err := cmd.GetURL("/iaas/templates/" + context.Args[0])
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+	_, err = client.Do(request)
+	if err != nil {
+		context.Stderr.Write([]byte("Failed to remove template.\n"))
+		return err
+	}
+	context.Stdout.Write([]byte("Template successfully removed.\n"))
 	return nil
 }
