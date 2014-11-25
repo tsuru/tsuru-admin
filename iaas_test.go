@@ -91,3 +91,52 @@ func (s *S) TestMachineDestroyRun(c *gocheck.C) {
 	c.Assert(err, gocheck.IsNil)
 	c.Assert(stdout.String(), gocheck.Equals, "Machine successfully destroyed.\n")
 }
+
+func (s *S) TestTemplateListInfo(c *gocheck.C) {
+	expected := &cmd.Info{
+		Name:    "machine-template-list",
+		Usage:   "machine-template-list",
+		Desc:    "List all machine templates.",
+		MinArgs: 0,
+	}
+	c.Assert((&templateList{}).Info(), gocheck.DeepEquals, expected)
+}
+
+func (s *S) TestTemplateListRun(c *gocheck.C) {
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	tpl1 := iaas.Template{Name: "machine1", IaaSName: "ec2", Data: iaas.TemplateDataList{
+		{Name: "region", Value: "us-east-1"},
+		{Name: "type", Value: "m1.small"},
+	}}
+	tpl2 := iaas.Template{Name: "tpl1", IaaSName: "ec2", Data: iaas.TemplateDataList{
+		{Name: "region", Value: "xxxx"},
+		{Name: "type", Value: "l1.large"},
+	}}
+	data, err := json.Marshal([]iaas.Template{tpl1, tpl2})
+	c.Assert(err, gocheck.IsNil)
+	expected := `+----------+------+------------------+
+| Name     | IaaS | Params           |
++----------+------+------------------+
+| machine1 | ec2  | region=us-east-1 |
+|          |      | type=m1.small    |
++----------+------+------------------+
+| tpl1     | ec2  | region=xxxx      |
+|          |      | type=l1.large    |
++----------+------+------------------+
+`
+	trans := &testing.ConditionalTransport{
+		Transport: testing.Transport{Message: string(data), Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			return req.URL.Path == "/iaas/templates" && req.Method == "GET"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := templateList{}
+	err = command.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	c.Assert(stdout.String(), gocheck.Equals, expected)
+}

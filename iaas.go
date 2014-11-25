@@ -87,3 +87,48 @@ func (c *machineDestroy) Run(context *cmd.Context, client *cmd.Client) error {
 	fmt.Fprintln(context.Stdout, "Machine successfully destroyed.")
 	return nil
 }
+
+type templateList struct{}
+
+func (c *templateList) Info() *cmd.Info {
+	return &cmd.Info{
+		Name:    "machine-template-list",
+		Usage:   "machine-template-list",
+		Desc:    "List all machine templates.",
+		MinArgs: 0,
+	}
+}
+
+func (c *templateList) Run(context *cmd.Context, client *cmd.Client) error {
+	url, err := cmd.GetURL("/iaas/templates")
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	var templates []iaas.Template
+	err = json.NewDecoder(response.Body).Decode(&templates)
+	if err != nil {
+		return err
+	}
+	table := cmd.NewTable()
+	table.Headers = cmd.Row([]string{"Name", "IaaS", "Params"})
+	table.LineSeparator = true
+	for _, template := range templates {
+		var params []string
+		for _, data := range template.Data {
+			params = append(params, fmt.Sprintf("%s=%s", data.Name, data.Value))
+		}
+		sort.Strings(params)
+		table.AddRow(cmd.Row([]string{template.Name, template.IaaSName, strings.Join(params, "\n")}))
+	}
+	table.Sort()
+	context.Stdout.Write(table.Bytes())
+	return nil
+}
