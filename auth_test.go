@@ -104,3 +104,40 @@ func (s *S) TestTokenGetFlags(c *gocheck.C) {
 func (s *S) TestTokenGenIsAFlaggedCommand(c *gocheck.C) {
 	var _ cmd.FlaggedCommand = &tokenGen{}
 }
+
+func (s *S) TestListUsersInfo(c *gocheck.C) {
+	expected := &cmd.Info{
+		Name:    "user-list",
+		MinArgs: 0,
+		Usage:   "user-list",
+		Desc:    "List all users in tsuru.",
+	}
+	c.Assert((&listUsers{}).Info(), gocheck.DeepEquals, expected)
+}
+
+func (s *S) TestListUsersRun(c *gocheck.C) {
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	manager := cmd.NewManager("glb", "0.2", "ad-ver", &stdout, &stderr, nil, nil)
+	result := `[{"email": "test@test.com"}]`
+	trans := testing.ConditionalTransport{
+		Transport: testing.Transport{Message: result, Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			return req.Method == "GET" && req.URL.Path == "/users"
+		},
+	}
+	expected := `+---------------+-------+
+| User          | Teams |
++---------------+-------+
+| test@test.com |       |
++---------------+-------+
+`
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	command := listUsers{}
+	err := command.Run(&context, client)
+	c.Assert(err, gocheck.IsNil)
+	c.Assert(stdout.String(), gocheck.Equals, expected)
+}

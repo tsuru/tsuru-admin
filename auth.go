@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/tsuru/tsuru/auth"
 	"github.com/tsuru/tsuru/cmd"
 	"launchpad.net/gnuflag"
 )
@@ -54,4 +55,48 @@ func (c *tokenGen) Flags() *gnuflag.FlagSet {
 	fs.BoolVar(&c.export, "export", false, "Define the token as environment variable in the app")
 	fs.BoolVar(&c.export, "e", false, "Define the token as environment variable in the app")
 	return fs
+}
+
+type listUsers struct{}
+
+func (c *listUsers) Run(ctx *cmd.Context, client *cmd.Client) error {
+	url, err := cmd.GetURL("/users")
+	if err != nil {
+		return err
+	}
+	request, _ := http.NewRequest("GET", url, nil)
+	resp, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	var users []auth.User
+	err = json.NewDecoder(resp.Body).Decode(&users)
+	if err != nil {
+		return err
+	}
+	println(users)
+	table := cmd.NewTable()
+	table.Headers = cmd.Row([]string{"User", "Teams"})
+	for _, u := range users {
+		teams, err := u.Teams()
+		if err != nil {
+			return err
+		}
+		teams_name := auth.GetTeamsNames(teams)
+		table.AddRow(cmd.Row([]string{u.Email, strings.Join(teams_name, ", ")}))
+	}
+	table.LineSeparator = true
+	table.Sort()
+	ctx.Stdout.Write(table.Bytes())
+	return nil
+}
+
+func (c *listUsers) Info() *cmd.Info {
+	return &cmd.Info{
+		Name:    "user-list",
+		MinArgs: 0,
+		Usage:   "user-list",
+		Desc:    "List all users in tsuru.",
+	}
 }
