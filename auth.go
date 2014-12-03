@@ -10,10 +10,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tsuru/tsuru/auth"
 	"github.com/tsuru/tsuru/cmd"
 	"launchpad.net/gnuflag"
 )
+
+type user struct {
+	Email string
+	Teams []string
+}
 
 type tokenGen struct {
 	export bool
@@ -70,21 +74,15 @@ func (c *listUsers) Run(ctx *cmd.Context, client *cmd.Client) error {
 		return err
 	}
 	defer resp.Body.Close()
-	var users []auth.User
+	var users []user
 	err = json.NewDecoder(resp.Body).Decode(&users)
 	if err != nil {
 		return err
 	}
-	println(users)
 	table := cmd.NewTable()
 	table.Headers = cmd.Row([]string{"User", "Teams"})
 	for _, u := range users {
-		teams, err := u.Teams()
-		if err != nil {
-			return err
-		}
-		teams_name := auth.GetTeamsNames(teams)
-		table.AddRow(cmd.Row([]string{u.Email, strings.Join(teams_name, ", ")}))
+		table.AddRow(cmd.Row([]string{u.Email, strings.Join(u.Teams, ", ")}))
 	}
 	table.LineSeparator = true
 	table.Sort()

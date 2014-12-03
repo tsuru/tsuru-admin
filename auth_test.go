@@ -122,18 +122,18 @@ func (s *S) TestListUsersRun(c *gocheck.C) {
 		Stderr: &stderr,
 	}
 	manager := cmd.NewManager("glb", "0.2", "ad-ver", &stdout, &stderr, nil, nil)
-	result := `[{"email": "test@test.com"}]`
+	result := `[{"email": "test@test.com","teams":["team1", "team2", "team3"]}]`
 	trans := testing.ConditionalTransport{
 		Transport: testing.Transport{Message: result, Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.Method == "GET" && req.URL.Path == "/users"
 		},
 	}
-	expected := `+---------------+-------+
-| User          | Teams |
-+---------------+-------+
-| test@test.com |       |
-+---------------+-------+
+	expected := `+---------------+---------------------+
+| User          | Teams               |
++---------------+---------------------+
+| test@test.com | team1, team2, team3 |
++---------------+---------------------+
 `
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
 	command := listUsers{}
