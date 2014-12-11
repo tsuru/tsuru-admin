@@ -18,7 +18,7 @@ import (
 func (s *S) TestPlanCreateInfo(c *gocheck.C) {
 	expected := &cmd.Info{
 		Name:    "plan-create",
-		Usage:   "plan-create <name> -c cpushare [-m memory] [-s swap] [--default]",
+		Usage:   "plan-create <name> -c cpushare [-m memory] [-s swap] [-r router] [--default]",
 		Desc:    "Creates a new plan for being used when creating apps.",
 		MinArgs: 1,
 	}
@@ -44,6 +44,7 @@ func (s *S) TestPlanCreate(c *gocheck.C) {
 				Swap:     0,
 				CpuShare: 100,
 				Default:  false,
+				Router:   "",
 			}
 			c.Assert(plan, gocheck.DeepEquals, expected)
 			return req.URL.Path == "/plans" && req.Method == "POST"
@@ -76,6 +77,7 @@ func (s *S) TestPlanCreateFlags(c *gocheck.C) {
 				Swap:     512,
 				CpuShare: 100,
 				Default:  true,
+				Router:   "myrouter",
 			}
 			c.Assert(plan, gocheck.DeepEquals, expected)
 			return req.URL.Path == "/plans" && req.Method == "POST"
@@ -83,7 +85,7 @@ func (s *S) TestPlanCreateFlags(c *gocheck.C) {
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := planCreate{}
-	command.Flags().Parse(true, []string{"-c", "100", "-m", "1024", "-s", "512", "-d"})
+	command.Flags().Parse(true, []string{"-c", "100", "-m", "1024", "-s", "512", "-d", "-r", "myrouter"})
 	err := command.Run(&context, client)
 	c.Assert(err, gocheck.IsNil)
 	c.Assert(stdout.String(), gocheck.Equals, "Plan successfully created!\n")

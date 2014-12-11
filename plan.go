@@ -20,6 +20,7 @@ type planCreate struct {
 	swap       int64
 	cpushare   int
 	setDefault bool
+	router     string
 	fs         *gnuflag.FlagSet
 }
 
@@ -38,6 +39,9 @@ func (c *planCreate) Flags() *gnuflag.FlagSet {
 		setDefault := "Set plan as default, this will remove the default flag from any other plan."
 		c.fs.BoolVar(&c.setDefault, "default", false, setDefault)
 		c.fs.BoolVar(&c.setDefault, "d", false, setDefault)
+		router := "The name of the router used by this plan."
+		c.fs.StringVar(&c.router, "router", "", router)
+		c.fs.StringVar(&c.router, "r", "", router)
 
 	}
 	return c.fs
@@ -46,7 +50,7 @@ func (c *planCreate) Flags() *gnuflag.FlagSet {
 func (c *planCreate) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "plan-create",
-		Usage:   "plan-create <name> -c cpushare [-m memory] [-s swap] [--default]",
+		Usage:   "plan-create <name> -c cpushare [-m memory] [-s swap] [-r router] [--default]",
 		Desc:    `Creates a new plan for being used when creating apps.`,
 		MinArgs: 1,
 	}
@@ -63,6 +67,7 @@ func (c *planCreate) Run(context *cmd.Context, client *cmd.Client) error {
 		Swap:     c.swap,
 		CpuShare: c.cpushare,
 		Default:  c.setDefault,
+		Router:   c.router,
 	}
 	planData, err := json.Marshal(plan)
 	if err != nil {
