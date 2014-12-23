@@ -123,95 +123,118 @@
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/action",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/api",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/app",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/auth",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/cmd",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/db",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/errors",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/exec",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/fs",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/git",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/iaas",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/io",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/log",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/provision",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/queue",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/quota",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/rec",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/repository",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/router",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/safe",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/service",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/testing",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/validation",
-			"Rev": "824ba2ca8ea9d6c3c9e45e8f74fcf9c704c4836e"
+			"Comment": "0.9.0-114-g9065879",
+			"Rev": "90658790e21513baaa33a69f7b8cf873a01d345e"
 		},
 		{
 			"ImportPath": "gopkg.in/mgo.v2",
