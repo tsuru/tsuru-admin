@@ -334,16 +334,19 @@ remove a platform that is used by an application.
 
 The -y flag assume "yes" as answer to all prompts and run non-interactively.
 
+Machine management
+==================
+
 .. _tsuru_admin_machines_list_cmd:
 
-machines-list
--------------
+machine-list
+------------
 
 .. highlight:: bash
 
 ::
 
-    $ tsuru-admin machines-list
+    $ tsuru-admin machine-list
 
 This command will list all machines created using ``docker-node-add`` and a IaaS
 provider.
@@ -357,7 +360,7 @@ machine-destroy
 
 ::
 
-    $ tsuru-admin machines-list <machine id>
+    $ tsuru-admin machine-destroy <machine id>
 
 This command will destroy a IaaS machine based on its ID.
 
