@@ -146,8 +146,8 @@ configured in your tsuru.conf file.
     $ tsuru-admin target-add default tsuru.myhost.com:8080
     $ tsuru-admin target-set default
 
-Commands
-========
+Container management
+====================
 
 All the **container** commands below only exist when using the docker
 provisioner.
@@ -207,6 +207,8 @@ The --dry flag runs the balancing algorithm without doing any real
 modification. It will only print which units would be moved and where they
 would be created.
 
+Node management
+===============
 
 .. _tsuru_admin_docker_node_add_cmd:
 
@@ -448,6 +450,9 @@ docker-healing-list
 
 This command will list all healing processes started for nodes or containers.
 
+Plan management
+===============
+
 .. _tsuru_admin_plan_create:
 
 plan-create
@@ -484,7 +489,6 @@ This command removes an existing plan, it will no longer be available for newly
 created apps. However, this won't change anything for existing apps that were
 created using the removed plan. They will keep using the same value amount of
 resources described by the plan.
-
 
 user-list
 ---------
