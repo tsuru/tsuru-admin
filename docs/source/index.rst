@@ -208,9 +208,6 @@ modification. It will only print which units would be moved and where they
 would be created.
 
 
-All the "platform*"" commands below only exist when using the docker
-provisioner.
-
 .. _tsuru_admin_docker_node_add_cmd:
 
 docker-node-add
@@ -283,6 +280,14 @@ created IaaS machine if the ``--destroy`` flag is passed.
 
 .. _tsuru_admin_platform_add_cmd:
 
+Platform management
+===================
+
+.. warning::
+
+    All the **platform** commands below only exist when using the docker
+    provisioner.
+
 platform-add
 ------------
 
@@ -314,6 +319,20 @@ It will automatically rebuild your platform and will flag apps to update
 platform on next deploy.
 
 The --dockerfile flag is an URL to a dockerfile which will update your platform.
+
+platform-remove
+---------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin platform-remove <platform name> [-y]
+
+This command allow you to remove a platform. This command will not
+remove a platform that is used by an application.
+
+The -y flag assume "yes" as answer to all prompts and run non-interactively.
 
 .. _tsuru_admin_machines_list_cmd:
 
