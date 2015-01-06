@@ -515,3 +515,19 @@ log-remove
     $ tsuru-admin log-remove [--app appname]
 
 This command removes the application log from the tsuru database.
+
+fix-containers
+--------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin fix-containers
+
+In some cases, like when a node is restarted, information about the containers
+can be outdated in tsuru database, because docker changes the container
+exposed port when the container is restarted.
+
+This command verify if has a container with wrong data stored in the database
+and fix this information.
