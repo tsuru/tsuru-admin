@@ -402,42 +402,6 @@ machine-template-remove
     $ tsuru-admin machine-template-remove <name>
 
 This command removes a machine template by name.
-.. _tsuru_admin_ssh_cmd:
-
-ssh
----
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin ssh <container-id>
-
-This command opens a SSH connection to the container, using the API server as a
-proxy. The user may specify part of the ID of the container. For example:
-
-.. highlight:: bash
-
-::
-
-    $ tsuru app-info -a myapp
-    Application: tsuru-dashboard
-    Repository: git@54.94.9.232:tsuru-dashboard.git
-    Platform: python
-    Teams: admin
-    Address: tsuru-dashboard.54.94.9.232.xip.io
-    Owner: admin@example.com
-    Deploys: 1
-    Units:
-    +------------------------------------------------------------------+---------+
-    | Unit                                                             | State   |
-    +------------------------------------------------------------------+---------+
-    | 39f82550514af3bbbec1fd204eba000546217a2fe6049e80eb28899db0419b2f | started |
-    +------------------------------------------------------------------+---------+
-    $ tsuru-admin ssh 39f8
-    Welcome to Ubuntu 14.04 LTS (GNU/Linux 3.13.0-24-generic x86_64)
-    ubuntu@ip-10-253-6-84:~$
-
 
 docker-healing-list
 -------------------
@@ -490,6 +454,9 @@ created apps. However, this won't change anything for existing apps that were
 created using the removed plan. They will keep using the same value amount of
 resources described by the plan.
 
+User management
+===============
+
 user-list
 ---------
 
@@ -498,3 +465,53 @@ user-list
     $ tsuru-admin user-list
 
 This command list all users in tsuru.
+
+Another commands
+================
+
+.. _tsuru_admin_ssh_cmd:
+
+ssh
+---
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin ssh <container-id>
+
+This command opens a SSH connection to the container, using the API server as a
+proxy. The user may specify part of the ID of the container. For example:
+
+.. highlight:: bash
+
+::
+
+    $ tsuru app-info -a myapp
+    Application: tsuru-dashboard
+    Repository: git@54.94.9.232:tsuru-dashboard.git
+    Platform: python
+    Teams: admin
+    Address: tsuru-dashboard.54.94.9.232.xip.io
+    Owner: admin@example.com
+    Deploys: 1
+    Units:
+    +------------------------------------------------------------------+---------+
+    | Unit                                                             | State   |
+    +------------------------------------------------------------------+---------+
+    | 39f82550514af3bbbec1fd204eba000546217a2fe6049e80eb28899db0419b2f | started |
+    +------------------------------------------------------------------+---------+
+    $ tsuru-admin ssh 39f8
+    Welcome to Ubuntu 14.04 LTS (GNU/Linux 3.13.0-24-generic x86_64)
+    ubuntu@ip-10-253-6-84:~$
+
+log-remove
+----------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin log-remove [--app appname]
+
+This command removes the application log from the tsuru database.
