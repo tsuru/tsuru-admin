@@ -390,6 +390,16 @@ This command creates a new machine template to be used with ``docker-node-add``
 command. This template will contain a list of parameters that will be sent to the
 IaaS provider.
 
+machine-template-remove
+-----------------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin machine-template-remove <name>
+
+This command removes a machine template by name.
 .. _tsuru_admin_ssh_cmd:
 
 ssh
