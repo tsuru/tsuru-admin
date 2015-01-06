@@ -10,12 +10,10 @@
     <http://docs.tsuru.io/en/latest/reference/config.html#admin-users>`_.
     To be an admin user you should be member of an `admin team <http://docs.tsuru.io/en/latest/reference/config.html#admin-team>`_.
 
-ddIf you use Mac OS X and `homebrew <http://mxcl.github.com/homebrew/>`_, you may
-
 Installing
 ==========
 
-There are several ways to install `tsuru-admin`:
+There are several ways to install **tsuru-admin**:
 
 - `Downloading binaries (Mac OS X and Linux)`_
 - `Using homebrew (Mac OS X only)`_
@@ -29,13 +27,13 @@ Downloading binaries (Mac OS X and Linux)
 We provide pre-built binaries for OS X and Linux, only for the amd64
 architecture. You can download these binaries directly from the releases page:
 
-* tsuru-admin: https://github.com/tsuru/tsuru-admin/releases
+* **tsuru-admin**: https://github.com/tsuru/tsuru-admin/releases
 
 Using homebrew (Mac OS X only)
 ------------------------------
 
 If you use Mac OS X and `homebrew <http://mxcl.github.com/homebrew/>`_, you may
-use a custom tap to install ``tsuru-admin``. First you need to add the tap:
+use a custom tap to install **tsuru-admin**. First you need to add the tap:
 
 .. highlight:: bash
 
@@ -43,7 +41,7 @@ use a custom tap to install ``tsuru-admin``. First you need to add the tap:
 
 $ brew tap tsuru/homebrew-tsuru
 
-Now you can install tsuru-admin:
+Now you can install **tsuru-admin**:
 
 .. highlight:: bash
 
@@ -65,7 +63,7 @@ For more details on taps, check `homebrew documentation
 
 .. note::
 
-    **tsuru-admin** requires Go 1.2 or higher. Make sure you have the last version
+    **tsuru-admin** requires Go 1.4. Make sure you have the last version
     of Go installed in your system.
 
 Using the PPA (Ubuntu only)
@@ -131,7 +129,7 @@ something like:
 Setting a target
 ================
 
-The target for the tsuru-admin command should point to the `listen` address
+The target for the **tsuru-admin** command should point to the `listen` address
 configured in your tsuru.conf file.
 
 .. highlight:: yaml
@@ -151,7 +149,7 @@ configured in your tsuru.conf file.
 Commands
 ========
 
-All the "container*"" commands below only exist when using the docker
+All the **container** commands below only exist when using the docker
 provisioner.
 
 .. _tsuru_admin_container_move_cmd:
@@ -241,7 +239,7 @@ Parameters have special meaning
   the default iaas specified in tsuru.conf file.
 
 * ``template=<template name>`` A machine template with predefined parameters,
-  additional parameters will override template ones. See 
+  additional parameters will override template ones. See
   :ref:`machine-template-add <tsuru_admin_machine_template_add_cmd>` command.
 
 .. _tsuru_admin_docker_node_list_cmd:
