@@ -6,7 +6,11 @@
 tsuru-admin is a command line for cloud administrators on
 [tsuru](https://github.com/tsuru/tsuru).
 
-##reporting issues
+Links:
 
-Please report issues to the
-[tsuru/tsuru](https://github.com/tsuru/tsuru/issues) repository.
+- tsuru-admin reference guide: http://tsuru-admin.readthedocs.org/en/latest/
+- Full tsuru documentation: http://docs.tsuru.io
+- How to Contribute: http://docs.tsuru.io/en/latest/contributing
+- Repository & Issue Tracker: https://github.com/tsuru/tsuru
+- IRC: Freenode, channel #tsuru
+- Gitter: https://gitter.im/tsuru/tsuru
