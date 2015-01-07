@@ -126,25 +126,22 @@ $ go get github.com/tsuru/tsuru-admin
 After installing, you must set the target with the tsuru server URL,
 something like:
 
-Setting a target
-================
+Managing remote tsuru server endpoints
+======================================
 
-The target for the **tsuru-admin** command should point to the `listen` address
-configured in your tsuru.conf file.
-
-.. highlight:: yaml
-
-::
-
-    listen: ":8080"
-
+The target is the **tsuru** server to which all operations will be directed to.
 
 .. highlight:: bash
 
 ::
 
-    $ tsuru-admin target-add default tsuru.myhost.com:8080
-    $ tsuru-admin target-set default
+    $ tsuru-admin target-add <label> <address> [--set-current|-s]
+    $ tsuru-admin target-list
+    $ tsuru-admin target-set <label>
+    $ tsuru-admin target-remove <label>
+
+With this set of commands you are be able to add a new labeled target,
+set a target for usage, list the added targets and remove a target, respectively.
 
 Check current version
 =====================
