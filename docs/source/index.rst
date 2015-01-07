@@ -569,3 +569,15 @@ exposed port when the container is restarted.
 
 This command verify if has a container with wrong data stored in the database
 and fix this information.
+
+app-unlock
+----------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin app-unlock -a <app-name> [-y]
+
+Forces the removal of an app lock.
+Use with caution, removing an active lock may cause inconsistencies.
