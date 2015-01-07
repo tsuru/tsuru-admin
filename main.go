@@ -25,7 +25,7 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(&platformAdd{})
 	m.Register(&platformUpdate{})
 	m.Register(&platformRemove{})
-	m.RegisterDeprecated(&machineList{}, "machines-list")
+	m.Register(&machineList{})
 	m.Register(&machineDestroy{})
 	m.Register(&appLockDelete{})
 	m.Register(viewUserQuota{})
