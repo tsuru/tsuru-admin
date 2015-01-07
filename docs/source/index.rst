@@ -410,7 +410,7 @@ docker-pool-list
 
     $ tsuru-admin docker-pool-list
 
-this command list available pools.
+This command list available pools.
 
 docker-pool-remove
 ------------------
