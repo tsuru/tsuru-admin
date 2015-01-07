@@ -387,6 +387,66 @@ machine-template-remove
 
 This command removes a machine template by name.
 
+Pool management
+===============
+
+docker-pool-add
+---------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin docker-pool-add <pool>
+
+This command adds a new pool (cluster).
+
+docker-pool-list
+----------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin docker-pool-list
+
+this command list available pools.
+
+docker-pool-remove
+------------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin docker-pool-remove <pool> [-y]
+
+This command removes a pool.
+
+The -y flag assume "yes" as answer to all prompts and run non-interactively.
+
+docker-pool-teams-add
+---------------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin docker-pool-teams-add <pool> <teams>
+
+This command adds one or more teams to a poll. You can add one or more teams at once.
+
+docker-pool-teams-remove
+------------------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin docker-pool-teams-remove <pool> <teams>
+
+This command removes one or more teams from a pool. You can remove one or more teams at once.
+
 Healer
 ======
 
