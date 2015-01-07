@@ -504,6 +504,59 @@ user-list
 
 This command list all users in tsuru.
 
+Quota management
+================
+
+Currently, there are two available quotas: apps per user and units per app.
+
+**tsuru-admin** can be used to see and change quota data.
+
+change-app-quota
+----------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin change-app-quota <user-email> <new-limit>
+
+Changes the limit of units that an app can have. The new limit must be an
+integer, it may also be "unlimited".
+
+change-user-quota
+-----------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin change-user-quota <user-email> <new-limit>
+
+Changes the limit of apps that a user can create. The new limit must be an
+integer, it may also be "unlimited".
+
+view-app-quota
+--------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin view-app-quota <app-name>
+
+Displays the current usage and limit of the given app.
+
+view-user-quota
+---------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin view-user-quota <user-email>
+
+Displays the current usage and limit of the user.
+
 Another commands
 ================
 
