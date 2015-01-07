@@ -507,7 +507,11 @@ This command list all users in tsuru.
 Quota management
 ================
 
-Currently, there are two available quotas: apps per user and units per app.
+Quotas are handled per application and user. Every user has a quota number for
+applications. For example, users may have a default quota of 2 applications, so
+whenever a user tries to create more than two applications, he/she will receive
+a quota exceeded error. There are also per applications quota. This one limits
+the maximum number of units that an application may have.
 
 **tsuru-admin** can be used to see and change quota data.
 
