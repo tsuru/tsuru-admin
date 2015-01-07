@@ -320,60 +320,6 @@ created IaaS machine if the ``--destroy`` flag is passed.
 
 .. _tsuru_admin_platform_add_cmd:
 
-Platform management
-===================
-
-.. warning::
-
-    All the **platform** commands below only exist when using the docker
-    provisioner.
-
-platform-add
-------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin platform-add <name> [--dockerfile]
-
-This command allow you to add a new platform to your tsuru installation.
-It will automatically create and build a whole new platform on tsuru server and
-will allow your users to create apps based on that platform.
-
-The --dockerfile flag is an URL to a dockerfile which will create your platform.
-
-.. _tsuru_admin_platform_update_cmd:
-
-platform-update
----------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin platform-update <name> [-d/--dockerfile]
-
-This command allow you to update a platform in your tsuru installation.
-It will automatically rebuild your platform and will flag apps to update
-platform on next deploy.
-
-The --dockerfile flag is an URL to a dockerfile which will update your platform.
-
-platform-remove
----------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin platform-remove <platform name> [-y]
-
-This command allow you to remove a platform. This command will not
-remove a platform that is used by an application.
-
-The -y flag assume "yes" as answer to all prompts and run non-interactively.
-
 Machine management
 ==================
 
@@ -441,6 +387,9 @@ machine-template-remove
 
 This command removes a machine template by name.
 
+Healer
+======
+
 docker-healing-list
 -------------------
 
@@ -451,6 +400,60 @@ docker-healing-list
     $ tsuru-admin docker-healing-list [--node] [--container]
 
 This command will list all healing processes started for nodes or containers.
+
+Platform management
+===================
+
+.. warning::
+
+    All the **platform** commands below only exist when using the docker
+    provisioner.
+
+platform-add
+------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin platform-add <name> [--dockerfile]
+
+This command allow you to add a new platform to your tsuru installation.
+It will automatically create and build a whole new platform on tsuru server and
+will allow your users to create apps based on that platform.
+
+The --dockerfile flag is an URL to a dockerfile which will create your platform.
+
+.. _tsuru_admin_platform_update_cmd:
+
+platform-update
+---------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin platform-update <name> [-d/--dockerfile]
+
+This command allow you to update a platform in your tsuru installation.
+It will automatically rebuild your platform and will flag apps to update
+platform on next deploy.
+
+The --dockerfile flag is an URL to a dockerfile which will update your platform.
+
+platform-remove
+---------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin platform-remove <platform name> [-y]
+
+This command allow you to remove a platform. This command will not
+remove a platform that is used by an application.
+
+The -y flag assume "yes" as answer to all prompts and run non-interactively.
 
 Plan management
 ===============
