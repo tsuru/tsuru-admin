@@ -146,6 +146,18 @@ configured in your tsuru.conf file.
     $ tsuru-admin target-add default tsuru.myhost.com:8080
     $ tsuru-admin target-set default
 
+Check current version
+=====================
+
+To see the current version of **tsuru-admin** you should use the `version` command:
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin version
+    tsuru-admin version 0.8.2.
+
 Container management
 ====================
 
