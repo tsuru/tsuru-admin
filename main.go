@@ -20,7 +20,6 @@ const (
 
 func buildManager(name string) *cmd.Manager {
 	m := cmd.BuildBaseManager(name, version, header, nil)
-	m.Register(&tokenGen{})
 	m.Register(&logRemove{})
 	m.Register(&platformAdd{})
 	m.Register(&platformUpdate{})
