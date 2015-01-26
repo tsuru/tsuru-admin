@@ -1,10 +1,10 @@
 {
 	"ImportPath": "github.com/tsuru/tsuru-admin",
-        "GoVersion": "devel +e45c4110ec90 Mon Nov 10 08:12:43 2014 -0800",
-        "Packages": [
-                "./..."
-        ],
-	"Deps": [
+		"GoVersion": "devel +e45c4110ec90 Mon Nov 10 08:12:43 2014 -0800",
+		"Packages": [
+			"./..."
+			],
+		"Deps": [
 		{
 			"ImportPath": "code.google.com/p/goauth2/oauth",
 			"Comment": "weekly-48",
@@ -227,18 +227,15 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/bcrypt",
-			"Comment": "null-236",
-			"Rev": "69e2a90ed92d03812364aeb947b7068dc42e561e"
+			"Rev": "1fbbd62cfec66bd39d91e97749579579d4d3037e"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/blowfish",
-			"Comment": "null-236",
-			"Rev": "69e2a90ed92d03812364aeb947b7068dc42e561e"
+			"Rev": "1fbbd62cfec66bd39d91e97749579579d4d3037e"
 		},
 		{
-			"ImportPath": "golang.org/x/crypto/ssh/terminal",
-			"Comment": "null-236",
-			"Rev": "69e2a90ed92d03812364aeb947b7068dc42e561e"
+			"ImportPath": "golang.org/x/crypto/ssh",
+			"Rev": "1fbbd62cfec66bd39d91e97749579579d4d3037e"
 		},
 		{
 			"ImportPath": "gopkg.in/amz.v1/aws",
