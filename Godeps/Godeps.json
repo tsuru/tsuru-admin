@@ -1,10 +1,10 @@
 {
 	"ImportPath": "github.com/tsuru/tsuru-admin",
-		"GoVersion": "devel +e45c4110ec90 Mon Nov 10 08:12:43 2014 -0800",
-		"Packages": [
-			"./..."
-			],
-		"Deps": [
+	"GoVersion": "devel +e45c4110ec90 Mon Nov 10 08:12:43 2014 -0800",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
 		{
 			"ImportPath": "code.google.com/p/goauth2/oauth",
 			"Comment": "weekly-48",
@@ -26,38 +26,38 @@
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/archive",
-			"Comment": "v1.3.0-221-g29ebb53",
-			"Rev": "29ebb53b522436b9f405b36616a1eeec8b087d2b"
+			"Comment": "v1.4.1-691-g94e169b",
+			"Rev": "94e169b44f3bcc346c7d0f9a733a8c76f1eace55"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/fileutils",
-			"Comment": "v1.3.0-221-g29ebb53",
-			"Rev": "29ebb53b522436b9f405b36616a1eeec8b087d2b"
+			"Comment": "v1.4.1-691-g94e169b",
+			"Rev": "94e169b44f3bcc346c7d0f9a733a8c76f1eace55"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/ioutils",
-			"Comment": "v1.3.0-221-g29ebb53",
-			"Rev": "29ebb53b522436b9f405b36616a1eeec8b087d2b"
+			"Comment": "v1.4.1-691-g94e169b",
+			"Rev": "94e169b44f3bcc346c7d0f9a733a8c76f1eace55"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/pools",
-			"Comment": "v1.3.0-221-g29ebb53",
-			"Rev": "29ebb53b522436b9f405b36616a1eeec8b087d2b"
+			"Comment": "v1.4.1-691-g94e169b",
+			"Rev": "94e169b44f3bcc346c7d0f9a733a8c76f1eace55"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/promise",
-			"Comment": "v1.3.0-221-g29ebb53",
-			"Rev": "29ebb53b522436b9f405b36616a1eeec8b087d2b"
+			"Comment": "v1.4.1-691-g94e169b",
+			"Rev": "94e169b44f3bcc346c7d0f9a733a8c76f1eace55"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/system",
-			"Comment": "v1.3.0-221-g29ebb53",
-			"Rev": "29ebb53b522436b9f405b36616a1eeec8b087d2b"
+			"Comment": "v1.4.1-691-g94e169b",
+			"Rev": "94e169b44f3bcc346c7d0f9a733a8c76f1eace55"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/vendor/src/code.google.com/p/go/src/pkg/archive/tar",
-			"Comment": "v1.3.0-221-g29ebb53",
-			"Rev": "29ebb53b522436b9f405b36616a1eeec8b087d2b"
+			"Comment": "v1.4.1-691-g94e169b",
+			"Rev": "94e169b44f3bcc346c7d0f9a733a8c76f1eace55"
 		},
 		{
 			"ImportPath": "github.com/fsouza/go-dockerclient",
