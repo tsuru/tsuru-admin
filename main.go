@@ -37,7 +37,7 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(&templateAdd{})
 	m.Register(&templateRemove{})
 	m.Register(&listUsers{})
-	m.Register(&cmd.SshToContainerCmd{})
+	m.RegisterDeprecated(&cmd.ShellToContainerCmd{}, "ssh")
 	registerProvisionersCommands(m)
 	return m
 }

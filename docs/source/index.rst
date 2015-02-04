@@ -632,14 +632,18 @@ Another commands
 ssh
 ---
 
+.. attention::
+    This command is deprecated.
+
 .. highlight:: bash
 
 ::
 
-    $ tsuru-admin ssh <container-id>
+    $ tsuru-admin ssh [container-id] -a app
 
-This command opens a SSH connection to the container, using the API server as a
-proxy. The user may specify part of the ID of the container. For example:
+This command opens a SSH connection to the container, using the API server as a proxy.
+You can access an app container just giving app name. Also, you can access a specific container from this app too.
+The user may specify part of the ID of the container. For example:
 
 .. highlight:: bash
 
