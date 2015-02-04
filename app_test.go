@@ -1,4 +1,4 @@
-// Copyright 2014 tsuru-admin authors. All rights reserved.
+// Copyright 2015 tsuru-admin authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/testing"
+	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"launchpad.net/gocheck"
 )
 
@@ -32,8 +32,8 @@ func (s *S) TestAppLockDeleteRun(c *gocheck.C) {
 		Stderr: &stderr,
 	}
 	expected := "Lock successfully removed!\n"
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.URL.Path == "/apps/app1/lock" && req.Method == "DELETE"
 		},

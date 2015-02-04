@@ -1,4 +1,4 @@
-// Copyright 2014 tsuru authors. All rights reserved.
+// Copyright 2015 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -11,7 +11,7 @@ import (
 
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/testing"
+	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"launchpad.net/gocheck"
 )
 
@@ -32,8 +32,8 @@ func (s *S) TestPlanCreate(c *gocheck.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusCreated},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusCreated},
 		CondFunc: func(req *http.Request) bool {
 			var plan app.Plan
 			err := json.NewDecoder(req.Body).Decode(&plan)
@@ -65,8 +65,8 @@ func (s *S) TestPlanCreateFlags(c *gocheck.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusCreated},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusCreated},
 		CondFunc: func(req *http.Request) bool {
 			var plan app.Plan
 			err := json.NewDecoder(req.Body).Decode(&plan)
@@ -98,8 +98,8 @@ func (s *S) TestPlanCreateError(c *gocheck.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusConflict},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusConflict},
 		CondFunc: func(req *http.Request) bool {
 			return req.URL.Path == "/plans" && req.Method == "POST"
 		},
@@ -128,8 +128,8 @@ func (s *S) TestPlanRemove(c *gocheck.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.URL.Path == "/plans/myplan" && req.Method == "DELETE"
 		},
@@ -148,8 +148,8 @@ func (s *S) TestPlanRemoveError(c *gocheck.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusInternalServerError},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusInternalServerError},
 		CondFunc: func(req *http.Request) bool {
 			return req.URL.Path == "/plans/myplan" && req.Method == "DELETE"
 		},

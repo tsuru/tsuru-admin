@@ -1,4 +1,4 @@
-// Copyright 2014 tsuru-admin authors. All rights reserved.
+// Copyright 2015 tsuru-admin authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -11,7 +11,7 @@ import (
 	"net/http"
 
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/testing"
+	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"github.com/tsuru/tsuru/iaas"
 	"launchpad.net/gocheck"
 )
@@ -50,8 +50,8 @@ func (s *S) TestMachineListRun(c *gocheck.C) {
 |     |       |         | param2=value2   |
 +-----+-------+---------+-----------------+
 `
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: string(data), Status: http.StatusOK},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: string(data), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.URL.Path == "/iaas/machines" && req.Method == "GET"
 		},
@@ -80,8 +80,8 @@ func (s *S) TestMachineDestroyRun(c *gocheck.C) {
 		Stderr: &stderr,
 		Args:   []string{"myid1"},
 	}
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.URL.Path == "/iaas/machines/myid1" && req.Method == "DELETE"
 		},
@@ -129,8 +129,8 @@ func (s *S) TestTemplateListRun(c *gocheck.C) {
 |          |      | type=l1.large    |
 +----------+------+------------------+
 `
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: string(data), Status: http.StatusOK},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: string(data), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.URL.Path == "/iaas/templates" && req.Method == "GET"
 		},
@@ -158,8 +158,8 @@ func (s *S) TestTemplateAddCmdRun(c *gocheck.C) {
 	context := cmd.Context{Args: []string{"my-tpl", "ec2", "zone=xyz", "image=ami-something"}, Stdout: &buf}
 	expectedBody := `{"Name":"my-tpl","IaaSName":"ec2",` +
 		`"Data":[{"Name":"zone","Value":"xyz"},{"Name":"image","Value":"ami-something"}]}`
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			body, _ := ioutil.ReadAll(req.Body)
 			c.Assert(string(body), gocheck.DeepEquals, expectedBody)
@@ -188,8 +188,8 @@ func (s *S) TestTemplateRemoveCmdInfo(c *gocheck.C) {
 func (s *S) TestTemplateRemoveCmdRun(c *gocheck.C) {
 	var buf bytes.Buffer
 	context := cmd.Context{Args: []string{"my-tpl"}, Stdout: &buf, Stderr: &buf}
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.URL.Path == "/iaas/templates/my-tpl" && req.Method == "DELETE"
 		},

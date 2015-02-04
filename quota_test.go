@@ -1,4 +1,4 @@
-// Copyright 2014 tsuru-admin authors. All rights reserved.
+// Copyright 2015 tsuru-admin authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -10,7 +10,7 @@ import (
 	"net/http"
 
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/testing"
+	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"launchpad.net/gocheck"
 )
 
@@ -33,8 +33,8 @@ func (s *S) TestViewUserQuotaRun(c *gocheck.C) {
 		Stderr: &stderr,
 	}
 	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
-	trans := testing.ConditionalTransport{
-		Transport: testing.Transport{Message: result, Status: http.StatusOK},
+	trans := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: result, Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.Method == "GET" && req.URL.Path == "/users/fss@corp.globo.com/quota"
 		},
@@ -51,7 +51,7 @@ Apps usage: 3/4
 
 func (s *S) TestViewUserQuotaRunFailure(c *gocheck.C) {
 	context := cmd.Context{Args: []string{"fss@corp.globo.com"}}
-	trans := testing.Transport{Message: "user not found", Status: http.StatusNotFound}
+	trans := cmdtest.Transport{Message: "user not found", Status: http.StatusNotFound}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
 	command := viewUserQuota{}
 	err := command.Run(&context, client)
@@ -81,8 +81,8 @@ func (s *S) TestChangeUserQuotaRun(c *gocheck.C) {
 		Stderr: &stderr,
 	}
 	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
-	trans := testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+	trans := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			called = true
 			defer req.Body.Close()
@@ -109,8 +109,8 @@ func (s *S) TestChangeUserQuotaRunUnlimited(c *gocheck.C) {
 		Stderr: &stderr,
 	}
 	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
-	trans := testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+	trans := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			called = true
 			defer req.Body.Close()
@@ -140,7 +140,7 @@ func (s *S) TestChangeUserQuotaRunInvalidLimit(c *gocheck.C) {
 func (s *S) TestChangeUserQuotaFailure(c *gocheck.C) {
 	var stdout, stderr bytes.Buffer
 	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
-	trans := &testing.Transport{
+	trans := &cmdtest.Transport{
 		Message: "user not found",
 		Status:  http.StatusNotFound,
 	}
@@ -175,8 +175,8 @@ func (s *S) TestViewAppQuotaRun(c *gocheck.C) {
 		Stderr: &stderr,
 	}
 	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
-	trans := testing.ConditionalTransport{
-		Transport: testing.Transport{Message: result, Status: http.StatusOK},
+	trans := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: result, Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.Method == "GET" && req.URL.Path == "/apps/hibria/quota"
 		},
@@ -193,7 +193,7 @@ Units usage: 3/4
 
 func (s *S) TestViewAppQuotaRunFailure(c *gocheck.C) {
 	context := cmd.Context{Args: []string{"hybria"}}
-	trans := testing.Transport{Message: "app not found", Status: http.StatusNotFound}
+	trans := cmdtest.Transport{Message: "app not found", Status: http.StatusNotFound}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
 	command := viewAppQuota{}
 	err := command.Run(&context, client)
@@ -223,8 +223,8 @@ func (s *S) TestChangeAppQuotaRun(c *gocheck.C) {
 		Stderr: &stderr,
 	}
 	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
-	trans := testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+	trans := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			called = true
 			defer req.Body.Close()
@@ -251,8 +251,8 @@ func (s *S) TestChangeAppQuotaRunUnlimited(c *gocheck.C) {
 		Stderr: &stderr,
 	}
 	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
-	trans := testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+	trans := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			called = true
 			defer req.Body.Close()
@@ -282,7 +282,7 @@ func (s *S) TestChangeAppQuotaRunInvalidLimit(c *gocheck.C) {
 func (s *S) TestChangeAppQuotaFailure(c *gocheck.C) {
 	var stdout, stderr bytes.Buffer
 	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
-	trans := &testing.Transport{
+	trans := &cmdtest.Transport{
 		Message: "app not found",
 		Status:  http.StatusNotFound,
 	}

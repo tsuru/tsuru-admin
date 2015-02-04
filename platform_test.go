@@ -1,4 +1,4 @@
-// Copyright 2014 tsuru-admin authors. All rights reserved.
+// Copyright 2015 tsuru-admin authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/testing"
+	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"launchpad.net/gocheck"
 )
 
@@ -33,8 +33,8 @@ func (s *S) TestPlatformAddRun(c *gocheck.C) {
 		Args:   []string{"teste"},
 	}
 	expected := "\nOK!\nPlatform successfully added!\n"
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "\nOK!\n", Status: http.StatusOK},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			c.Assert(req.Header.Get("Content-Type"), gocheck.Equals, "application/x-www-form-urlencoded")
 			return req.URL.Path == "/platforms" && req.Method == "POST"
@@ -101,8 +101,8 @@ func (s *S) TestPlatformUpdateRun(c *gocheck.C) {
 		Args:   []string{name},
 	}
 	expected := "\nOK!\nPlatform successfully updated!\n"
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "\nOK!\n", Status: http.StatusOK},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			c.Assert(req.Header.Get("Content-Type"), gocheck.Equals, "application/x-www-form-urlencoded")
 			c.Assert(req.FormValue("dockerfile"), gocheck.Equals, "http://localhost/Dockerfile")
@@ -126,8 +126,8 @@ func (s *S) TestPlatformRemoveRun(c *gocheck.C) {
 		Args:   []string{name},
 	}
 	expected := "Platform successfully removed!\n"
-	trans := &testing.ConditionalTransport{
-		Transport: testing.Transport{Message: "", Status: http.StatusOK},
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.URL.Path == "/platforms/"+name && req.Method == "DELETE"
 		},

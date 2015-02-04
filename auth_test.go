@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/testing"
+	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"launchpad.net/gocheck"
 )
 
@@ -31,8 +31,8 @@ func (s *S) TestListUsersRun(c *gocheck.C) {
 	}
 	manager := cmd.NewManager("glb", "0.2", "ad-ver", &stdout, &stderr, nil, nil)
 	result := `[{"email": "test@test.com","teams":["team1", "team2", "team3"]}]`
-	trans := testing.ConditionalTransport{
-		Transport: testing.Transport{Message: result, Status: http.StatusOK},
+	trans := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: result, Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			return req.Method == "GET" && req.URL.Path == "/users"
 		},
