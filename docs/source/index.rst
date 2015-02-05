@@ -627,21 +627,26 @@ Displays the current usage and limit of the user.
 Another commands
 ================
 
-.. _tsuru_admin_ssh_cmd:
-
 ssh
 ---
 
 .. attention::
-    This command is deprecated.
+    This command is deprecated. Please see app-shell command
+
+
+.. _tsuru_admin_app_shell_cmd:
+
+
+app-shell
+---------
 
 .. highlight:: bash
 
 ::
 
-    $ tsuru-admin ssh [container-id] -a app
+    $ tsuru-admin app-shell [container-id] -a myapp
 
-This command opens a SSH connection to the container, using the API server as a proxy.
+This command opens a remote shell inside container, using the API server as a proxy.
 You can access an app container just giving app name. Also, you can access a specific container from this app too.
 The user may specify part of the ID of the container. For example:
 
@@ -663,7 +668,7 @@ The user may specify part of the ID of the container. For example:
     +------------------------------------------------------------------+---------+
     | 39f82550514af3bbbec1fd204eba000546217a2fe6049e80eb28899db0419b2f | started |
     +------------------------------------------------------------------+---------+
-    $ tsuru-admin ssh 39f8
+    $ tsuru-admin app-shell 39f8 -a myapp
     Welcome to Ubuntu 14.04 LTS (GNU/Linux 3.13.0-24-generic x86_64)
     ubuntu@ip-10-253-6-84:~$
 
