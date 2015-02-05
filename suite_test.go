@@ -10,7 +10,8 @@ import (
 	"testing"
 
 	"github.com/tsuru/tsuru/cmd"
-	tTesting "github.com/tsuru/tsuru/testing"
+	"github.com/tsuru/tsuru/cmd/cmdtest"
+	"github.com/tsuru/tsuru/provision/provisiontest"
 	"launchpad.net/gocheck"
 )
 
@@ -23,11 +24,11 @@ var manager *cmd.Manager
 func (s *S) SetUpSuite(c *gocheck.C) {
 	var stdout, stderr bytes.Buffer
 	manager = cmd.NewManager("glb", version, header, &stdout, &stderr, os.Stdin, nil)
-	s.recover = tTesting.SetTargetFile(c, []byte("http://localhost"))
+	s.recover = cmdtest.SetTargetFile(c, []byte("http://localhost"))
 }
 
 func (s *S) TearDownSuite(c *gocheck.C) {
-	tTesting.RollbackFile(s.recover)
+	cmdtest.RollbackFile(s.recover)
 }
 
 var _ = gocheck.Suite(&S{})
@@ -35,7 +36,7 @@ var _ = gocheck.Suite(&S{})
 func Test(t *testing.T) { gocheck.TestingT(t) }
 
 type AdminCommandableProvisioner struct {
-	tTesting.FakeProvisioner
+	provisiontest.FakeProvisioner
 }
 
 func (p *AdminCommandableProvisioner) AdminCommands() []cmd.Command {

@@ -7,7 +7,7 @@ package main
 import (
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/provision"
-	"github.com/tsuru/tsuru/testing"
+	"github.com/tsuru/tsuru/provision/provisiontest"
 	"launchpad.net/gocheck"
 )
 
@@ -36,7 +36,7 @@ func (s *S) TestCommandsFromBaseManagerAreRegistered(c *gocheck.C) {
 }
 
 func (s *S) TestShouldRegisterAllCommandsFromProvisioners(c *gocheck.C) {
-	fp := testing.NewFakeProvisioner()
+	fp := provisiontest.NewFakeProvisioner()
 	p := AdminCommandableProvisioner{FakeProvisioner: *fp}
 	provision.Register("fakeAdminProvisioner", &p)
 	manager := buildManager("tsuru-admin")
