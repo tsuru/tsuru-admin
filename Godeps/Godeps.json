@@ -236,8 +236,7 @@
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",
-			"Comment": "87",
-			"Rev": "gustavo@niemeyer.net-20130302024745-6ikofwq2c03h7giu"
+			"Rev": "64131543e7896d5bcc6bd5a76287eb75ea96c673"
 		},
 		{
 			"ImportPath": "gopkg.in/mgo.v2",
