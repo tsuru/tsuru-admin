@@ -627,13 +627,6 @@ Displays the current usage and limit of the user.
 Another commands
 ================
 
-ssh
----
-
-.. attention::
-    This command is deprecated. Please see app-shell command
-
-
 .. _tsuru_admin_app_shell_cmd:
 
 
