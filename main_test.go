@@ -8,67 +8,67 @@ import (
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/provision/provisiontest"
-	"launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 )
 
-func (s *S) TestLogRemoveIsRegistered(c *gocheck.C) {
+func (s *S) TestLogRemoveIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	token, ok := manager.Commands["log-remove"]
-	c.Assert(ok, gocheck.Equals, true)
-	c.Assert(token, gocheck.FitsTypeOf, &logRemove{})
+	c.Assert(ok, check.Equals, true)
+	c.Assert(token, check.FitsTypeOf, &logRemove{})
 }
 
-func (s *S) TestPlatformAddIsRegistered(c *gocheck.C) {
+func (s *S) TestPlatformAddIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	token, ok := manager.Commands["platform-add"]
-	c.Assert(ok, gocheck.Equals, true)
-	c.Assert(token, gocheck.FitsTypeOf, &platformAdd{})
+	c.Assert(ok, check.Equals, true)
+	c.Assert(token, check.FitsTypeOf, &platformAdd{})
 }
 
-func (s *S) TestCommandsFromBaseManagerAreRegistered(c *gocheck.C) {
+func (s *S) TestCommandsFromBaseManagerAreRegistered(c *check.C) {
 	baseManager := cmd.BuildBaseManager("tsuru", version, header, nil)
 	manager := buildManager("tsuru")
 	for name, instance := range baseManager.Commands {
 		command, ok := manager.Commands[name]
-		c.Assert(ok, gocheck.Equals, true)
-		c.Assert(command, gocheck.FitsTypeOf, instance)
+		c.Assert(ok, check.Equals, true)
+		c.Assert(command, check.FitsTypeOf, instance)
 	}
 }
 
-func (s *S) TestShouldRegisterAllCommandsFromProvisioners(c *gocheck.C) {
+func (s *S) TestShouldRegisterAllCommandsFromProvisioners(c *check.C) {
 	fp := provisiontest.NewFakeProvisioner()
 	p := AdminCommandableProvisioner{FakeProvisioner: *fp}
 	provision.Register("fakeAdminProvisioner", &p)
 	manager := buildManager("tsuru-admin")
 	fake, ok := manager.Commands["fake-admin"]
-	c.Assert(ok, gocheck.Equals, true)
-	c.Assert(fake, gocheck.FitsTypeOf, &FakeAdminCommand{})
+	c.Assert(ok, check.Equals, true)
+	c.Assert(fake, check.FitsTypeOf, &FakeAdminCommand{})
 }
 
-func (s *S) TestViewUserQuotaIsRegistered(c *gocheck.C) {
+func (s *S) TestViewUserQuotaIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	viewQuota, ok := manager.Commands["view-user-quota"]
-	c.Assert(ok, gocheck.Equals, true)
-	c.Assert(viewQuota, gocheck.FitsTypeOf, viewUserQuota{})
+	c.Assert(ok, check.Equals, true)
+	c.Assert(viewQuota, check.FitsTypeOf, viewUserQuota{})
 }
 
-func (s *S) TestChangeUserQuotaIsRegistered(c *gocheck.C) {
+func (s *S) TestChangeUserQuotaIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	changeQuota, ok := manager.Commands["change-user-quota"]
-	c.Assert(ok, gocheck.Equals, true)
-	c.Assert(changeQuota, gocheck.FitsTypeOf, changeUserQuota{})
+	c.Assert(ok, check.Equals, true)
+	c.Assert(changeQuota, check.FitsTypeOf, changeUserQuota{})
 }
 
-func (s *S) TestViewAppQuotaIsRegistered(c *gocheck.C) {
+func (s *S) TestViewAppQuotaIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	viewQuota, ok := manager.Commands["view-app-quota"]
-	c.Assert(ok, gocheck.Equals, true)
-	c.Assert(viewQuota, gocheck.FitsTypeOf, viewAppQuota{})
+	c.Assert(ok, check.Equals, true)
+	c.Assert(viewQuota, check.FitsTypeOf, viewAppQuota{})
 }
 
-func (s *S) TestChangeAppQuotaIsRegistered(c *gocheck.C) {
+func (s *S) TestChangeAppQuotaIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	changeQuota, ok := manager.Commands["change-app-quota"]
-	c.Assert(ok, gocheck.Equals, true)
-	c.Assert(changeQuota, gocheck.FitsTypeOf, changeAppQuota{})
+	c.Assert(ok, check.Equals, true)
+	c.Assert(changeQuota, check.FitsTypeOf, changeAppQuota{})
 }

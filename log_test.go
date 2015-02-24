@@ -10,20 +10,20 @@ import (
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
-	"launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 )
 
-func (s *S) TestLogRemoveInfo(c *gocheck.C) {
+func (s *S) TestLogRemoveInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "log-remove",
 		Usage:   "log-remove [--app appname]",
 		Desc:    `remove all app logs.`,
 		MinArgs: 0,
 	}
-	c.Assert((&logRemove{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&logRemove{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestLogRemoveRun(c *gocheck.C) {
+func (s *S) TestLogRemoveRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -40,11 +40,11 @@ func (s *S) TestLogRemoveRun(c *gocheck.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := logRemove{}
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, expected)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestLogRemoveByAppRun(c *gocheck.C) {
+func (s *S) TestLogRemoveByAppRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -62,24 +62,24 @@ func (s *S) TestLogRemoveByAppRun(c *gocheck.C) {
 	command := logRemove{}
 	command.Flags().Parse(true, []string{"--app", "app1"})
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, expected)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestLogRemoveFlagSet(c *gocheck.C) {
+func (s *S) TestLogRemoveFlagSet(c *check.C) {
 	command := logRemove{}
 	flagset := command.Flags()
 	flagset.Parse(true, []string{"--app", "ashamed"})
 	app := flagset.Lookup("app")
-	c.Check(app, gocheck.NotNil)
-	c.Check(app.Name, gocheck.Equals, "app")
-	c.Check(app.Usage, gocheck.Equals, "The name of the app.")
-	c.Check(app.Value.String(), gocheck.Equals, "ashamed")
-	c.Check(app.DefValue, gocheck.Equals, "")
+	c.Check(app, check.NotNil)
+	c.Check(app.Name, check.Equals, "app")
+	c.Check(app.Usage, check.Equals, "The name of the app.")
+	c.Check(app.Value.String(), check.Equals, "ashamed")
+	c.Check(app.DefValue, check.Equals, "")
 	sapp := flagset.Lookup("a")
-	c.Check(sapp, gocheck.NotNil)
-	c.Check(sapp.Name, gocheck.Equals, "a")
-	c.Check(sapp.Usage, gocheck.Equals, "The name of the app.")
-	c.Check(sapp.Value.String(), gocheck.Equals, "ashamed")
-	c.Check(sapp.DefValue, gocheck.Equals, "")
+	c.Check(sapp, check.NotNil)
+	c.Check(sapp.Name, check.Equals, "a")
+	c.Check(sapp.Usage, check.Equals, "The name of the app.")
+	c.Check(sapp.Value.String(), check.Equals, "ashamed")
+	c.Check(sapp.DefValue, check.Equals, "")
 }

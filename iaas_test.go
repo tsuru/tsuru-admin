@@ -13,20 +13,20 @@ import (
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"github.com/tsuru/tsuru/iaas"
-	"launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 )
 
-func (s *S) TestMachineListInfo(c *gocheck.C) {
+func (s *S) TestMachineListInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "machine-list",
 		Usage:   "machine-list",
 		Desc:    "List all machines created using a IaaS.",
 		MinArgs: 0,
 	}
-	c.Assert((&machineList{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&machineList{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestMachineListRun(c *gocheck.C) {
+func (s *S) TestMachineListRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -40,7 +40,7 @@ func (s *S) TestMachineListRun(c *gocheck.C) {
 		"param2": "value2",
 	}}
 	data, err := json.Marshal([]iaas.Machine{m1, m2})
-	c.Assert(err, gocheck.IsNil)
+	c.Assert(err, check.IsNil)
 	expected := `+-----+-------+---------+-----------------+
 | Id  | IaaS  | Address | Creation Params |
 +-----+-------+---------+-----------------+
@@ -59,21 +59,21 @@ func (s *S) TestMachineListRun(c *gocheck.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := machineList{}
 	err = command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, expected)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestMachineDestroyInfo(c *gocheck.C) {
+func (s *S) TestMachineDestroyInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "machine-destroy",
 		Usage:   "machine-destroy <machine id>",
 		Desc:    "Destroy an existing machine created using a IaaS.",
 		MinArgs: 1,
 	}
-	c.Assert((&machineDestroy{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&machineDestroy{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestMachineDestroyRun(c *gocheck.C) {
+func (s *S) TestMachineDestroyRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -89,21 +89,21 @@ func (s *S) TestMachineDestroyRun(c *gocheck.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := machineDestroy{}
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, "Machine successfully destroyed.\n")
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, "Machine successfully destroyed.\n")
 }
 
-func (s *S) TestTemplateListInfo(c *gocheck.C) {
+func (s *S) TestTemplateListInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "machine-template-list",
 		Usage:   "machine-template-list",
 		Desc:    "List all machine templates.",
 		MinArgs: 0,
 	}
-	c.Assert((&templateList{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&templateList{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestTemplateListRun(c *gocheck.C) {
+func (s *S) TestTemplateListRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -118,7 +118,7 @@ func (s *S) TestTemplateListRun(c *gocheck.C) {
 		{Name: "type", Value: "l1.large"},
 	}}
 	data, err := json.Marshal([]iaas.Template{tpl1, tpl2})
-	c.Assert(err, gocheck.IsNil)
+	c.Assert(err, check.IsNil)
 	expected := `+----------+------+------------------+
 | Name     | IaaS | Params           |
 +----------+------+------------------+
@@ -138,11 +138,11 @@ func (s *S) TestTemplateListRun(c *gocheck.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := templateList{}
 	err = command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, expected)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestTemplateAddCmdInfo(c *gocheck.C) {
+func (s *S) TestTemplateAddCmdInfo(c *check.C) {
 	expected := cmd.Info{
 		Name:    "machine-template-add",
 		Usage:   "machine-template-add <name> <iaas> <param>=<value>...",
@@ -150,10 +150,10 @@ func (s *S) TestTemplateAddCmdInfo(c *gocheck.C) {
 		MinArgs: 3,
 	}
 	cmd := templateAdd{}
-	c.Assert(cmd.Info(), gocheck.DeepEquals, &expected)
+	c.Assert(cmd.Info(), check.DeepEquals, &expected)
 }
 
-func (s *S) TestTemplateAddCmdRun(c *gocheck.C) {
+func (s *S) TestTemplateAddCmdRun(c *check.C) {
 	var buf bytes.Buffer
 	context := cmd.Context{Args: []string{"my-tpl", "ec2", "zone=xyz", "image=ami-something"}, Stdout: &buf}
 	expectedBody := `{"Name":"my-tpl","IaaSName":"ec2",` +
@@ -162,7 +162,7 @@ func (s *S) TestTemplateAddCmdRun(c *gocheck.C) {
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			body, _ := ioutil.ReadAll(req.Body)
-			c.Assert(string(body), gocheck.DeepEquals, expectedBody)
+			c.Assert(string(body), check.DeepEquals, expectedBody)
 			return req.URL.Path == "/iaas/templates" && req.Method == "POST"
 		},
 	}
@@ -170,11 +170,11 @@ func (s *S) TestTemplateAddCmdRun(c *gocheck.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
 	cmd := templateAdd{}
 	err := cmd.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(buf.String(), gocheck.Equals, "Template successfully added.\n")
+	c.Assert(err, check.IsNil)
+	c.Assert(buf.String(), check.Equals, "Template successfully added.\n")
 }
 
-func (s *S) TestTemplateRemoveCmdInfo(c *gocheck.C) {
+func (s *S) TestTemplateRemoveCmdInfo(c *check.C) {
 	expected := cmd.Info{
 		Name:    "machine-template-remove",
 		Usage:   "machine-template-remove <name>",
@@ -182,10 +182,10 @@ func (s *S) TestTemplateRemoveCmdInfo(c *gocheck.C) {
 		MinArgs: 1,
 	}
 	cmd := templateRemove{}
-	c.Assert(cmd.Info(), gocheck.DeepEquals, &expected)
+	c.Assert(cmd.Info(), check.DeepEquals, &expected)
 }
 
-func (s *S) TestTemplateRemoveCmdRun(c *gocheck.C) {
+func (s *S) TestTemplateRemoveCmdRun(c *check.C) {
 	var buf bytes.Buffer
 	context := cmd.Context{Args: []string{"my-tpl"}, Stdout: &buf, Stderr: &buf}
 	trans := &cmdtest.ConditionalTransport{
@@ -198,6 +198,6 @@ func (s *S) TestTemplateRemoveCmdRun(c *gocheck.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
 	cmd := templateRemove{}
 	err := cmd.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(buf.String(), gocheck.Equals, "Template successfully removed.\n")
+	c.Assert(err, check.IsNil)
+	c.Assert(buf.String(), check.Equals, "Template successfully removed.\n")
 }

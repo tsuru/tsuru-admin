@@ -12,20 +12,20 @@ import (
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
-	"launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 )
 
-func (s *S) TestPlanCreateInfo(c *gocheck.C) {
+func (s *S) TestPlanCreateInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "plan-create",
 		Usage:   "plan-create <name> -c cpushare [-m memory] [-s swap] [-r router] [--default]",
 		Desc:    "Creates a new plan for being used when creating apps.",
 		MinArgs: 1,
 	}
-	c.Assert((&planCreate{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&planCreate{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestPlanCreate(c *gocheck.C) {
+func (s *S) TestPlanCreate(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Args:   []string{"myplan"},
@@ -37,7 +37,7 @@ func (s *S) TestPlanCreate(c *gocheck.C) {
 		CondFunc: func(req *http.Request) bool {
 			var plan app.Plan
 			err := json.NewDecoder(req.Body).Decode(&plan)
-			c.Assert(err, gocheck.IsNil)
+			c.Assert(err, check.IsNil)
 			expected := app.Plan{
 				Name:     "myplan",
 				Memory:   0,
@@ -46,7 +46,7 @@ func (s *S) TestPlanCreate(c *gocheck.C) {
 				Default:  false,
 				Router:   "",
 			}
-			c.Assert(plan, gocheck.DeepEquals, expected)
+			c.Assert(plan, check.DeepEquals, expected)
 			return req.URL.Path == "/plans" && req.Method == "POST"
 		},
 	}
@@ -54,11 +54,11 @@ func (s *S) TestPlanCreate(c *gocheck.C) {
 	command := planCreate{}
 	command.Flags().Parse(true, []string{"-c", "100"})
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, "Plan successfully created!\n")
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, "Plan successfully created!\n")
 }
 
-func (s *S) TestPlanCreateFlags(c *gocheck.C) {
+func (s *S) TestPlanCreateFlags(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Args:   []string{"myplan"},
@@ -70,7 +70,7 @@ func (s *S) TestPlanCreateFlags(c *gocheck.C) {
 		CondFunc: func(req *http.Request) bool {
 			var plan app.Plan
 			err := json.NewDecoder(req.Body).Decode(&plan)
-			c.Assert(err, gocheck.IsNil)
+			c.Assert(err, check.IsNil)
 			expected := app.Plan{
 				Name:     "myplan",
 				Memory:   1024,
@@ -79,7 +79,7 @@ func (s *S) TestPlanCreateFlags(c *gocheck.C) {
 				Default:  true,
 				Router:   "myrouter",
 			}
-			c.Assert(plan, gocheck.DeepEquals, expected)
+			c.Assert(plan, check.DeepEquals, expected)
 			return req.URL.Path == "/plans" && req.Method == "POST"
 		},
 	}
@@ -87,11 +87,11 @@ func (s *S) TestPlanCreateFlags(c *gocheck.C) {
 	command := planCreate{}
 	command.Flags().Parse(true, []string{"-c", "100", "-m", "1024", "-s", "512", "-d", "-r", "myrouter"})
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, "Plan successfully created!\n")
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, "Plan successfully created!\n")
 }
 
-func (s *S) TestPlanCreateError(c *gocheck.C) {
+func (s *S) TestPlanCreateError(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Args:   []string{"myplan"},
@@ -107,21 +107,21 @@ func (s *S) TestPlanCreateError(c *gocheck.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := planCreate{}
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.NotNil)
-	c.Assert(stdout.String(), gocheck.Equals, "Failed to create plan!\n")
+	c.Assert(err, check.NotNil)
+	c.Assert(stdout.String(), check.Equals, "Failed to create plan!\n")
 }
 
-func (s *S) TestPlanRemoveInfo(c *gocheck.C) {
+func (s *S) TestPlanRemoveInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "plan-remove",
 		Usage:   "plan-remove <name>",
 		Desc:    "Removes a plan from the database.",
 		MinArgs: 1,
 	}
-	c.Assert((&planRemove{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&planRemove{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestPlanRemove(c *gocheck.C) {
+func (s *S) TestPlanRemove(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Args:   []string{"myplan"},
@@ -137,11 +137,11 @@ func (s *S) TestPlanRemove(c *gocheck.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := planRemove{}
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, "Plan successfully removed!\n")
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, "Plan successfully removed!\n")
 }
 
-func (s *S) TestPlanRemoveError(c *gocheck.C) {
+func (s *S) TestPlanRemoveError(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Args:   []string{"myplan"},
@@ -157,6 +157,6 @@ func (s *S) TestPlanRemoveError(c *gocheck.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := planRemove{}
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.NotNil)
-	c.Assert(stdout.String(), gocheck.Equals, "Failed to remove plan!\n")
+	c.Assert(err, check.NotNil)
+	c.Assert(stdout.String(), check.Equals, "Failed to remove plan!\n")
 }

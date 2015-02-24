@@ -11,10 +11,10 @@ import (
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
-	"launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 )
 
-func (s *S) TestPlatformAddInfo(c *gocheck.C) {
+func (s *S) TestPlatformAddInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "platform-add",
 		Usage:   "platform-add <platform name> [--dockerfile/-d Dockerfile]",
@@ -22,10 +22,10 @@ func (s *S) TestPlatformAddInfo(c *gocheck.C) {
 		MinArgs: 1,
 	}
 
-	c.Assert((&platformAdd{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&platformAdd{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestPlatformAddRun(c *gocheck.C) {
+func (s *S) TestPlatformAddRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -36,7 +36,7 @@ func (s *S) TestPlatformAddRun(c *gocheck.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			c.Assert(req.Header.Get("Content-Type"), gocheck.Equals, "application/x-www-form-urlencoded")
+			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
 			return req.URL.Path == "/platforms" && req.Method == "POST"
 		},
 	}
@@ -44,55 +44,55 @@ func (s *S) TestPlatformAddRun(c *gocheck.C) {
 	command := platformAdd{}
 	command.Flags().Parse(true, []string{"--dockerfile", "http://localhost/Dockerfile"})
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, expected)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestPlatformAddFlagSet(c *gocheck.C) {
+func (s *S) TestPlatformAddFlagSet(c *check.C) {
 	message := "The dockerfile url to create a platform"
 	command := platformAdd{}
 	flagset := command.Flags()
 	flagset.Parse(true, []string{"--dockerfile", "dockerfile"})
 
 	dockerfile := flagset.Lookup("dockerfile")
-	c.Check(dockerfile.Name, gocheck.Equals, "dockerfile")
-	c.Check(dockerfile.Usage, gocheck.Equals, message)
-	c.Check(dockerfile.DefValue, gocheck.Equals, "")
+	c.Check(dockerfile.Name, check.Equals, "dockerfile")
+	c.Check(dockerfile.Usage, check.Equals, message)
+	c.Check(dockerfile.DefValue, check.Equals, "")
 
 	sdockerfile := flagset.Lookup("d")
-	c.Check(sdockerfile.Name, gocheck.Equals, "d")
-	c.Check(sdockerfile.Usage, gocheck.Equals, message)
-	c.Check(sdockerfile.DefValue, gocheck.Equals, "")
+	c.Check(sdockerfile.Name, check.Equals, "d")
+	c.Check(sdockerfile.Usage, check.Equals, message)
+	c.Check(sdockerfile.DefValue, check.Equals, "")
 }
 
-func (s *S) TestPlatformUpdateInfo(c *gocheck.C) {
+func (s *S) TestPlatformUpdateInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "platform-update",
 		Usage:   "platform-update <platform name> [--dockerfile/-d Dockerfile]",
 		Desc:    "Update a platform to tsuru.",
 		MinArgs: 1,
 	}
-	c.Assert((&platformUpdate{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&platformUpdate{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestPlatformUpdateFlagSet(c *gocheck.C) {
+func (s *S) TestPlatformUpdateFlagSet(c *check.C) {
 	dockerfile_message := "The dockerfile url to update a platform"
 	command := platformUpdate{}
 	flagset := command.Flags()
 	flagset.Parse(true, []string{"--dockerfile", "dockerfile"})
 
 	dockerfile := flagset.Lookup("dockerfile")
-	c.Check(dockerfile.Name, gocheck.Equals, "dockerfile")
-	c.Check(dockerfile.Usage, gocheck.Equals, dockerfile_message)
-	c.Check(dockerfile.DefValue, gocheck.Equals, "")
+	c.Check(dockerfile.Name, check.Equals, "dockerfile")
+	c.Check(dockerfile.Usage, check.Equals, dockerfile_message)
+	c.Check(dockerfile.DefValue, check.Equals, "")
 
 	sdockerfile := flagset.Lookup("d")
-	c.Check(sdockerfile.Name, gocheck.Equals, "d")
-	c.Check(sdockerfile.Usage, gocheck.Equals, dockerfile_message)
-	c.Check(sdockerfile.DefValue, gocheck.Equals, "")
+	c.Check(sdockerfile.Name, check.Equals, "d")
+	c.Check(sdockerfile.Usage, check.Equals, dockerfile_message)
+	c.Check(sdockerfile.DefValue, check.Equals, "")
 }
 
-func (s *S) TestPlatformUpdateRun(c *gocheck.C) {
+func (s *S) TestPlatformUpdateRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	name := "teste"
 	context := cmd.Context{
@@ -104,8 +104,8 @@ func (s *S) TestPlatformUpdateRun(c *gocheck.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			c.Assert(req.Header.Get("Content-Type"), gocheck.Equals, "application/x-www-form-urlencoded")
-			c.Assert(req.FormValue("dockerfile"), gocheck.Equals, "http://localhost/Dockerfile")
+			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
+			c.Assert(req.FormValue("dockerfile"), check.Equals, "http://localhost/Dockerfile")
 			return req.URL.Path == "/platforms/"+name && req.Method == "PUT"
 		},
 	}
@@ -113,11 +113,11 @@ func (s *S) TestPlatformUpdateRun(c *gocheck.C) {
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--dockerfile", "http://localhost/Dockerfile"})
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, expected)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestPlatformRemoveRun(c *gocheck.C) {
+func (s *S) TestPlatformRemoveRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	name := "teste"
 	context := cmd.Context{
@@ -136,21 +136,21 @@ func (s *S) TestPlatformRemoveRun(c *gocheck.C) {
 	command := platformRemove{}
 	command.Flags().Parse(true, []string{"-y"})
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, expected)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestPlatformRemoveInfo(c *gocheck.C) {
+func (s *S) TestPlatformRemoveInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "platform-remove",
 		Usage:   "platform-remove <platform name> [-y]",
 		Desc:    "Remove a platform from tsuru.",
 		MinArgs: 1,
 	}
-	c.Assert((&platformRemove{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&platformRemove{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestPlatformRemoveConfirmation(c *gocheck.C) {
+func (s *S) TestPlatformRemoveConfirmation(c *check.C) {
 	var stdout bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -159,6 +159,6 @@ func (s *S) TestPlatformRemoveConfirmation(c *gocheck.C) {
 	}
 	command := platformRemove{}
 	err := command.Run(&context, nil)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, "Are you sure you want to remove \"something\" platform? (y/n) Abort.\n")
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, "Are you sure you want to remove \"something\" platform? (y/n) Abort.\n")
 }

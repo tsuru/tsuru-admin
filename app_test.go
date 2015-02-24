@@ -11,10 +11,10 @@ import (
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
-	"launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 )
 
-func (s *S) TestAppLockDeleteInfo(c *gocheck.C) {
+func (s *S) TestAppLockDeleteInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:  "app-unlock",
 		Usage: "app-unlock -a <app-name> [-y]",
@@ -22,10 +22,10 @@ func (s *S) TestAppLockDeleteInfo(c *gocheck.C) {
 Use with caution, removing an active lock may cause inconsistencies.`,
 		MinArgs: 0,
 	}
-	c.Assert((&appLockDelete{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&appLockDelete{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestAppLockDeleteRun(c *gocheck.C) {
+func (s *S) TestAppLockDeleteRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -42,11 +42,11 @@ func (s *S) TestAppLockDeleteRun(c *gocheck.C) {
 	command := appLockDelete{}
 	command.Flags().Parse(true, []string{"--app", "app1", "-y"})
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, expected)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestAppLockDeleteRunAsksConfirmation(c *gocheck.C) {
+func (s *S) TestAppLockDeleteRunAsksConfirmation(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -56,6 +56,6 @@ func (s *S) TestAppLockDeleteRunAsksConfirmation(c *gocheck.C) {
 	command := appLockDelete{}
 	command.Flags().Parse(true, []string{"--app", "app1"})
 	err := command.Run(&context, nil)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, "Are you sure you want to remove the lock from app \"app1\"? (y/n) Abort.\n")
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, "Are you sure you want to remove the lock from app \"app1\"? (y/n) Abort.\n")
 }

@@ -10,20 +10,20 @@ import (
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
-	"launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 )
 
-func (s *S) TestListUsersInfo(c *gocheck.C) {
+func (s *S) TestListUsersInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "user-list",
 		MinArgs: 0,
 		Usage:   "user-list",
 		Desc:    "List all users in tsuru.",
 	}
-	c.Assert((&listUsers{}).Info(), gocheck.DeepEquals, expected)
+	c.Assert((&listUsers{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestListUsersRun(c *gocheck.C) {
+func (s *S) TestListUsersRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
 		Stdout: &stdout,
@@ -46,6 +46,6 @@ func (s *S) TestListUsersRun(c *gocheck.C) {
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
 	command := listUsers{}
 	err := command.Run(&context, client)
-	c.Assert(err, gocheck.IsNil)
-	c.Assert(stdout.String(), gocheck.Equals, expected)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
 }

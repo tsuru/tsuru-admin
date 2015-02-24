@@ -1,4 +1,4 @@
-// Copyright 2014 tsuru-admin authors. All rights reserved.
+// Copyright 2015 tsuru-admin authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -12,7 +12,7 @@ import (
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"github.com/tsuru/tsuru/provision/provisiontest"
-	"launchpad.net/gocheck"
+	"gopkg.in/check.v1"
 )
 
 type S struct {
@@ -21,19 +21,19 @@ type S struct {
 
 var manager *cmd.Manager
 
-func (s *S) SetUpSuite(c *gocheck.C) {
+func (s *S) SetUpSuite(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	manager = cmd.NewManager("glb", version, header, &stdout, &stderr, os.Stdin, nil)
 	s.recover = cmdtest.SetTargetFile(c, []byte("http://localhost"))
 }
 
-func (s *S) TearDownSuite(c *gocheck.C) {
+func (s *S) TearDownSuite(c *check.C) {
 	cmdtest.RollbackFile(s.recover)
 }
 
-var _ = gocheck.Suite(&S{})
+var _ = check.Suite(&S{})
 
-func Test(t *testing.T) { gocheck.TestingT(t) }
+func Test(t *testing.T) { check.TestingT(t) }
 
 type AdminCommandableProvisioner struct {
 	provisiontest.FakeProvisioner
