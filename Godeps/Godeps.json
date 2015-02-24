@@ -80,19 +80,19 @@
 		},
 		{
 			"ImportPath": "github.com/tsuru/config",
-			"Rev": "96579b79a0a66b9b6c95a8ff7c344aa512b41288"
+			"Rev": "a2b4aec819a60c646dad55cba9c76ddfed4b6ed1"
 		},
 		{
 			"ImportPath": "github.com/tsuru/docker-cluster/cluster",
-			"Rev": "08394df25dcf18e61d6b98da7a0756c0ea9cef51"
+			"Rev": "37fc6bb12f8bf66179ee46a999c90169eac96a75"
 		},
 		{
 			"ImportPath": "github.com/tsuru/docker-cluster/log",
-			"Rev": "08394df25dcf18e61d6b98da7a0756c0ea9cef51"
+			"Rev": "37fc6bb12f8bf66179ee46a999c90169eac96a75"
 		},
 		{
 			"ImportPath": "github.com/tsuru/docker-cluster/storage",
-			"Rev": "08394df25dcf18e61d6b98da7a0756c0ea9cef51"
+			"Rev": "37fc6bb12f8bf66179ee46a999c90169eac96a75"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/action",
