@@ -1,4 +1,4 @@
-# Copyright 2014 tsuru-admin authors. All rights reserved.
+# Copyright 2015 tsuru-admin authors. All rights reserved.
 # Use of this source code is governed by a BSD-style
 #  license that can be found in the LICENSE file.
 
@@ -23,3 +23,7 @@ release:
 	@git push origin master
 
 	@echo "$(version) released!"
+
+godep:
+	go get $(GO_EXTRAFLAGS) github.com/tools/godep
+	godep restore ./...
