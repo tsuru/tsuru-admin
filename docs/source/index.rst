@@ -298,6 +298,19 @@ Using the ``-f/--filter`` flag, the user is able to filter the nodes that
 appear in the list based on the key pairs displayed in the metadata column.
 Users can also combine filters with multiple listings of ``-f``:
 
+docker-node-update
+------------------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin docker-node-update <address> [param_name=param_value...]
+
+This command modifies metadata associated to a docker node. If a parameter is set
+to an empty value, it will be removed from the node's metadata.
+
+
 .. highlight:: bash
 
 ::
