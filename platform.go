@@ -1,4 +1,4 @@
-// Copyright 2014 tsuru-admin authors. All rights reserved.
+// Copyright 2015 tsuru-admin authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -32,6 +32,7 @@ func (p *platformAdd) Info() *cmd.Info {
 }
 
 func (p *platformAdd) Run(context *cmd.Context, client *cmd.Client) error {
+	context.RawOutput()
 	name := context.Args[0]
 	body := fmt.Sprintf("name=%s&dockerfile=%s", name, p.dockerfile)
 	url, err := cmd.GetURL("/platforms")
@@ -92,6 +93,7 @@ func (p *platformUpdate) Flags() *gnuflag.FlagSet {
 }
 
 func (p *platformUpdate) Run(context *cmd.Context, client *cmd.Client) error {
+	context.RawOutput()
 	name := context.Args[0]
 	body := fmt.Sprintf("a=1&dockerfile=%s", p.dockerfile)
 	url, err := cmd.GetURL("/platforms/" + name)
