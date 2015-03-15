@@ -716,3 +716,14 @@ app-unlock
 
 Forces the removal of an app lock.
 Use with caution, removing an active lock may cause inconsistencies.
+
+router-list
+----------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin router-list
+
+List all routers available for plan creation.
