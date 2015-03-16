@@ -129,7 +129,7 @@ func (c *planRoutersList) Info() *cmd.Info {
 }
 
 func (c *planRoutersList) Run(context *cmd.Context, client *cmd.Client) error {
-	url, err := cmd.GetURL("/plan/routers")
+	url, err := cmd.GetURL("/plans/routers")
 	if err != nil {
 		return err
 	}

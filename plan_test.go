@@ -194,7 +194,7 @@ func (s *S) TestPlanRoutersListRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(data), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/plan/routers" && req.Method == "GET"
+			return req.URL.Path == "/plans/routers" && req.Method == "GET"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
