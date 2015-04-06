@@ -38,6 +38,11 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(&templateAdd{})
 	m.Register(&templateRemove{})
 	m.Register(&listUsers{})
+	m.RegisterDeprecated(addPoolToSchedulerCmd{}, "docker-pool-add")
+	m.RegisterDeprecated(&removePoolFromSchedulerCmd{}, "docker-pool-remove")
+	m.RegisterDeprecated(listPoolsInTheSchedulerCmd{}, "docker-pool-list")
+	m.RegisterDeprecated(addTeamsToPoolCmd{}, "docker-pool-teams-add")
+	m.RegisterDeprecated(removeTeamsFromPoolCmd{}, "docker-pool-teams-remove")
 	m.RegisterDeprecated(&cmd.ShellToContainerCmd{}, "ssh")
 	registerProvisionersCommands(m)
 	return m
