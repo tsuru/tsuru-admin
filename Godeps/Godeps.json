@@ -1,12 +1,7 @@
 {
 	"ImportPath": "github.com/tsuru/tsuru-admin",
-	"GoVersion": "devel +d9859ad Tue Feb 24 17:35:25 2015 +0000",
+	"GoVersion": "devel +1b4025f Fri Apr 24 20:10:14 2015 +0000",
 	"Deps": [
-		{
-			"ImportPath": "code.google.com/p/goauth2/oauth",
-			"Comment": "weekly-48",
-			"Rev": "6a3615e294b534a1c24cb5d3d7570fa8bbc30c99"
-		},
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
 			"Comment": "v0.5.1-37-g6ebb4e7",
@@ -92,6 +87,10 @@
 		{
 			"ImportPath": "github.com/tsuru/docker-cluster/storage",
 			"Rev": "f993a0852523111045987f862d046d1a23f75201"
+		},
+		{
+			"ImportPath": "github.com/tsuru/monsterqueue",
+			"Rev": "c5a9483b7caddae75bfa6cce8f1eaebe88e5b7d6"
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/action",
@@ -221,6 +220,18 @@
 			"Rev": "1fbbd62cfec66bd39d91e97749579579d4d3037e"
 		},
 		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "ff8eb9a34a5cbb9941ffc6f84a19a8014c2646ad"
+		},
+		{
+			"ImportPath": "golang.org/x/net/netutil",
+			"Rev": "ff8eb9a34a5cbb9941ffc6f84a19a8014c2646ad"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2",
+			"Rev": "96e89befdc0f88d5868b297eb0e0727ce6978884"
+		},
+		{
 			"ImportPath": "gopkg.in/amz.v2/aws",
 			"Rev": "e902e769a04d5c84fb6b61d2cd362bc8f973b787"
 		},
@@ -235,6 +246,11 @@
 		{
 			"ImportPath": "gopkg.in/mgo.v2",
 			"Rev": "dc255bb679efa273b6544a03261c4053505498a4"
+		},
+		{
+			"ImportPath": "gopkg.in/tylerb/graceful.v1",
+			"Comment": "v1",
+			"Rev": "d506b859c378b0e4a1b16d44021f3937f9ba4578"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v1",
