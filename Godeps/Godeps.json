@@ -49,7 +49,7 @@
 		},
 		{
 			"ImportPath": "github.com/fsouza/go-dockerclient",
-			"Rev": "20220089b9b5b43f9bc668e4942d39455cd39845"
+			"Rev": "0ba7f0a32981ca4c1043c245017eb099708695ef"
 		},
 		{
 			"ImportPath": "github.com/garyburd/redigo/redis",
@@ -78,15 +78,15 @@
 		},
 		{
 			"ImportPath": "github.com/tsuru/docker-cluster/cluster",
-			"Rev": "f993a0852523111045987f862d046d1a23f75201"
+			"Rev": "6e9d5514297396b71457c29b9ac6dbc3745b4aeb"
 		},
 		{
 			"ImportPath": "github.com/tsuru/docker-cluster/log",
-			"Rev": "f993a0852523111045987f862d046d1a23f75201"
+			"Rev": "6e9d5514297396b71457c29b9ac6dbc3745b4aeb"
 		},
 		{
 			"ImportPath": "github.com/tsuru/docker-cluster/storage",
-			"Rev": "f993a0852523111045987f862d046d1a23f75201"
+			"Rev": "6e9d5514297396b71457c29b9ac6dbc3745b4aeb"
 		},
 		{
 			"ImportPath": "github.com/tsuru/monsterqueue",
