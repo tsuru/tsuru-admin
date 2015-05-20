@@ -598,7 +598,7 @@ change-app-quota
 
 ::
 
-    $ tsuru-admin change-app-quota <user-email> <new-limit>
+    $ tsuru-admin change-app-quota <app-name> <new-limit>
 
 Changes the limit of units that an app can have. The new limit must be an
 integer, it may also be "unlimited".
