@@ -14,21 +14,34 @@ import (
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/provision"
+	"launchpad.net/gnuflag"
 )
 
-type addPoolToSchedulerCmd struct{}
+type addPoolToSchedulerCmd struct {
+	public bool
+	fs     *gnuflag.FlagSet
+}
 
 func (addPoolToSchedulerCmd) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "pool-add",
-		Usage:   "pool-add <pool>",
-		Desc:    "Add a pool to cluster",
+		Usage:   "pool-add <pool> [-p/--public]",
+		Desc:    "Add a pool to cluster. Use [-p/--public] flag to create a public pool.",
 		MinArgs: 1,
 	}
 }
 
-func (addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	b, err := json.Marshal(map[string]string{"pool": ctx.Args[0]})
+func (c *addPoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
+	if c.fs == nil {
+		c.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
+		c.fs.BoolVar(&c.public, "public", false, "Make pool public")
+		c.fs.BoolVar(&c.public, "p", false, "Make pool public")
+	}
+	return c.fs
+}
+
+func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
+	b, err := json.Marshal(map[string]interface{}{"name": ctx.Args[0], "public": c.public})
 	if err != nil {
 		return err
 	}

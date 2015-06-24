@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -19,8 +20,8 @@ import (
 func (s *S) TestAddPoolToSchedulerCmdInfo(c *check.C) {
 	expected := cmd.Info{
 		Name:    "pool-add",
-		Usage:   "pool-add <pool>",
-		Desc:    "Add a pool to cluster",
+		Usage:   "pool-add <pool> [-p/--public]",
+		Desc:    "Add a pool to cluster. Use [-p/--public] flag to create a public pool.",
 		MinArgs: 1,
 	}
 	cmd := addPoolToSchedulerCmd{}
@@ -39,6 +40,33 @@ func (s *S) TestAddPoolToTheSchedulerCmd(c *check.C) {
 	manager := cmd.Manager{}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
 	cmd := addPoolToSchedulerCmd{}
+	err := cmd.Run(&context, client)
+	c.Assert(err, check.IsNil)
+}
+
+func (s *S) TestAddPublicPool(c *check.C) {
+	var buf bytes.Buffer
+	context := cmd.Context{Args: []string{"test"}, Stdout: &buf}
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			defer req.Body.Close()
+			body, err := ioutil.ReadAll(req.Body)
+			c.Assert(err, check.IsNil)
+			expected := map[string]interface{}{
+				"name":   "test",
+				"public": true,
+			}
+			result := map[string]interface{}{}
+			err = json.Unmarshal(body, &result)
+			c.Assert(expected, check.DeepEquals, result)
+			return req.URL.Path == "/pool"
+		},
+	}
+	manager := cmd.Manager{}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
+	cmd := addPoolToSchedulerCmd{}
+	cmd.Flags().Parse(true, []string{"-p"})
 	err := cmd.Run(&context, client)
 	c.Assert(err, check.IsNil)
 }
