@@ -62,15 +62,18 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 }
 
 type updatePoolToSchedulerCmd struct {
-	public bool
-	fs     *gnuflag.FlagSet
+	public  bool
+	newName string
+	fs      *gnuflag.FlagSet
 }
 
 func (updatePoolToSchedulerCmd) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "pool-update",
-		Usage:   "pool-update <pool> [--public=true/false]",
-		Desc:    "Update a pool. Use [--public=true/false] to change the pool attribute.",
+		Name:  "pool-update",
+		Usage: "pool-update <pool> [--public=true/false] [--new-name=<new_name>]",
+		Desc: `Update a pool.
+Use [--public=true/false] to change the pool attribute.
+Use [--new-name=<new_name>] to change pool name.`,
 		MinArgs: 1,
 	}
 }
@@ -78,14 +81,14 @@ func (updatePoolToSchedulerCmd) Info() *cmd.Info {
 func (c *updatePoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
 	if c.fs == nil {
 		c.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
-		c.fs.BoolVar(&c.public, "public", false, "Make pool public")
-		c.fs.BoolVar(&c.public, "p", false, "Make pool public")
+		c.fs.BoolVar(&c.public, "public", false, "Make pool public.")
+		c.fs.StringVar(&c.newName, "new-name", "", "Change pool name.")
 	}
 	return c.fs
 }
 
 func (c *updatePoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	b, err := json.Marshal(provision.PoolUpdateOptions{Public: c.public})
+	b, err := json.Marshal(provision.PoolUpdateOptions{Public: c.public, NewName: c.newName})
 	if err != nil {
 		return err
 	}

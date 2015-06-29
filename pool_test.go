@@ -73,9 +73,11 @@ func (s *S) TestAddPublicPool(c *check.C) {
 
 func (s *S) TestUpdatePoolToSchedulerCmdInfo(c *check.C) {
 	expected := cmd.Info{
-		Name:    "pool-update",
-		Usage:   "pool-update <pool> [--public=true/false]",
-		Desc:    "Update a pool. Use [--public=true/false] to change the pool attribute.",
+		Name:  "pool-update",
+		Usage: "pool-update <pool> [--public=true/false] [--new-name=<new_name>]",
+		Desc: `Update a pool.
+Use [--public=true/false] to change the pool attribute.
+Use [--new-name=<new_name>] to change pool name.`,
 		MinArgs: 1,
 	}
 	cmd := updatePoolToSchedulerCmd{}
@@ -94,7 +96,7 @@ func (s *S) TestUpdatePoolToTheSchedulerCmd(c *check.C) {
 	manager := cmd.Manager{}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
 	cmd := updatePoolToSchedulerCmd{}
-	cmd.Flags().Parse(true, []string{"--public", "true"})
+	cmd.Flags().Parse(true, []string{"--public", "true", "--new-name", "test"})
 	err := cmd.Run(&context, client)
 	c.Assert(err, check.IsNil)
 }
