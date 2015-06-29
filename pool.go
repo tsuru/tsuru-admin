@@ -61,6 +61,50 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 	return nil
 }
 
+type updatePoolToSchedulerCmd struct {
+	public bool
+	fs     *gnuflag.FlagSet
+}
+
+func (updatePoolToSchedulerCmd) Info() *cmd.Info {
+	return &cmd.Info{
+		Name:    "pool-update",
+		Usage:   "pool-update <pool> [--public=true/false]",
+		Desc:    "Update a pool. Use [--public=true/false] to change the pool attribute.",
+		MinArgs: 1,
+	}
+}
+
+func (c *updatePoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
+	if c.fs == nil {
+		c.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
+		c.fs.BoolVar(&c.public, "public", false, "Make pool public")
+		c.fs.BoolVar(&c.public, "p", false, "Make pool public")
+	}
+	return c.fs
+}
+
+func (c *updatePoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
+	b, err := json.Marshal(provision.PoolUpdateOptions{Public: c.public})
+	if err != nil {
+		return err
+	}
+	url, err := cmd.GetURL(fmt.Sprintf("/pool/%s", ctx.Args[0]))
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
+	if err != nil {
+		return err
+	}
+	_, err = client.Do(req)
+	if err != nil {
+		return err
+	}
+	ctx.Stdout.Write([]byte("Pool successfully updated.\n"))
+	return nil
+}
+
 type removePoolFromSchedulerCmd struct {
 	cmd.ConfirmationCommand
 }

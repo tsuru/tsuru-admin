@@ -71,6 +71,34 @@ func (s *S) TestAddPublicPool(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
+func (s *S) TestUpdatePoolToSchedulerCmdInfo(c *check.C) {
+	expected := cmd.Info{
+		Name:    "pool-update",
+		Usage:   "pool-update <pool> [--public=true/false]",
+		Desc:    "Update a pool. Use [--public=true/false] to change the pool attribute.",
+		MinArgs: 1,
+	}
+	cmd := updatePoolToSchedulerCmd{}
+	c.Assert(cmd.Info(), check.DeepEquals, &expected)
+}
+
+func (s *S) TestUpdatePoolToTheSchedulerCmd(c *check.C) {
+	var buf bytes.Buffer
+	context := cmd.Context{Args: []string{"poolTest"}, Stdout: &buf}
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			return req.URL.Path == "/pool/poolTest"
+		},
+	}
+	manager := cmd.Manager{}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
+	cmd := updatePoolToSchedulerCmd{}
+	cmd.Flags().Parse(true, []string{"--public", "true"})
+	err := cmd.Run(&context, client)
+	c.Assert(err, check.IsNil)
+}
+
 func (s *S) TestRemovePoolFromSchedulerCmdInfo(c *check.C) {
 	expected := cmd.Info{
 		Name:    "pool-remove",
