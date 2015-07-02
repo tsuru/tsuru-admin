@@ -18,15 +18,18 @@ import (
 )
 
 type addPoolToSchedulerCmd struct {
-	public bool
-	fs     *gnuflag.FlagSet
+	public      bool
+	defaultPool bool
+	fs          *gnuflag.FlagSet
 }
 
 func (addPoolToSchedulerCmd) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "pool-add",
-		Usage:   "pool-add <pool> [-p/--public]",
-		Desc:    "Add a pool to cluster. Use [-p/--public] flag to create a public pool.",
+		Name:  "pool-add",
+		Usage: "pool-add <pool> [-p/--public] [-d/--default]",
+		Desc: `Add a pool to cluster.
+Use [-p/--public] flag to create a public pool.
+Use [-d/--default] flag to create default pool.`,
 		MinArgs: 1,
 	}
 }
@@ -36,12 +39,18 @@ func (c *addPoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
 		c.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
 		c.fs.BoolVar(&c.public, "public", false, "Make pool public")
 		c.fs.BoolVar(&c.public, "p", false, "Make pool public")
+		c.fs.BoolVar(&c.defaultPool, "default", false, "Make pool default")
+		c.fs.BoolVar(&c.defaultPool, "d", false, "Make pool default")
 	}
 	return c.fs
 }
 
 func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	b, err := json.Marshal(map[string]interface{}{"name": ctx.Args[0], "public": c.public})
+	b, err := json.Marshal(map[string]interface{}{
+		"name":    ctx.Args[0],
+		"public":  c.public,
+		"default": c.defaultPool,
+	})
 	if err != nil {
 		return err
 	}

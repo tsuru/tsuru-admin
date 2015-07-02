@@ -19,9 +19,11 @@ import (
 
 func (s *S) TestAddPoolToSchedulerCmdInfo(c *check.C) {
 	expected := cmd.Info{
-		Name:    "pool-add",
-		Usage:   "pool-add <pool> [-p/--public]",
-		Desc:    "Add a pool to cluster. Use [-p/--public] flag to create a public pool.",
+		Name:  "pool-add",
+		Usage: "pool-add <pool> [-p/--public] [-d/--default]",
+		Desc: `Add a pool to cluster.
+Use [-p/--public] flag to create a public pool.
+Use [-d/--default] flag to create default pool.`,
 		MinArgs: 1,
 	}
 	cmd := addPoolToSchedulerCmd{}
@@ -54,8 +56,9 @@ func (s *S) TestAddPublicPool(c *check.C) {
 			body, err := ioutil.ReadAll(req.Body)
 			c.Assert(err, check.IsNil)
 			expected := map[string]interface{}{
-				"name":   "test",
-				"public": true,
+				"name":    "test",
+				"public":  true,
+				"default": false,
 			}
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
@@ -67,6 +70,34 @@ func (s *S) TestAddPublicPool(c *check.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
 	cmd := addPoolToSchedulerCmd{}
 	cmd.Flags().Parse(true, []string{"-p"})
+	err := cmd.Run(&context, client)
+	c.Assert(err, check.IsNil)
+}
+
+func (s *S) TestAddDefaultPool(c *check.C) {
+	var buf bytes.Buffer
+	context := cmd.Context{Args: []string{"test"}, Stdout: &buf}
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			defer req.Body.Close()
+			body, err := ioutil.ReadAll(req.Body)
+			c.Assert(err, check.IsNil)
+			expected := map[string]interface{}{
+				"name":    "test",
+				"public":  false,
+				"default": true,
+			}
+			result := map[string]interface{}{}
+			err = json.Unmarshal(body, &result)
+			c.Assert(expected, check.DeepEquals, result)
+			return req.URL.Path == "/pool"
+		},
+	}
+	manager := cmd.Manager{}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
+	cmd := addPoolToSchedulerCmd{}
+	cmd.Flags().Parse(true, []string{"-d"})
 	err := cmd.Run(&context, client)
 	c.Assert(err, check.IsNil)
 }
