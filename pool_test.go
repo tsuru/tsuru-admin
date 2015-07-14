@@ -20,10 +20,11 @@ import (
 func (s *S) TestAddPoolToSchedulerCmdInfo(c *check.C) {
 	expected := cmd.Info{
 		Name:  "pool-add",
-		Usage: "pool-add <pool> [-p/--public] [-d/--default]",
+		Usage: "pool-add <pool> [-p/--public] [-d/--default] [-f/--force]",
 		Desc: `Add a pool to cluster.
 Use [-p/--public] flag to create a public pool.
-Use [-d/--default] flag to create default pool.`,
+Use [-d/--default] flag to create default pool.
+Use [-f/--force] flag to force overwrite default pool.`,
 		MinArgs: 1,
 	}
 	cmd := addPoolToSchedulerCmd{}
@@ -133,7 +134,38 @@ func (s *S) TestFailToAddMoreThanOneDefaultPool(c *check.C) {
 	c.Assert(buf.String(), check.Equals, expected)
 }
 
-func (s *S) TestOverwriteDefaultPool(c *check.C) {
+func (s *S) TestForceToOverwriteDefaultPool(c *check.C) {
+	var buf bytes.Buffer
+	stdin := bytes.NewBufferString("no")
+	transportError := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Status: http.StatusPreconditionFailed, Message: "Default pool already exist."},
+		CondFunc: func(req *http.Request) bool {
+			defer req.Body.Close()
+			body, err := ioutil.ReadAll(req.Body)
+			c.Assert(err, check.IsNil)
+			expected := map[string]interface{}{
+				"name":    "test",
+				"public":  false,
+				"default": true,
+			}
+			result := map[string]interface{}{}
+			err = json.Unmarshal(body, &result)
+			c.Assert(result, check.DeepEquals, expected)
+			return req.URL.RawQuery == "force=true"
+		},
+	}
+	manager := cmd.Manager{}
+	println("test")
+	context := cmd.Context{Args: []string{"test"}, Stdout: &buf, Stdin: stdin}
+	client := cmd.NewClient(&http.Client{Transport: &transportError}, nil, &manager)
+	command := addPoolToSchedulerCmd{}
+	command.Flags().Parse(true, []string{"-d"})
+	command.Flags().Parse(true, []string{"-f"})
+	err := command.Run(&context, client)
+	c.Assert(err, check.IsNil)
+}
+
+func (s *S) TestAskOverwriteDefaultPool(c *check.C) {
 	var buf bytes.Buffer
 	var called int
 	stdin := bytes.NewBufferString("yes")
@@ -152,7 +184,7 @@ func (s *S) TestOverwriteDefaultPool(c *check.C) {
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(expected, check.DeepEquals, result)
-			return req.URL.Path == "/pool"
+			return req.URL.RawQuery == "force=false"
 		},
 	}
 	transportOk := cmdtest.ConditionalTransport{

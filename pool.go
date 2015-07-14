@@ -19,18 +19,20 @@ import (
 )
 
 type addPoolToSchedulerCmd struct {
-	public      bool
-	defaultPool bool
-	fs          *gnuflag.FlagSet
+	public       bool
+	defaultPool  bool
+	forceDefault bool
+	fs           *gnuflag.FlagSet
 }
 
 func (addPoolToSchedulerCmd) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:  "pool-add",
-		Usage: "pool-add <pool> [-p/--public] [-d/--default]",
+		Usage: "pool-add <pool> [-p/--public] [-d/--default] [-f/--force]",
 		Desc: `Add a pool to cluster.
 Use [-p/--public] flag to create a public pool.
-Use [-d/--default] flag to create default pool.`,
+Use [-d/--default] flag to create default pool.
+Use [-f/--force] flag to force overwrite default pool.`,
 		MinArgs: 1,
 	}
 }
@@ -42,6 +44,8 @@ func (c *addPoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
 		c.fs.BoolVar(&c.public, "p", false, "Make pool public")
 		c.fs.BoolVar(&c.defaultPool, "default", false, "Make pool default")
 		c.fs.BoolVar(&c.defaultPool, "d", false, "Make pool default")
+		c.fs.BoolVar(&c.forceDefault, "force", false, "Force overwrite default pool.")
+		c.fs.BoolVar(&c.forceDefault, "f", false, "Force overwrite default pool.")
 	}
 	return c.fs
 }
@@ -55,7 +59,8 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL("/pool")
+	url, err := cmd.GetURL(fmt.Sprintf("/pool?force=%t", c.forceDefault))
+	println(url)
 	if err != nil {
 		return err
 	}
