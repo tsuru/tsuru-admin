@@ -60,7 +60,6 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 		return err
 	}
 	url, err := cmd.GetURL(fmt.Sprintf("/pool?force=%t", c.forceDefault))
-	println(url)
 	if err != nil {
 		return err
 	}

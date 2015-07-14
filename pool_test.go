@@ -155,7 +155,6 @@ func (s *S) TestForceToOverwriteDefaultPool(c *check.C) {
 		},
 	}
 	manager := cmd.Manager{}
-	println("test")
 	context := cmd.Context{Args: []string{"test"}, Stdout: &buf, Stdin: stdin}
 	client := cmd.NewClient(&http.Client{Transport: &transportError}, nil, &manager)
 	command := addPoolToSchedulerCmd{}
