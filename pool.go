@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/tsuru/tsuru/cmd"
+	"github.com/tsuru/tsuru/errors"
 	"github.com/tsuru/tsuru/provision"
 	"launchpad.net/gnuflag"
 )
@@ -64,6 +65,27 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 	}
 	_, err = client.Do(req)
 	if err != nil {
+		var answer string
+		if e, ok := err.(*errors.HTTP); ok && e.Code == http.StatusPreconditionFailed {
+			fmt.Fprintf(ctx.Stdout, "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) ", ctx.Args[0])
+			fmt.Fscanf(ctx.Stdin, "%s", &answer)
+			if answer == "y" || answer == "yes" {
+				url, _ := cmd.GetURL(fmt.Sprintf("/pool?force=%t", true))
+				req, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
+				if err != nil {
+					return err
+				}
+				_, err = client.Do(req)
+				if err != nil {
+					return err
+				}
+				ctx.Stdout.Write([]byte("Pool successfully registered.\n"))
+				return nil
+
+			}
+			ctx.Stdout.Write([]byte("Pool add aborted.\n"))
+			return nil
+		}
 		return err
 	}
 	ctx.Stdout.Write([]byte("Pool successfully registered.\n"))

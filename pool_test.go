@@ -96,10 +96,89 @@ func (s *S) TestAddDefaultPool(c *check.C) {
 	}
 	manager := cmd.Manager{}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
-	cmd := addPoolToSchedulerCmd{}
-	cmd.Flags().Parse(true, []string{"-d"})
-	err := cmd.Run(&context, client)
+	command := addPoolToSchedulerCmd{}
+	command.Flags().Parse(true, []string{"-d"})
+	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
+}
+
+func (s *S) TestFailToAddMoreThanOneDefaultPool(c *check.C) {
+	var buf bytes.Buffer
+	stdin := bytes.NewBufferString("no")
+	transportError := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Status: http.StatusPreconditionFailed, Message: "Default pool already exist."},
+		CondFunc: func(req *http.Request) bool {
+			defer req.Body.Close()
+			body, err := ioutil.ReadAll(req.Body)
+			c.Assert(err, check.IsNil)
+			expected := map[string]interface{}{
+				"name":    "test",
+				"public":  false,
+				"default": true,
+			}
+			result := map[string]interface{}{}
+			err = json.Unmarshal(body, &result)
+			c.Assert(expected, check.DeepEquals, result)
+			return req.URL.Path == "/pool"
+		},
+	}
+	manager := cmd.Manager{}
+	context := cmd.Context{Args: []string{"test"}, Stdout: &buf, Stdin: stdin}
+	client := cmd.NewClient(&http.Client{Transport: &transportError}, nil, &manager)
+	command := addPoolToSchedulerCmd{}
+	command.Flags().Parse(true, []string{"-d"})
+	err := command.Run(&context, client)
+	c.Assert(err, check.IsNil)
+	expected := "WARNING: Default pool already exist. Do you want change to test pool? (y/n) Pool add aborted.\n"
+	c.Assert(buf.String(), check.Equals, expected)
+}
+
+func (s *S) TestOverwriteDefaultPool(c *check.C) {
+	var buf bytes.Buffer
+	var called int
+	stdin := bytes.NewBufferString("yes")
+	transportError := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Status: http.StatusPreconditionFailed, Message: "Default pool already exist."},
+		CondFunc: func(req *http.Request) bool {
+			called += 1
+			defer req.Body.Close()
+			body, err := ioutil.ReadAll(req.Body)
+			c.Assert(err, check.IsNil)
+			expected := map[string]interface{}{
+				"name":    "test",
+				"public":  false,
+				"default": true,
+			}
+			result := map[string]interface{}{}
+			err = json.Unmarshal(body, &result)
+			c.Assert(expected, check.DeepEquals, result)
+			return req.URL.Path == "/pool"
+		},
+	}
+	transportOk := cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Status: http.StatusOK, Message: ""},
+		CondFunc: func(req *http.Request) bool {
+			called += 1
+			return req.URL.RawQuery == "force=true"
+		},
+	}
+	multiTransport := cmdtest.MultiConditionalTransport{
+		ConditionalTransports: []cmdtest.ConditionalTransport{transportError, transportOk},
+	}
+	context := cmd.Context{
+		Args:   []string{"test"},
+		Stdout: &buf,
+		Stdin:  stdin,
+	}
+	manager := cmd.Manager{}
+	client := cmd.NewClient(&http.Client{Transport: &multiTransport}, nil, &manager)
+	command := addPoolToSchedulerCmd{}
+	command.Flags().Parse(true, []string{"-d"})
+	err := command.Run(&context, client)
+	c.Assert(err, check.IsNil)
+	c.Assert(called, check.Equals, 2)
+	expected := "WARNING: Default pool already exist. Do you want change to test pool? (y/n) Pool successfully registered.\n"
+	c.Assert(buf.String(), check.Equals, expected)
 }
 
 func (s *S) TestUpdatePoolToSchedulerCmdInfo(c *check.C) {
