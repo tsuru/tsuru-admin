@@ -60,14 +60,7 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 		return err
 	}
 	url, err := cmd.GetURL(fmt.Sprintf("/pool?force=%t", c.forceDefault))
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
-	if err != nil {
-		return err
-	}
-	_, err = client.Do(req)
+	err = doRequest(client, url, b)
 	if err != nil {
 		var answer string
 		if e, ok := err.(*errors.HTTP); ok && e.Code == http.StatusPreconditionFailed {
@@ -75,11 +68,7 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 			fmt.Fscanf(ctx.Stdin, "%s", &answer)
 			if answer == "y" || answer == "yes" {
 				url, _ := cmd.GetURL(fmt.Sprintf("/pool?force=%t", true))
-				req, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
-				if err != nil {
-					return err
-				}
-				_, err = client.Do(req)
+				err = doRequest(client, url, b)
 				if err != nil {
 					return err
 				}
@@ -96,19 +85,33 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 	return nil
 }
 
+func doRequest(client *cmd.Client, url string, body []byte) error {
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	_, err = client.Do(req)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type updatePoolToSchedulerCmd struct {
-	public  bool
-	newName string
-	fs      *gnuflag.FlagSet
+	public       bool
+	defaultPool  bool
+	forceDefault bool
+	fs           *gnuflag.FlagSet
 }
 
 func (updatePoolToSchedulerCmd) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:  "pool-update",
-		Usage: "pool-update <pool> [--public=true/false] [--new-name=<new_name>]",
+		Usage: "pool-update <pool> [--public=true/false] [--default=true/false] [-f/--force]",
 		Desc: `Update a pool.
 Use [--public=true/false] to change the pool attribute.
-Use [--new-name=<new_name>] to change pool name.`,
+Use [--default=true/false] to change the pool attribute.
+Use [-f/--force] to force pool to be default.`,
 		MinArgs: 1,
 	}
 }
@@ -117,26 +120,48 @@ func (c *updatePoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
 	if c.fs == nil {
 		c.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
 		c.fs.BoolVar(&c.public, "public", false, "Make pool public.")
-		c.fs.StringVar(&c.newName, "new-name", "", "Change pool name.")
+		c.fs.BoolVar(&c.defaultPool, "default", false, "Make pool default.")
+		c.fs.BoolVar(&c.forceDefault, "force", false, "Force pool to be default.")
+		c.fs.BoolVar(&c.forceDefault, "f", false, "Force pool to be default.")
 	}
 	return c.fs
 }
 
 func (c *updatePoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	b, err := json.Marshal(provision.PoolUpdateOptions{Public: c.public, NewName: c.newName})
+	opts := provision.PoolUpdateOptions{
+		Public:  c.public,
+		Default: c.defaultPool,
+		Force:   c.forceDefault,
+	}
+	b, err := json.Marshal(opts)
 	if err != nil {
 		return err
 	}
 	url, err := cmd.GetURL(fmt.Sprintf("/pool/%s", ctx.Args[0]))
+	err = doRequest(client, url, b)
 	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
-	if err != nil {
-		return err
-	}
-	_, err = client.Do(req)
-	if err != nil {
+		var answer string
+		if e, ok := err.(*errors.HTTP); ok && e.Code == http.StatusPreconditionFailed {
+			fmt.Fprintf(ctx.Stdout, "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) ", ctx.Args[0])
+			fmt.Fscanf(ctx.Stdin, "%s", &answer)
+			if answer == "y" || answer == "yes" {
+				opts := provision.PoolUpdateOptions{
+					Public:  c.public,
+					Default: c.defaultPool,
+					Force:   true,
+				}
+				b, err := json.Marshal(opts)
+				err = doRequest(client, url, b)
+				if err != nil {
+					return err
+				}
+				ctx.Stdout.Write([]byte("Pool successfully updated.\n"))
+				return nil
+
+			}
+			ctx.Stdout.Write([]byte("Pool add aborted.\n"))
+			return nil
+		}
 		return err
 	}
 	ctx.Stdout.Write([]byte("Pool successfully updated.\n"))
