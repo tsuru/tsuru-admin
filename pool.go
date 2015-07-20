@@ -240,7 +240,7 @@ func (listPoolsInTheSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) erro
 		}
 		defaultFlag := ""
 		if p.Default {
-			defaultFlag = "*"
+			defaultFlag = " (default)"
 		}
 		t.AddRow(cmd.Row([]string{p.Name + defaultFlag, strings.Join(p.Teams, ", "), public}))
 	}

@@ -427,13 +427,13 @@ func (s *S) TestListPoolsInTheSchedulerCmdRun(c *check.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
 	err := listPoolsInTheSchedulerCmd{}.Run(&ctx, client)
 	c.Assert(err, check.IsNil)
-	expected := `+--------+------------------+---------+
-| Pools  | Teams            | Public  |
-+--------+------------------+---------+
-| pool1  | tsuruteam, ateam |         |
-| pool2  |                  |    X    |
-| pool3* |                  |         |
-+--------+------------------+---------+
+	expected := `+-----------------+------------------+---------+
+| Pools           | Teams            | Public  |
++-----------------+------------------+---------+
+| pool1           | tsuruteam, ateam |         |
+| pool2           |                  |    X    |
+| pool3 (default) |                  |         |
++-----------------+------------------+---------+
 `
 	c.Assert(buf.String(), check.Equals, expected)
 }
