@@ -216,7 +216,7 @@ func (listPoolsInTheSchedulerCmd) Info() *cmd.Info {
 }
 
 func (listPoolsInTheSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	t := cmd.Table{Headers: cmd.Row([]string{"Pools", "Teams"})}
+	t := cmd.Table{Headers: cmd.Row([]string{"Pools", "Teams", "Public"})}
 	url, err := cmd.GetURL("/pool")
 	if err != nil {
 		return err
@@ -234,7 +234,15 @@ func (listPoolsInTheSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) erro
 	var pools []provision.Pool
 	err = json.Unmarshal(body, &pools)
 	for _, p := range pools {
-		t.AddRow(cmd.Row([]string{p.Name, strings.Join(p.Teams, ", ")}))
+		public := ""
+		if p.Public {
+			public = "   X   "
+		}
+		defaultFlag := ""
+		if p.Default {
+			defaultFlag = "*"
+		}
+		t.AddRow(cmd.Row([]string{p.Name + defaultFlag, strings.Join(p.Teams, ", "), public}))
 	}
 	t.Sort()
 	ctx.Stdout.Write(t.Bytes())
@@ -253,11 +261,11 @@ func (addTeamsToPoolCmd) Info() *cmd.Info {
 }
 
 func (addTeamsToPoolCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	body, err := json.Marshal(map[string]interface{}{"pool": ctx.Args[0], "teams": ctx.Args[1:]})
+	body, err := json.Marshal(map[string]interface{}{"teams": ctx.Args[1:]})
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL("/pool/team")
+	url, err := cmd.GetURL(fmt.Sprintf("/pool/%s/team", ctx.Args[0]))
 	if err != nil {
 		return err
 	}
@@ -289,7 +297,7 @@ func (removeTeamsFromPoolCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL("/pool/team")
+	url, err := cmd.GetURL(fmt.Sprintf("/pool/%s/team", ctx.Args[0]))
 	if err != nil {
 		return err
 	}

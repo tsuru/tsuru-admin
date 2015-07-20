@@ -412,7 +412,9 @@ func (s *S) TestListPoolsInTheSchedulerCmdInfo(c *check.C) {
 func (s *S) TestListPoolsInTheSchedulerCmdRun(c *check.C) {
 	var buf bytes.Buffer
 	pool := provision.Pool{Name: "pool1", Teams: []string{"tsuruteam", "ateam"}}
-	pools := []provision.Pool{pool}
+	publicPool := provision.Pool{Name: "pool2", Public: true}
+	defaultPool := provision.Pool{Name: "pool3", Default: true}
+	pools := []provision.Pool{pool, publicPool, defaultPool}
 	poolsJson, _ := json.Marshal(pools)
 	ctx := cmd.Context{Stdout: &buf}
 	trans := &cmdtest.ConditionalTransport{
@@ -425,11 +427,13 @@ func (s *S) TestListPoolsInTheSchedulerCmdRun(c *check.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
 	err := listPoolsInTheSchedulerCmd{}.Run(&ctx, client)
 	c.Assert(err, check.IsNil)
-	expected := `+-------+------------------+
-| Pools | Teams            |
-+-------+------------------+
-| pool1 | tsuruteam, ateam |
-+-------+------------------+
+	expected := `+--------+------------------+---------+
+| Pools  | Teams            | Public  |
++--------+------------------+---------+
+| pool1  | tsuruteam, ateam |         |
+| pool2  |                  |    X    |
+| pool3* |                  |         |
++--------+------------------+---------+
 `
 	c.Assert(buf.String(), check.Equals, expected)
 }
@@ -451,7 +455,7 @@ func (s *S) TestAddTeamsToPoolCmdRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/pool/team"
+			return req.URL.Path == "/pool/pool1/team"
 		},
 	}
 	manager := cmd.Manager{}
@@ -477,7 +481,7 @@ func (s *S) TestRemoveTeamsFromPoolCmdRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/pool/team"
+			return req.URL.Path == "/pool/pool1/team"
 		},
 	}
 	manager := cmd.Manager{}
