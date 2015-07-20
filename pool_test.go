@@ -272,7 +272,7 @@ func (s *S) TestFailToUpdateMoreThanOneDefaultPool(c *check.C) {
 	command.Flags().Parse(true, []string{"--default=true"})
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
-	expected := "WARNING: Default pool already exist. Do you want change to test pool? (y/n) Pool add aborted.\n"
+	expected := "WARNING: Default pool already exist. Do you want change to test pool? (y/n) Pool update aborted.\n"
 	c.Assert(buf.String(), check.Equals, expected)
 }
 

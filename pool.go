@@ -62,22 +62,12 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 	url, err := cmd.GetURL(fmt.Sprintf("/pool?force=%t", c.forceDefault))
 	err = doRequest(client, url, b)
 	if err != nil {
-		var answer string
 		if e, ok := err.(*errors.HTTP); ok && e.Code == http.StatusPreconditionFailed {
-			fmt.Fprintf(ctx.Stdout, "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) ", ctx.Args[0])
-			fmt.Fscanf(ctx.Stdin, "%s", &answer)
-			if answer == "y" || answer == "yes" {
-				url, _ := cmd.GetURL(fmt.Sprintf("/pool?force=%t", true))
-				err = doRequest(client, url, b)
-				if err != nil {
-					return err
-				}
-				ctx.Stdout.Write([]byte("Pool successfully registered.\n"))
-				return nil
-
-			}
-			ctx.Stdout.Write([]byte("Pool add aborted.\n"))
-			return nil
+			retryMessage := "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) "
+			url, _ := cmd.GetURL(fmt.Sprintf("/pool?force=%t", true))
+			successMessage := "Pool successfully registered.\n"
+			failMessage := "Pool add aborted.\n"
+			return confirmAction(ctx, client, url, b, retryMessage, failMessage, successMessage)
 		}
 		return err
 	}
@@ -94,6 +84,23 @@ func doRequest(client *cmd.Client, url string, body []byte) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func confirmAction(ctx *cmd.Context, client *cmd.Client, url string, body []byte, retryMessage, failMessage, successMessage string) error {
+	var answer string
+	fmt.Fprintf(ctx.Stdout, retryMessage, ctx.Args[0])
+	fmt.Fscanf(ctx.Stdin, "%s", &answer)
+	if answer == "y" || answer == "yes" {
+		err := doRequest(client, url, body)
+		if err != nil {
+			return err
+		}
+		ctx.Stdout.Write([]byte(successMessage))
+		return nil
+
+	}
+	ctx.Stdout.Write([]byte(failMessage))
 	return nil
 }
 
@@ -140,27 +147,20 @@ func (c *updatePoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) err
 	url, err := cmd.GetURL(fmt.Sprintf("/pool/%s", ctx.Args[0]))
 	err = doRequest(client, url, b)
 	if err != nil {
-		var answer string
 		if e, ok := err.(*errors.HTTP); ok && e.Code == http.StatusPreconditionFailed {
-			fmt.Fprintf(ctx.Stdout, "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) ", ctx.Args[0])
-			fmt.Fscanf(ctx.Stdin, "%s", &answer)
-			if answer == "y" || answer == "yes" {
-				opts := provision.PoolUpdateOptions{
-					Public:  c.public,
-					Default: c.defaultPool,
-					Force:   true,
-				}
-				b, err := json.Marshal(opts)
-				err = doRequest(client, url, b)
-				if err != nil {
-					return err
-				}
-				ctx.Stdout.Write([]byte("Pool successfully updated.\n"))
-				return nil
-
+			retryMessage := "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) "
+			failMessage := "Pool update aborted.\n"
+			successMessage := "Pool successfully updated.\n"
+			opts := provision.PoolUpdateOptions{
+				Public:  c.public,
+				Default: c.defaultPool,
+				Force:   true,
 			}
-			ctx.Stdout.Write([]byte("Pool add aborted.\n"))
-			return nil
+			body, err := json.Marshal(opts)
+			if err != nil {
+				return err
+			}
+			return confirmAction(ctx, client, url, body, retryMessage, failMessage, successMessage)
 		}
 		return err
 	}
