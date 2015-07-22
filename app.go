@@ -5,9 +5,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
 	"launchpad.net/gnuflag"
 )
@@ -60,4 +62,63 @@ func (c *appLockDelete) Flags() *gnuflag.FlagSet {
 		)
 	}
 	return c.fs
+}
+
+type appRoutesRebuild struct {
+	cmd.GuessingCommand
+}
+
+func (c *appRoutesRebuild) Info() *cmd.Info {
+	return &cmd.Info{
+		Name:    "app-routes-rebuild",
+		MinArgs: 0,
+		Usage:   "app-routes-rebuild -a <app-name>",
+		Desc: `Rebuild routes for an application.
+This can be used to recover from some failure in the router that caused
+existing routes to be lost.`,
+	}
+}
+
+func (c *appRoutesRebuild) Run(ctx *cmd.Context, client *cmd.Client) error {
+	appName, err := c.Guess()
+	if err != nil {
+		return err
+	}
+	url, err := cmd.GetURL("/apps/" + appName + "/routes")
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
+	}
+	rsp, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer rsp.Body.Close()
+	var rebuildResult app.RebuildRoutesResult
+	err = json.NewDecoder(rsp.Body).Decode(&rebuildResult)
+	if err != nil {
+		return err
+	}
+	rebuilt := len(rebuildResult.Added) > 0 || len(rebuildResult.Removed) > 0
+	if len(rebuildResult.Added) > 0 {
+		fmt.Fprintf(ctx.Stdout, "Added routes:\n")
+		for _, added := range rebuildResult.Added {
+			fmt.Fprintf(ctx.Stdout, "- %s\n", added)
+		}
+	}
+	if len(rebuildResult.Removed) > 0 {
+		fmt.Fprintf(ctx.Stdout, "Removed routes:\n")
+		for _, removed := range rebuildResult.Removed {
+			fmt.Fprintf(ctx.Stdout, "- %s\n", removed)
+		}
+	}
+	if rebuilt {
+		fmt.Fprintf(ctx.Stdout, "\nRoutes successfully rebuilt!\n")
+	} else {
+		fmt.Fprintf(ctx.Stdout, "Nothing to do, routes already correct.\n")
+	}
+	return nil
 }
