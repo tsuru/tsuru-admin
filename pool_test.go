@@ -232,7 +232,17 @@ func (s *S) TestUpdatePoolToTheSchedulerCmd(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/pool/poolTest"
+			defer req.Body.Close()
+			body, err := ioutil.ReadAll(req.Body)
+			c.Assert(err, check.IsNil)
+			expected := map[string]interface{}{
+				"default": interface{}(nil),
+				"public":  true,
+			}
+			result := map[string]interface{}{}
+			err = json.Unmarshal(body, &result)
+			c.Assert(expected, check.DeepEquals, result)
+			return req.URL.Path == "/pool/poolTest" && req.URL.Query().Get("force") == "false"
 		},
 	}
 	manager := cmd.Manager{}
@@ -253,16 +263,13 @@ func (s *S) TestFailToUpdateMoreThanOneDefaultPool(c *check.C) {
 			body, err := ioutil.ReadAll(req.Body)
 			c.Assert(err, check.IsNil)
 			expected := map[string]interface{}{
-				"Public":  false,
-				"Default": true,
-				"Force":   false,
-				"Name":    "",
-				"NewName": "",
+				"default": true,
+				"public":  interface{}(nil),
 			}
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(expected, check.DeepEquals, result)
-			return req.URL.Path == "/pool/test"
+			return req.URL.Path == "/pool/test" && req.URL.Query().Get("force") == "false"
 		},
 	}
 	manager := cmd.Manager{}
@@ -286,16 +293,13 @@ func (s *S) TestForceToOverwriteDefaultPoolInUpdate(c *check.C) {
 			body, err := ioutil.ReadAll(req.Body)
 			c.Assert(err, check.IsNil)
 			expected := map[string]interface{}{
-				"Public":  false,
-				"Default": true,
-				"Force":   true,
-				"Name":    "",
-				"NewName": "",
+				"default": true,
+				"public":  interface{}(nil),
 			}
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(result, check.DeepEquals, expected)
-			return req.URL.Path == "/pool/test"
+			return req.URL.Path == "/pool/test" && req.URL.Query().Get("force") == "true"
 		},
 	}
 	manager := cmd.Manager{}
@@ -319,24 +323,23 @@ func (s *S) TestAskOverwriteDefaultPoolInUpdate(c *check.C) {
 			defer req.Body.Close()
 			body, err := ioutil.ReadAll(req.Body)
 			c.Assert(err, check.IsNil)
+			a := new(bool)
+			*a = true
 			expected := map[string]interface{}{
-				"Public":  false,
-				"Default": true,
-				"Force":   false,
-				"Name":    "",
-				"NewName": "",
+				"default": true,
+				"public":  nil,
 			}
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(expected, check.DeepEquals, result)
-			return req.URL.Path == "/pool/test"
+			return req.URL.Path == "/pool/test" && req.URL.Query().Get("force") == "false"
 		},
 	}
 	transportOk := cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Status: http.StatusOK, Message: ""},
 		CondFunc: func(req *http.Request) bool {
 			called += 1
-			return req.URL.Path == "/pool/test"
+			return req.URL.Path == "/pool/test" && req.URL.Query().Get("force") == "true"
 		},
 	}
 	multiTransport := cmdtest.MultiConditionalTransport{

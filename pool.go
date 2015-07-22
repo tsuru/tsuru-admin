@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/tsuru/tsuru/cmd"
@@ -104,9 +105,29 @@ func confirmAction(ctx *cmd.Context, client *cmd.Client, url string, body []byte
 	return nil
 }
 
+type pointerBoolFlag struct {
+	value *bool
+}
+
+func (p *pointerBoolFlag) String() string {
+	return fmt.Sprintf("%#v", p)
+}
+
+func (p *pointerBoolFlag) Set(value string) error {
+	if value == "" {
+		return nil
+	}
+	v, err := strconv.ParseBool(value)
+	if err != nil {
+		return err
+	}
+	p.value = &v
+	return nil
+}
+
 type updatePoolToSchedulerCmd struct {
-	public       bool
-	defaultPool  bool
+	public       pointerBoolFlag
+	defaultPool  pointerBoolFlag
 	forceDefault bool
 	fs           *gnuflag.FlagSet
 }
@@ -126,8 +147,8 @@ Use [-f/--force] to force pool to be default.`,
 func (c *updatePoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
 	if c.fs == nil {
 		c.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
-		c.fs.BoolVar(&c.public, "public", false, "Make pool public.")
-		c.fs.BoolVar(&c.defaultPool, "default", false, "Make pool default.")
+		c.fs.Var(&c.public, "public", "Make pool public.")
+		c.fs.Var(&c.defaultPool, "default", "Make pool default.")
 		c.fs.BoolVar(&c.forceDefault, "force", false, "Force pool to be default.")
 		c.fs.BoolVar(&c.forceDefault, "f", false, "Force pool to be default.")
 	}
@@ -135,32 +156,23 @@ func (c *updatePoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
 }
 
 func (c *updatePoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	opts := provision.PoolUpdateOptions{
-		Public:  c.public,
-		Default: c.defaultPool,
-		Force:   c.forceDefault,
+	opts := map[string]*bool{
+		"public":  c.public.value,
+		"default": c.defaultPool.value,
 	}
 	b, err := json.Marshal(opts)
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL(fmt.Sprintf("/pool/%s", ctx.Args[0]))
+	url, err := cmd.GetURL(fmt.Sprintf("/pool/%s?force=%t", ctx.Args[0], c.forceDefault))
 	err = doRequest(client, url, b)
 	if err != nil {
 		if e, ok := err.(*errors.HTTP); ok && e.Code == http.StatusPreconditionFailed {
 			retryMessage := "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) "
 			failMessage := "Pool update aborted.\n"
 			successMessage := "Pool successfully updated.\n"
-			opts := provision.PoolUpdateOptions{
-				Public:  c.public,
-				Default: c.defaultPool,
-				Force:   true,
-			}
-			body, err := json.Marshal(opts)
-			if err != nil {
-				return err
-			}
-			return confirmAction(ctx, client, url, body, retryMessage, failMessage, successMessage)
+			url, err = cmd.GetURL(fmt.Sprintf("/pool/%s?force=%t", ctx.Args[0], true))
+			return confirmAction(ctx, client, url, b, retryMessage, failMessage, successMessage)
 		}
 		return err
 	}
