@@ -190,15 +190,15 @@
 		},
 		{
 			"ImportPath": "github.com/tsuru/docker-cluster/cluster",
-			"Rev": "6e9d5514297396b71457c29b9ac6dbc3745b4aeb"
+			"Rev": "bc2f88ca37feaaae0e12045b4dcca40c5e957776"
 		},
 		{
 			"ImportPath": "github.com/tsuru/docker-cluster/log",
-			"Rev": "6e9d5514297396b71457c29b9ac6dbc3745b4aeb"
+			"Rev": "bc2f88ca37feaaae0e12045b4dcca40c5e957776"
 		},
 		{
 			"ImportPath": "github.com/tsuru/docker-cluster/storage",
-			"Rev": "6e9d5514297396b71457c29b9ac6dbc3745b4aeb"
+			"Rev": "bc2f88ca37feaaae0e12045b4dcca40c5e957776"
 		},
 		{
 			"ImportPath": "github.com/tsuru/monsterqueue",
