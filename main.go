@@ -46,6 +46,7 @@ func buildManager(name string) *cmd.Manager {
 	m.RegisterDeprecated(removeTeamsFromPoolCmd{}, "docker-pool-teams-remove")
 	m.Register(&cmd.ShellToContainerCmd{})
 	m.Register(&appRoutesRebuild{})
+	m.Register(&templateUpdate{})
 	registerProvisionersCommands(m)
 	return m
 }

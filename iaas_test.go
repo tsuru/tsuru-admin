@@ -201,3 +201,24 @@ func (s *S) TestTemplateRemoveCmdRun(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(buf.String(), check.Equals, "Template successfully removed.\n")
 }
+
+func (s *S) TestTemplateUpdateCmdRun(c *check.C) {
+	var buf bytes.Buffer
+	context := cmd.Context{Args: []string{"my-tpl", "zone=", "image=ami-something"}, Stdout: &buf}
+	expectedBody := `{"Name":"my-tpl","IaaSName":"",` +
+		`"Data":[{"Name":"zone","Value":""},{"Name":"image","Value":"ami-something"}]}`
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			body, _ := ioutil.ReadAll(req.Body)
+			c.Assert(string(body), check.DeepEquals, expectedBody)
+			return req.URL.Path == "/iaas/templates/my-tpl" && req.Method == "PUT"
+		},
+	}
+	manager := cmd.Manager{}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
+	cmd := templateUpdate{}
+	err := cmd.Run(&context, client)
+	c.Assert(err, check.IsNil)
+	c.Assert(buf.String(), check.Equals, "Template successfully updated.\n")
+}

@@ -207,3 +207,47 @@ func (c *templateRemove) Run(context *cmd.Context, client *cmd.Client) error {
 	context.Stdout.Write([]byte("Template successfully removed.\n"))
 	return nil
 }
+
+type templateUpdate struct{}
+
+func (c *templateUpdate) Info() *cmd.Info {
+	return &cmd.Info{
+		Name:    "machine-template-update",
+		Usage:   "machine-template-update <name> <param>=<value>...",
+		Desc:    "Update an existing machine template.",
+		MinArgs: 2,
+	}
+}
+
+func (c *templateUpdate) Run(context *cmd.Context, client *cmd.Client) error {
+	var template iaas.Template
+	template.Name = context.Args[0]
+	for _, param := range context.Args[1:] {
+		if strings.Contains(param, "=") {
+			keyValue := strings.SplitN(param, "=", 2)
+			template.Data = append(template.Data, iaas.TemplateData{
+				Name:  keyValue[0],
+				Value: keyValue[1],
+			})
+		}
+	}
+	templateBytes, err := json.Marshal(template)
+	if err != nil {
+		return err
+	}
+	url, err := cmd.GetURL(fmt.Sprintf("/iaas/templates/%s", template.Name))
+	if err != nil {
+		return err
+	}
+	request, err := http.NewRequest("PUT", url, bytes.NewBuffer(templateBytes))
+	if err != nil {
+		return err
+	}
+	_, err = client.Do(request)
+	if err != nil {
+		context.Stderr.Write([]byte("Failed to update template.\n"))
+		return err
+	}
+	context.Stdout.Write([]byte("Template successfully updated.\n"))
+	return nil
+}
