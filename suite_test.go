@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/tsuru/tsuru/cmd"
-	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"github.com/tsuru/tsuru/provision/provisiontest"
 	"gopkg.in/check.v1"
 )
@@ -24,11 +23,11 @@ var manager *cmd.Manager
 func (s *S) SetUpSuite(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	manager = cmd.NewManager("glb", version, header, &stdout, &stderr, os.Stdin, nil)
-	s.recover = cmdtest.SetTargetFile(c, []byte("http://localhost"))
+	os.Setenv("TSURU_TARGET", "http://localhost")
 }
 
 func (s *S) TearDownSuite(c *check.C) {
-	cmdtest.RollbackFile(s.recover)
+	os.Unsetenv("TSURU_TARGET")
 }
 
 var _ = check.Suite(&S{})
