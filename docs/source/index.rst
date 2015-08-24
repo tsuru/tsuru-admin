@@ -115,21 +115,24 @@ Build from source (Linux and Mac OS X)
 <http://golang.org>`_, so before installing tsuru from source, please make sure
 you have `installed and configured Go <http://golang.org/doc/install>`_.
 
-With Go installed and configured, you can use ``go get`` to install **tsuru-admin**:
+With Go installed and configured, you will need to install godep and then
+download and compile tsuru-admin source. You can do that with the following
+commands:
 
 .. highlight:: bash
 
 ::
 
-$ go get github.com/tsuru/tsuru-admin
-
-After installing, you must set the target with the tsuru server URL,
-something like:
+    $ go get -d github.com/tsuru/tsuru-admin
+    $ pushd $GOPATH/src/github.com/tsuru/tsuru-admin
+    $ make godep
+    $ go install
 
 Managing remote tsuru server endpoints
 ======================================
 
-The target is the **tsuru** server to which all operations will be directed to.
+After installing, you must set the target with the tsuru server URL. The target
+is the **tsuru** server to which all operations will be directed to.
 
 .. highlight:: bash
 
@@ -244,6 +247,47 @@ distribute the units as evenly as possible.
 The --dry flag runs the balancing algorithm without doing any real
 modification. It will only print which units would be moved and where they
 would be created.
+
+bs management
+=============
+
+.. _tsuru_admin_bs_management:
+
+bs-info
+-------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin bs-info
+
+This command displays the current configuration of bs, including environment
+variables and image.
+
+bs-env-set
+----------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin bs-env-set <NAME=value> [NAME=value]... [-p/--pool poolname]
+
+This command sets environment variables used when starting bs (big sibling)
+container.
+
+bs-upgrade
+----------
+
+.. highlight:: bash
+
+::
+
+    $ tsuru-admin bs-upgrade
+
+This command upgrades the bs image. You can check the current image with the
+``bs-info`` command.
 
 Node management
 ===============
@@ -718,7 +762,7 @@ Forces the removal of an app lock.
 Use with caution, removing an active lock may cause inconsistencies.
 
 router-list
-----------
+-----------
 
 .. highlight:: bash
 
