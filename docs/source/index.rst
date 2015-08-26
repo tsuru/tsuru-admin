@@ -349,10 +349,13 @@ docker-node-update
 
 ::
 
-    $ tsuru-admin docker-node-update <address> [param_name=param_value...]
+    $ tsuru-admin docker-node-update <address> [param_name=param_value...] --disable
 
 This command modifies metadata associated to a docker node. If a parameter is set
 to an empty value, it will be removed from the node's metadata.
+
+Using the ``--disable`` flag, the node will be disabled in scheduler. It means
+this node will not receive any containers.
 
 
 .. highlight:: bash
@@ -370,10 +373,13 @@ docker-node-remove
 
 ::
 
-    $ tsuru-admin docker-node-remove <address> [--destroy]
+    $ tsuru-admin docker-node-remove <address> [--destroy] --no-rebalance
 
-This command removes a node from the cluster. Optionally it also destroys the
-created IaaS machine if the ``--destroy`` flag is passed.
+This command removes a node from the cluster and rebalance the containers in
+node to others nodes in cluster. Optionally it also destroys the created IaaS
+machine if the ``--destroy`` flag is passed.
+
+Using the ``--no-rebalance`` flag the node will be removed without rebalance.
 
 .. _tsuru_admin_platform_add_cmd:
 
