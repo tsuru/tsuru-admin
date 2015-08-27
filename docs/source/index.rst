@@ -277,6 +277,10 @@ bs-env-set
 This command sets environment variables used when starting bs (big sibling)
 container.
 
+If the `standard bs image <https://github.com/tsuru/bs>`_ is being used, it's
+possible to find which environment variables can be configured in `bs readme
+file <https://github.com/tsuru/bs#environment-variables>`_.
+
 bs-upgrade
 ----------
 
