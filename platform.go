@@ -70,13 +70,15 @@ type platformUpdate struct {
 	name        string
 	dockerfile  string
 	forceUpdate bool
+	disabled    bool
+	enabled     bool
 	fs          *gnuflag.FlagSet
 }
 
 func (p *platformUpdate) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "platform-update",
-		Usage:   "platform-update <platform name> [--dockerfile/-d Dockerfile]",
+		Usage:   "platform-update <platform name> [--dockerfile/-d Dockerfile] [--disable/--enable]",
 		Desc:    "Update a platform to tsuru.",
 		MinArgs: 1,
 	}
@@ -88,15 +90,28 @@ func (p *platformUpdate) Flags() *gnuflag.FlagSet {
 		p.fs = gnuflag.NewFlagSet("platform-update", gnuflag.ExitOnError)
 		p.fs.StringVar(&p.dockerfile, "dockerfile", "", dockerfileMessage)
 		p.fs.StringVar(&p.dockerfile, "d", "", dockerfileMessage)
+		p.fs.BoolVar(&p.disabled, "disable", false, "Disable the platform")
+		p.fs.BoolVar(&p.enabled, "enable", false, "Enable the platform")
 	}
 	return p.fs
 }
 
+//colocar dockerfile certo no metodo acima
 func (p *platformUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 	context.RawOutput()
 	name := context.Args[0]
+	if p.disabled && p.enabled {
+		return errors.New("Conflicting options: --enable and --disable\n")
+	}
+	disableVar := ""
+	if p.enabled {
+		disableVar = "false"
+	}
+	if p.disabled {
+		disableVar = "true"
+	}
 	body := fmt.Sprintf("a=1&dockerfile=%s", p.dockerfile)
-	url, err := cmd.GetURL("/platforms/" + name)
+	url, err := cmd.GetURL(fmt.Sprintf("/platforms/%s?disabled=%s", name, disableVar))
 	request, err := http.NewRequest("PUT", url, strings.NewReader(body))
 	if err != nil {
 		return err

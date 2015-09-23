@@ -68,7 +68,7 @@ func (s *S) TestPlatformAddFlagSet(c *check.C) {
 func (s *S) TestPlatformUpdateInfo(c *check.C) {
 	expected := &cmd.Info{
 		Name:    "platform-update",
-		Usage:   "platform-update <platform name> [--dockerfile/-d Dockerfile]",
+		Usage:   "platform-update <platform name> [--dockerfile/-d Dockerfile] [--disable/--enable]",
 		Desc:    "Update a platform to tsuru.",
 		MinArgs: 1,
 	}
@@ -106,6 +106,8 @@ func (s *S) TestPlatformUpdateRun(c *check.C) {
 		CondFunc: func(req *http.Request) bool {
 			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
 			c.Assert(req.FormValue("dockerfile"), check.Equals, "http://localhost/Dockerfile")
+			c.Assert(req.URL.Path, check.Equals, "/platforms/"+name)
+			c.Assert(req.Method, check.Equals, "PUT")
 			return req.URL.Path == "/platforms/"+name && req.Method == "PUT"
 		},
 	}
@@ -115,6 +117,82 @@ func (s *S) TestPlatformUpdateRun(c *check.C) {
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	c.Assert(stdout.String(), check.Equals, expected)
+}
+
+func (s *S) TestPlatformUpdateWithFlagDisableTrue(c *check.C) {
+	var stdout, stderr bytes.Buffer
+	name := "teste"
+	context := cmd.Context{
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Args:   []string{name},
+	}
+	expected := "\nOK!\nPlatform successfully updated!\n"
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
+			c.Assert(req.URL.Path, check.Equals, "/platforms/"+name)
+			c.Assert(req.Method, check.Equals, "PUT")
+			return req.URL.Path == "/platforms/"+name && req.Method == "PUT" && req.URL.RawQuery == "disabled=true"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := platformUpdate{}
+	command.Flags().Parse(true, []string{"--disable"})
+	err := command.Run(&context, client)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
+}
+
+func (s *S) TestPlatformUpdateWithFlagEnabledTrue(c *check.C) {
+	var stdout, stderr bytes.Buffer
+	name := "teste"
+	context := cmd.Context{
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Args:   []string{name},
+	}
+	expected := "\nOK!\nPlatform successfully updated!\n"
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
+			c.Assert(req.URL.Path, check.Equals, "/platforms/"+name)
+			c.Assert(req.Method, check.Equals, "PUT")
+			return req.URL.Path == "/platforms/"+name && req.Method == "PUT" && req.URL.RawQuery == "disabled=false"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := platformUpdate{}
+	command.Flags().Parse(true, []string{"--enable"})
+	err := command.Run(&context, client)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, expected)
+}
+
+func (s *S) TestPlatformUpdateWithWrongFlag(c *check.C) {
+	var stdout, stderr bytes.Buffer
+	name := "teste"
+	context := cmd.Context{
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Args:   []string{name},
+	}
+	expected := "Conflicting options: --enable and --disable\n"
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
+			return req.URL.Path == "/platforms/"+name && req.Method == "PUT" && req.URL.RawQuery == "disabled=true"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := platformUpdate{}
+	command.Flags().Parse(true, []string{"--disable", "--enable"})
+	err := command.Run(&context, client)
+	c.Assert(err, check.NotNil)
+	c.Assert(err.Error(), check.Equals, expected)
 }
 
 func (s *S) TestPlatformRemoveRun(c *check.C) {
