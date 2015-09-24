@@ -6,11 +6,13 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"strings"
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
+	"github.com/tsuru/tsuru/io"
 	"gopkg.in/check.v1"
 )
 
@@ -100,9 +102,11 @@ func (s *S) TestPlatformUpdateRun(c *check.C) {
 		Stderr: &stderr,
 		Args:   []string{name},
 	}
-	expected := "\nOK!\nPlatform successfully updated!\n"
+	expectedMsg := "--something--\nPlatform successfully updated!\n"
+	msg := io.SimpleJsonMessage{Message: expectedMsg}
+	result, err := json.Marshal(msg)
 	trans := &cmdtest.ConditionalTransport{
-		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
+		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
 			c.Assert(req.FormValue("dockerfile"), check.Equals, "http://localhost/Dockerfile")
@@ -114,9 +118,9 @@ func (s *S) TestPlatformUpdateRun(c *check.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--dockerfile", "http://localhost/Dockerfile"})
-	err := command.Run(&context, client)
+	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
-	c.Assert(stdout.String(), check.Equals, expected)
+	c.Assert(stdout.String(), check.Equals, expectedMsg)
 }
 
 func (s *S) TestPlatformUpdateWithFlagDisableTrue(c *check.C) {
@@ -127,9 +131,11 @@ func (s *S) TestPlatformUpdateWithFlagDisableTrue(c *check.C) {
 		Stderr: &stderr,
 		Args:   []string{name},
 	}
-	expected := "\nOK!\nPlatform successfully updated!\n"
+	expectedMsg := "Platform successfully updated!\n"
+	msg := io.SimpleJsonMessage{Message: expectedMsg}
+	result, err := json.Marshal(msg)
 	trans := &cmdtest.ConditionalTransport{
-		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
+		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
 			c.Assert(req.URL.Path, check.Equals, "/platforms/"+name)
@@ -140,9 +146,9 @@ func (s *S) TestPlatformUpdateWithFlagDisableTrue(c *check.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--disable"})
-	err := command.Run(&context, client)
+	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
-	c.Assert(stdout.String(), check.Equals, expected)
+	c.Assert(stdout.String(), check.Equals, expectedMsg)
 }
 
 func (s *S) TestPlatformUpdateWithFlagEnabledTrue(c *check.C) {
@@ -153,9 +159,11 @@ func (s *S) TestPlatformUpdateWithFlagEnabledTrue(c *check.C) {
 		Stderr: &stderr,
 		Args:   []string{name},
 	}
-	expected := "\nOK!\nPlatform successfully updated!\n"
+	expectedMsg := "Platform successfully updated!\n"
+	msg := io.SimpleJsonMessage{Message: expectedMsg}
+	result, err := json.Marshal(msg)
 	trans := &cmdtest.ConditionalTransport{
-		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
+		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
 			c.Assert(req.URL.Path, check.Equals, "/platforms/"+name)
@@ -166,9 +174,9 @@ func (s *S) TestPlatformUpdateWithFlagEnabledTrue(c *check.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--enable"})
-	err := command.Run(&context, client)
+	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
-	c.Assert(stdout.String(), check.Equals, expected)
+	c.Assert(stdout.String(), check.Equals, expectedMsg)
 }
 
 func (s *S) TestPlatformUpdateWithWrongFlag(c *check.C) {
@@ -181,7 +189,7 @@ func (s *S) TestPlatformUpdateWithWrongFlag(c *check.C) {
 	}
 	expected := "Conflicting options: --enable and --disable\n"
 	trans := &cmdtest.ConditionalTransport{
-		Transport: cmdtest.Transport{Message: "\nOK!\n", Status: http.StatusOK},
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
 			return req.URL.Path == "/platforms/"+name && req.Method == "PUT" && req.URL.RawQuery == "disabled=true"
@@ -193,6 +201,29 @@ func (s *S) TestPlatformUpdateWithWrongFlag(c *check.C) {
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, expected)
+}
+
+func (s *S) TestPlatformUpdateWithError(c *check.C) {
+	var stdout, stderr bytes.Buffer
+	name := "teste"
+	context := cmd.Context{
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Args:   []string{name},
+	}
+	expectedError := "Flag is required"
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
+		CondFunc: func(req *http.Request) bool {
+			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
+			return req.URL.Path == "/platforms/"+name && req.Method == "PUT"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := platformUpdate{}
+	err := command.Run(&context, client)
+	c.Assert(err, check.NotNil)
+	c.Assert(err.Error(), check.Equals, expectedError)
 }
 
 func (s *S) TestPlatformRemoveRun(c *check.C) {

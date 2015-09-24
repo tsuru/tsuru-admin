@@ -70,8 +70,8 @@ type platformUpdate struct {
 	name        string
 	dockerfile  string
 	forceUpdate bool
-	disabled    bool
-	enabled     bool
+	disable     bool
+	enable      bool
 	fs          *gnuflag.FlagSet
 }
 
@@ -90,28 +90,30 @@ func (p *platformUpdate) Flags() *gnuflag.FlagSet {
 		p.fs = gnuflag.NewFlagSet("platform-update", gnuflag.ExitOnError)
 		p.fs.StringVar(&p.dockerfile, "dockerfile", "", dockerfileMessage)
 		p.fs.StringVar(&p.dockerfile, "d", "", dockerfileMessage)
-		p.fs.BoolVar(&p.disabled, "disable", false, "Disable the platform")
-		p.fs.BoolVar(&p.enabled, "enable", false, "Enable the platform")
+		p.fs.BoolVar(&p.disable, "disable", false, "Disable the platform")
+		p.fs.BoolVar(&p.enable, "enable", false, "Enable the platform")
 	}
 	return p.fs
 }
 
-//colocar dockerfile certo no metodo acima
 func (p *platformUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 	context.RawOutput()
 	name := context.Args[0]
-	if p.disabled && p.enabled {
+	if p.disable && p.enable {
 		return errors.New("Conflicting options: --enable and --disable\n")
 	}
-	disableVar := ""
-	if p.enabled {
-		disableVar = "false"
+	if !p.disable && !p.enable && p.dockerfile == "" {
+		return errors.New("Flag is required")
 	}
-	if p.disabled {
-		disableVar = "true"
+	disable := ""
+	if p.enable {
+		disable = "false"
+	}
+	if p.disable {
+		disable = "true"
 	}
 	body := fmt.Sprintf("a=1&dockerfile=%s", p.dockerfile)
-	url, err := cmd.GetURL(fmt.Sprintf("/platforms/%s?disabled=%s", name, disableVar))
+	url, err := cmd.GetURL(fmt.Sprintf("/platforms/%s?disabled=%s", name, disable))
 	request, err := http.NewRequest("PUT", url, strings.NewReader(body))
 	if err != nil {
 		return err
@@ -121,15 +123,7 @@ func (p *platformUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
-	var buf bytes.Buffer
-	for n := int64(1); n > 0 && err == nil; n, err = io.Copy(io.MultiWriter(&buf, context.Stdout), response.Body) {
-	}
-	if strings.HasSuffix(buf.String(), "\nOK!\n") {
-		fmt.Fprintf(context.Stdout, "Platform successfully updated!\n")
-		return nil
-	}
-	return errors.New("Failed to update platform!\n")
+	return cmd.StreamJSONResponse(context.Stdout, response)
 }
 
 type platformRemove struct {
