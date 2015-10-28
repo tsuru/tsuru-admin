@@ -314,7 +314,7 @@
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2",
-			"Rev": "96e89befdc0f88d5868b297eb0e0727ce6978884"
+			"Rev": "038cb4adce85ed41e285c2e7cc6221a92bfa44aa"
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",
