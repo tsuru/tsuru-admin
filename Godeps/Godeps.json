@@ -1,9 +1,39 @@
 {
 	"ImportPath": "github.com/tsuru/tsuru-admin",
-	"GoVersion": "go1.4.2",
+	"GoVersion": "go1.5.1",
 	"Deps": [
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/aws",
+			"Comment": "v0.9.16-3-g4944a94",
+			"Rev": "4944a94a3b092d1dad8a964415700a70f55e580a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/endpoints",
+			"Comment": "v0.9.16-3-g4944a94",
+			"Rev": "4944a94a3b092d1dad8a964415700a70f55e580a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/ec2query",
+			"Comment": "v0.9.16-3-g4944a94",
+			"Rev": "4944a94a3b092d1dad8a964415700a70f55e580a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/query/queryutil",
+			"Comment": "v0.9.16-3-g4944a94",
+			"Rev": "4944a94a3b092d1dad8a964415700a70f55e580a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/rest",
+			"Comment": "v0.9.16-3-g4944a94",
+			"Rev": "4944a94a3b092d1dad8a964415700a70f55e580a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil",
+			"Comment": "v0.9.16-3-g4944a94",
+			"Rev": "4944a94a3b092d1dad8a964415700a70f55e580a"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/signer/v4",
 			"Comment": "v0.9.16-3-g4944a94",
 			"Rev": "4944a94a3b092d1dad8a964415700a70f55e580a"
 		},
@@ -27,12 +57,21 @@
 			"Rev": "a13766a8c2572caeb14341b7de158aff2fd00fa9"
 		},
 		{
+			"ImportPath": "github.com/digitalocean/godo",
+			"Comment": "v0.9.0",
+			"Rev": "2a0d64a42bb60a95677748a4d5729af6184330b4"
+		},
+		{
 			"ImportPath": "github.com/fsouza/go-dockerclient",
 			"Rev": "ed101b8f31b3244e1b571d07d25fa9824eec9aaa"
 		},
 		{
 			"ImportPath": "github.com/garyburd/redigo/redis",
 			"Rev": "8736767bf9f75f2374aac103059362a5c322d211"
+		},
+		{
+			"ImportPath": "github.com/google/go-querystring/query",
+			"Rev": "547ef5ac979778feb2f760cdb5f4eae1a2207b86"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
@@ -150,6 +189,10 @@
 			"Rev": "bbbcac964e38148a7b43491a83d83b6b584600dc"
 		},
 		{
+			"ImportPath": "github.com/tent/http-link-go",
+			"Rev": "ac974c61c2f990f4115b119354b5e0b47550e888"
+		},
+		{
 			"ImportPath": "github.com/tsuru/config",
 			"Rev": "cedd0ae4817d94ddda2b1320f3a8c9154c4d0d57"
 		},
@@ -236,6 +279,11 @@
 		},
 		{
 			"ImportPath": "github.com/tsuru/tsuru/log",
+			"Comment": "0.12.3-rc1-176-g86d6c2b",
+			"Rev": "86d6c2b81ca43d82394adff8d87321b9e85b547f"
+		},
+		{
+			"ImportPath": "github.com/tsuru/tsuru/permission",
 			"Comment": "0.12.3-rc1-176-g86d6c2b",
 			"Rev": "86d6c2b81ca43d82394adff8d87321b9e85b547f"
 		},
