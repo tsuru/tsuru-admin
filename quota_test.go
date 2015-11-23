@@ -208,7 +208,7 @@ The new limit must be an integer, it may also be "unlimited".`
 	expected := &cmd.Info{
 		Name:    "change-app-quota",
 		MinArgs: 2,
-		Usage:   "change-app-quota <user-email> <new-limit>",
+		Usage:   "change-app-quota <app-name> <new-limit>",
 		Desc:    desc,
 	}
 	c.Assert(changeAppQuota{}.Info(), check.DeepEquals, expected)
