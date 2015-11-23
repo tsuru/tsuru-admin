@@ -27,10 +27,10 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(&machineList{})
 	m.Register(&machineDestroy{})
 	m.Register(&appLockDelete{})
-	m.Register(viewUserQuota{})
-	m.Register(changeUserQuota{})
-	m.Register(viewAppQuota{})
-	m.Register(changeAppQuota{})
+	m.RegisterDeprecated(&userQuotaView{}, "view-user-quota") //C
+	m.RegisterDeprecated(&userChangeQuota{}, "change-user-quota") //C
+	m.RegisterDeprecated(&appQuotaView{}, "view-app-quota") //C
+	m.RegisterDeprecated(&appQuotaChange{}, "change-app-quota") //C
 	m.Register(&planCreate{})
 	m.Register(&planRemove{})
 	m.Register(&planRoutersList{})

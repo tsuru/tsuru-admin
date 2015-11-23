@@ -645,49 +645,49 @@ the maximum number of units that an application may have.
 
 **tsuru-admin** can be used to see and change quota data.
 
-change-app-quota
+app-quota-change
 ----------------
 
 .. highlight:: bash
 
 ::
 
-    $ tsuru-admin change-app-quota <app-name> <new-limit>
+    $ tsuru-admin app-quota-change <app-name> <new-limit>
 
 Changes the limit of units that an app can have. The new limit must be an
 integer, it may also be "unlimited".
 
-change-user-quota
+user-quota-change
 -----------------
 
 .. highlight:: bash
 
 ::
 
-    $ tsuru-admin change-user-quota <user-email> <new-limit>
+    $ tsuru-admin user-quota-change <user-email> <new-limit>
 
 Changes the limit of apps that a user can create. The new limit must be an
 integer, it may also be "unlimited".
 
-view-app-quota
+app-quota-view
 --------------
 
 .. highlight:: bash
 
 ::
 
-    $ tsuru-admin view-app-quota <app-name>
+    $ tsuru-admin app-quota-view <app-name>
 
 Displays the current usage and limit of the given app.
 
-view-user-quota
+user-quota-view
 ---------------
 
 .. highlight:: bash
 
 ::
 
-    $ tsuru-admin view-user-quota <user-email>
+    $ tsuru-admin user-quota-view <user-email>
 
 Displays the current usage and limit of the user.
 

@@ -14,17 +14,17 @@ import (
 	"gopkg.in/check.v1"
 )
 
-func (s *S) TestViewUserQuotaInfo(c *check.C) {
+func (s *S) TestUserQuotaViewInfo(c *check.C) {
 	expected := &cmd.Info{
-		Name:    "view-user-quota",
+		Name:    "user-quota-view",
 		MinArgs: 1,
-		Usage:   "view-user-quota <user-email>",
+		Usage:   "user-quota-view <user-email>",
 		Desc:    "Displays the current usage and limit of the user",
 	}
-	c.Assert(viewUserQuota{}.Info(), check.DeepEquals, expected)
+	c.Assert((&userQuotaView{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestViewUserQuotaRun(c *check.C) {
+func (s *S) TestUserQuotaViewRun(c *check.C) {
 	result := `{"inuse":3,"limit":4}`
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
@@ -40,7 +40,7 @@ func (s *S) TestViewUserQuotaRun(c *check.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
-	command := viewUserQuota{}
+	command := userQuotaView{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	expected := `User: fss@corp.globo.com
@@ -49,30 +49,30 @@ Apps usage: 3/4
 	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestViewUserQuotaRunFailure(c *check.C) {
+func (s *S) TestUserQuotaViewRunFailure(c *check.C) {
 	context := cmd.Context{Args: []string{"fss@corp.globo.com"}}
 	trans := cmdtest.Transport{Message: "user not found", Status: http.StatusNotFound}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
-	command := viewUserQuota{}
+	command := userQuotaView{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, "user not found")
 }
 
-func (s *S) TestChangeUserQuotaInfo(c *check.C) {
+func (s *S) TestUserChangeQuotaInfo(c *check.C) {
 	desc := `Changes the limit of apps that a user can create
 
 The new limit must be an integer, it may also be "unlimited".`
 	expected := &cmd.Info{
-		Name:    "change-user-quota",
+		Name:    "user-quota-change",
 		MinArgs: 2,
-		Usage:   "change-user-quota <user-email> <new-limit>",
+		Usage:   "user-quota-change <user-email> <new-limit>",
 		Desc:    desc,
 	}
-	c.Assert(changeUserQuota{}.Info(), check.DeepEquals, expected)
+	c.Assert((&userChangeQuota{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestChangeUserQuotaRun(c *check.C) {
+func (s *S) TestUserChangeQuotaRun(c *check.C) {
 	var called bool
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
@@ -93,14 +93,14 @@ func (s *S) TestChangeUserQuotaRun(c *check.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
-	command := changeUserQuota{}
+	command := userChangeQuota{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	c.Assert(stdout.String(), check.Equals, "Quota successfully updated.\n")
 	c.Assert(called, check.Equals, true)
 }
 
-func (s *S) TestChangeUserQuotaRunUnlimited(c *check.C) {
+func (s *S) TestUserChangeQuotaRunUnlimited(c *check.C) {
 	var called bool
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
@@ -122,22 +122,22 @@ func (s *S) TestChangeUserQuotaRunUnlimited(c *check.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
-	command := changeUserQuota{}
+	command := userChangeQuota{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	c.Assert(stdout.String(), check.Equals, "Quota successfully updated.\n")
 	c.Assert(called, check.Equals, true)
 }
 
-func (s *S) TestChangeUserQuotaRunInvalidLimit(c *check.C) {
+func (s *S) TestUserChangeQuotaRunInvalidLimit(c *check.C) {
 	context := cmd.Context{Args: []string{"fss@corp.globo.com", "unlimiteddd"}}
-	command := changeUserQuota{}
+	command := userChangeQuota{}
 	err := command.Run(&context, nil)
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, `invalid limit. It must be either an integer or "unlimited"`)
 }
 
-func (s *S) TestChangeUserQuotaFailure(c *check.C) {
+func (s *S) TestUserChangeQuotaFailure(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
 	trans := &cmdtest.Transport{
@@ -150,23 +150,23 @@ func (s *S) TestChangeUserQuotaFailure(c *check.C) {
 		Stderr: &stderr,
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := changeUserQuota{}
+	command := userChangeQuota{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, "user not found")
 }
 
-func (s *S) TestViewAppQuotaInfo(c *check.C) {
+func (s *S) TestAppQuotaViewInfo(c *check.C) {
 	expected := &cmd.Info{
-		Name:    "view-app-quota",
+		Name:    "app-quota-view",
 		MinArgs: 1,
-		Usage:   "view-app-quota <app-name>",
+		Usage:   "app-quota-view <app-name>",
 		Desc:    "Displays the current usage and limit of the given app",
 	}
-	c.Assert(viewAppQuota{}.Info(), check.DeepEquals, expected)
+	c.Assert((&appQuotaView{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestViewAppQuotaRun(c *check.C) {
+func (s *S) TestAppQuotaViewRun(c *check.C) {
 	result := `{"inuse":3,"limit":4}`
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
@@ -182,7 +182,7 @@ func (s *S) TestViewAppQuotaRun(c *check.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
-	command := viewAppQuota{}
+	command := appQuotaView{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	expected := `App: hibria
@@ -191,30 +191,30 @@ Units usage: 3/4
 	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestViewAppQuotaRunFailure(c *check.C) {
+func (s *S) TestAppQuotaViewRunFailure(c *check.C) {
 	context := cmd.Context{Args: []string{"hybria"}}
 	trans := cmdtest.Transport{Message: "app not found", Status: http.StatusNotFound}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
-	command := viewAppQuota{}
+	command := appQuotaView{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, "app not found")
 }
 
-func (s *S) TestChangeAppQuotaInfo(c *check.C) {
+func (s *S) TestAppQuotaChangeInfo(c *check.C) {
 	desc := `Changes the limit of units that an app can have
 
 The new limit must be an integer, it may also be "unlimited".`
 	expected := &cmd.Info{
-		Name:    "change-app-quota",
+		Name:    "app-quota-change",
 		MinArgs: 2,
-		Usage:   "change-app-quota <app-name> <new-limit>",
+		Usage:   "app-quota-change <app-name> <new-limit>",
 		Desc:    desc,
 	}
-	c.Assert(changeAppQuota{}.Info(), check.DeepEquals, expected)
+	c.Assert((&appQuotaChange{}).Info(), check.DeepEquals, expected)
 }
 
-func (s *S) TestChangeAppQuotaRun(c *check.C) {
+func (s *S) TestAppQuotaChangeRun(c *check.C) {
 	var called bool
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
@@ -235,14 +235,14 @@ func (s *S) TestChangeAppQuotaRun(c *check.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
-	command := changeAppQuota{}
+	command := appQuotaChange{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	c.Assert(stdout.String(), check.Equals, "Quota successfully updated.\n")
 	c.Assert(called, check.Equals, true)
 }
 
-func (s *S) TestChangeAppQuotaRunUnlimited(c *check.C) {
+func (s *S) TestAppQuotaChangeRunUnlimited(c *check.C) {
 	var called bool
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
@@ -264,22 +264,22 @@ func (s *S) TestChangeAppQuotaRunUnlimited(c *check.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
-	command := changeAppQuota{}
+	command := appQuotaChange{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	c.Assert(stdout.String(), check.Equals, "Quota successfully updated.\n")
 	c.Assert(called, check.Equals, true)
 }
 
-func (s *S) TestChangeAppQuotaRunInvalidLimit(c *check.C) {
+func (s *S) TestAppQuotaChangeRunInvalidLimit(c *check.C) {
 	context := cmd.Context{Args: []string{"myapp", "unlimiteddd"}}
-	command := changeAppQuota{}
+	command := appQuotaChange{}
 	err := command.Run(&context, nil)
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, `invalid limit. It must be either an integer or "unlimited"`)
 }
 
-func (s *S) TestChangeAppQuotaFailure(c *check.C) {
+func (s *S) TestAppQuotaChangeFailure(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	manager := cmd.NewManager("tsuru", "0.5", "ad-ver", &stdout, &stderr, nil, nil)
 	trans := &cmdtest.Transport{
@@ -292,7 +292,7 @@ func (s *S) TestChangeAppQuotaFailure(c *check.C) {
 		Stderr: &stderr,
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := changeAppQuota{}
+	command := appQuotaChange{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, "app not found")

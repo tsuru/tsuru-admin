@@ -16,18 +16,18 @@ import (
 	"github.com/tsuru/tsuru/quota"
 )
 
-type viewUserQuota struct{}
+type userQuotaView struct{}
 
-func (viewUserQuota) Info() *cmd.Info {
+func (*userQuotaView) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "view-user-quota",
+		Name:    "user-quota-view",
 		MinArgs: 1,
-		Usage:   "view-user-quota <user-email>",
+		Usage:   "user-quota-view <user-email>",
 		Desc:    "Displays the current usage and limit of the user",
 	}
 }
 
-func (viewUserQuota) Run(context *cmd.Context, client *cmd.Client) error {
+func (*userQuotaView) Run(context *cmd.Context, client *cmd.Client) error {
 	url, err := cmd.GetURL("/users/" + context.Args[0] + "/quota")
 	if err != nil {
 		return err
@@ -48,21 +48,21 @@ func (viewUserQuota) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
-type changeUserQuota struct{}
+type userChangeQuota struct{}
 
-func (changeUserQuota) Info() *cmd.Info {
+func (*userChangeQuota) Info() *cmd.Info {
 	desc := `Changes the limit of apps that a user can create
 
 The new limit must be an integer, it may also be "unlimited".`
 	return &cmd.Info{
-		Name:    "change-user-quota",
+		Name:    "user-quota-change",
 		MinArgs: 2,
-		Usage:   "change-user-quota <user-email> <new-limit>",
+		Usage:   "user-quota-change <user-email> <new-limit>",
 		Desc:    desc,
 	}
 }
 
-func (changeUserQuota) Run(context *cmd.Context, client *cmd.Client) error {
+func (*userChangeQuota) Run(context *cmd.Context, client *cmd.Client) error {
 	url, err := cmd.GetURL("/users/" + context.Args[0] + "/quota")
 	if err != nil {
 		return err
@@ -82,18 +82,18 @@ func (changeUserQuota) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
-type viewAppQuota struct{}
+type appQuotaView struct{}
 
-func (viewAppQuota) Info() *cmd.Info {
+func (*appQuotaView) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "view-app-quota",
+		Name:    "app-quota-view",
 		MinArgs: 1,
-		Usage:   "view-app-quota <app-name>",
+		Usage:   "app-quota-view <app-name>",
 		Desc:    "Displays the current usage and limit of the given app",
 	}
 }
 
-func (viewAppQuota) Run(context *cmd.Context, client *cmd.Client) error {
+func (*appQuotaView) Run(context *cmd.Context, client *cmd.Client) error {
 	url, err := cmd.GetURL("/apps/" + context.Args[0] + "/quota")
 	if err != nil {
 		return err
@@ -114,21 +114,21 @@ func (viewAppQuota) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
-type changeAppQuota struct{}
+type appQuotaChange struct{}
 
-func (changeAppQuota) Info() *cmd.Info {
+func (*appQuotaChange) Info() *cmd.Info {
 	desc := `Changes the limit of units that an app can have
 
 The new limit must be an integer, it may also be "unlimited".`
 	return &cmd.Info{
-		Name:    "change-app-quota",
+		Name:    "app-quota-change",
 		MinArgs: 2,
-		Usage:   "change-app-quota <app-name> <new-limit>",
+		Usage:   "app-quota-change <app-name> <new-limit>",
 		Desc:    desc,
 	}
 }
 
-func (changeAppQuota) Run(context *cmd.Context, client *cmd.Client) error {
+func (appQuotaChange) Run(context *cmd.Context, client *cmd.Client) error {
 	url, err := cmd.GetURL("/apps/" + context.Args[0] + "/quota")
 	if err != nil {
 		return err

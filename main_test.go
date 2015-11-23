@@ -45,30 +45,30 @@ func (s *S) TestShouldRegisterAllCommandsFromProvisioners(c *check.C) {
 	c.Assert(fake, check.FitsTypeOf, &FakeAdminCommand{})
 }
 
-func (s *S) TestViewUserQuotaIsRegistered(c *check.C) {
+func (s *S) TestUserQuotaViewIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
-	viewQuota, ok := manager.Commands["view-user-quota"]
+	viewQuota, ok := manager.Commands["user-quota-view"]
 	c.Assert(ok, check.Equals, true)
-	c.Assert(viewQuota, check.FitsTypeOf, viewUserQuota{})
+	c.Assert(viewQuota, check.FitsTypeOf, &userQuotaView{})
 }
 
-func (s *S) TestChangeUserQuotaIsRegistered(c *check.C) {
+func (s *S) TestUserChangeQuotaIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
-	changeQuota, ok := manager.Commands["change-user-quota"]
+	changeQuota, ok := manager.Commands["user-quota-change"]
 	c.Assert(ok, check.Equals, true)
-	c.Assert(changeQuota, check.FitsTypeOf, changeUserQuota{})
+	c.Assert(changeQuota, check.FitsTypeOf, &userChangeQuota{})
 }
 
-func (s *S) TestViewAppQuotaIsRegistered(c *check.C) {
+func (s *S) TestAppQuotaViewIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
-	viewQuota, ok := manager.Commands["view-app-quota"]
+	viewQuota, ok := manager.Commands["app-quota-view"]
 	c.Assert(ok, check.Equals, true)
-	c.Assert(viewQuota, check.FitsTypeOf, viewAppQuota{})
+	c.Assert(viewQuota, check.FitsTypeOf, &appQuotaView{})
 }
 
-func (s *S) TestChangeAppQuotaIsRegistered(c *check.C) {
+func (s *S) TestAppQuotaChangeIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
-	changeQuota, ok := manager.Commands["change-app-quota"]
+	changeQuota, ok := manager.Commands["app-quota-change"]
 	c.Assert(ok, check.Equals, true)
-	c.Assert(changeQuota, check.FitsTypeOf, changeAppQuota{})
+	c.Assert(changeQuota, check.FitsTypeOf, &appQuotaChange{})
 }
