@@ -12,11 +12,6 @@ import (
 	"github.com/tsuru/tsuru/cmd"
 )
 
-type user struct {
-	Email string
-	Teams []string
-}
-
 type listUsers struct{}
 
 func (c *listUsers) Run(ctx *cmd.Context, client *cmd.Client) error {
@@ -30,15 +25,19 @@ func (c *listUsers) Run(ctx *cmd.Context, client *cmd.Client) error {
 		return err
 	}
 	defer resp.Body.Close()
-	var users []user
+	var users []cmd.APIUser
 	err = json.NewDecoder(resp.Body).Decode(&users)
 	if err != nil {
 		return err
 	}
 	table := cmd.NewTable()
-	table.Headers = cmd.Row([]string{"User", "Teams"})
+	table.Headers = cmd.Row([]string{"User", "Roles", "Permissions"})
 	for _, u := range users {
-		table.AddRow(cmd.Row([]string{u.Email, strings.Join(u.Teams, ", ")}))
+		table.AddRow(cmd.Row([]string{
+			u.Email,
+			strings.Join(u.RoleInstances(), "\n"),
+			strings.Join(u.PermissionInstances(), "\n"),
+		}))
 	}
 	table.LineSeparator = true
 	table.Sort()
