@@ -37,7 +37,7 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(&templateList{})
 	m.Register(&templateAdd{})
 	m.Register(&templateRemove{})
-	m.Register(&listUsers{})
+	m.RegisterRemoved("user-list", "You should use `tsuru user-list` instead.")
 	m.RegisterDeprecated(&addPoolToSchedulerCmd{}, "docker-pool-add")
 	m.Register(&updatePoolToSchedulerCmd{})
 	m.RegisterDeprecated(&removePoolFromSchedulerCmd{}, "docker-pool-remove")
