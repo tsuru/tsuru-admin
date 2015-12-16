@@ -41,7 +41,7 @@ func buildManager(name string) *cmd.Manager {
 	m.RegisterDeprecated(&addPoolToSchedulerCmd{}, "docker-pool-add")
 	m.Register(&updatePoolToSchedulerCmd{})
 	m.RegisterDeprecated(&removePoolFromSchedulerCmd{}, "docker-pool-remove")
-	m.RegisterDeprecated(listPoolsInTheSchedulerCmd{}, "docker-pool-list")
+	m.RegisterRemoved("pool-list", "You should use `tsuru pool-list` instead.")
 	m.RegisterDeprecated(addTeamsToPoolCmd{}, "docker-pool-teams-add")
 	m.RegisterDeprecated(removeTeamsFromPoolCmd{}, "docker-pool-teams-remove")
 	m.Register(&cmd.ShellToContainerCmd{})

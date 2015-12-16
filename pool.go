@@ -8,14 +8,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/errors"
-	"github.com/tsuru/tsuru/provision"
 	"launchpad.net/gnuflag"
 )
 
@@ -214,50 +211,6 @@ func (c *removePoolFromSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) e
 		return err
 	}
 	ctx.Stdout.Write([]byte("Pool successfully removed.\n"))
-	return nil
-}
-
-type listPoolsInTheSchedulerCmd struct{}
-
-func (listPoolsInTheSchedulerCmd) Info() *cmd.Info {
-	return &cmd.Info{
-		Name:  "pool-list",
-		Usage: "pool-list",
-		Desc:  "List available pools in the cluster",
-	}
-}
-
-func (listPoolsInTheSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	t := cmd.Table{Headers: cmd.Row([]string{"Pools", "Teams", "Public"})}
-	url, err := cmd.GetURL("/pool")
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	var pools []provision.Pool
-	err = json.Unmarshal(body, &pools)
-	for _, p := range pools {
-		public := ""
-		if p.Public {
-			public = "   X   "
-		}
-		defaultFlag := ""
-		if p.Default {
-			defaultFlag = " (default)"
-		}
-		t.AddRow(cmd.Row([]string{p.Name + defaultFlag, strings.Join(p.Teams, ", "), public}))
-	}
-	t.Sort()
-	ctx.Stdout.Write(t.Bytes())
 	return nil
 }
 

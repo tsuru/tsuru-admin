@@ -13,7 +13,6 @@ import (
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
-	"github.com/tsuru/tsuru/provision"
 	"gopkg.in/check.v1"
 )
 
@@ -400,45 +399,6 @@ func (s *S) TestRemovePoolFromTheSchedulerCmdConfirmation(c *check.C) {
 	err := command.Run(&context, nil)
 	c.Assert(err, check.IsNil)
 	c.Assert(stdout.String(), check.Equals, "Are you sure you want to remove \"poolX\" pool? (y/n) Abort.\n")
-}
-
-func (s *S) TestListPoolsInTheSchedulerCmdInfo(c *check.C) {
-	expected := cmd.Info{
-		Name:  "pool-list",
-		Usage: "pool-list",
-		Desc:  "List available pools in the cluster",
-	}
-	cmd := listPoolsInTheSchedulerCmd{}
-	c.Assert(cmd.Info(), check.DeepEquals, &expected)
-}
-
-func (s *S) TestListPoolsInTheSchedulerCmdRun(c *check.C) {
-	var buf bytes.Buffer
-	pool := provision.Pool{Name: "pool1", Teams: []string{"tsuruteam", "ateam"}}
-	publicPool := provision.Pool{Name: "pool2", Public: true}
-	defaultPool := provision.Pool{Name: "pool3", Default: true}
-	pools := []provision.Pool{pool, publicPool, defaultPool}
-	poolsJson, _ := json.Marshal(pools)
-	ctx := cmd.Context{Stdout: &buf}
-	trans := &cmdtest.ConditionalTransport{
-		Transport: cmdtest.Transport{Message: string(poolsJson), Status: http.StatusOK},
-		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/pool"
-		},
-	}
-	manager := cmd.Manager{}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
-	err := listPoolsInTheSchedulerCmd{}.Run(&ctx, client)
-	c.Assert(err, check.IsNil)
-	expected := `+-----------------+------------------+---------+
-| Pools           | Teams            | Public  |
-+-----------------+------------------+---------+
-| pool1           | tsuruteam, ateam |         |
-| pool2           |                  |    X    |
-| pool3 (default) |                  |         |
-+-----------------+------------------+---------+
-`
-	c.Assert(buf.String(), check.Equals, expected)
 }
 
 func (s *S) TestAddTeamsToPoolCmdInfo(c *check.C) {
