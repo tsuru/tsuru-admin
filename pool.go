@@ -11,9 +11,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/tsuru/gnuflag"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/errors"
-	"launchpad.net/gnuflag"
 )
 
 type addPoolToSchedulerCmd struct {

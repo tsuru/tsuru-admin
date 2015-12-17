@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/tsuru/gnuflag"
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
-	"launchpad.net/gnuflag"
 )
 
 type appLockDelete struct {

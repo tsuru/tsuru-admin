@@ -14,8 +14,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/tsuru/gnuflag"
 	"github.com/tsuru/tsuru/cmd"
-	"launchpad.net/gnuflag"
 )
 
 type platformAdd struct {

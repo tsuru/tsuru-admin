@@ -10,10 +10,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/tsuru/gnuflag"
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/router"
-	"launchpad.net/gnuflag"
 )
 
 type planCreate struct {
