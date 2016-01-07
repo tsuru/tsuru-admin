@@ -1,0 +1,1008 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/RobotsAndPencils/go-saml/util",
+			"path": "github.com/RobotsAndPencils/go-saml/util",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws",
+			"path": "github.com/aws/aws-sdk-go/aws",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/awserr",
+			"path": "github.com/aws/aws-sdk-go/aws/awserr",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/awsutil",
+			"path": "github.com/aws/aws-sdk-go/aws/awsutil",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/client",
+			"path": "github.com/aws/aws-sdk-go/aws/client",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/client/metadata",
+			"path": "github.com/aws/aws-sdk-go/aws/client/metadata",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/corehandlers",
+			"path": "github.com/aws/aws-sdk-go/aws/corehandlers",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/credentials",
+			"path": "github.com/aws/aws-sdk-go/aws/credentials",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds",
+			"path": "github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/defaults",
+			"path": "github.com/aws/aws-sdk-go/aws/defaults",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/ec2metadata",
+			"path": "github.com/aws/aws-sdk-go/aws/ec2metadata",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/request",
+			"path": "github.com/aws/aws-sdk-go/aws/request",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws/session",
+			"path": "github.com/aws/aws-sdk-go/aws/session",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/private/endpoints",
+			"path": "github.com/aws/aws-sdk-go/private/endpoints",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/private/protocol/ec2query",
+			"path": "github.com/aws/aws-sdk-go/private/protocol/ec2query",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/private/protocol/query/queryutil",
+			"path": "github.com/aws/aws-sdk-go/private/protocol/query/queryutil",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/private/protocol/rest",
+			"path": "github.com/aws/aws-sdk-go/private/protocol/rest",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil",
+			"path": "github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/private/signer/v4",
+			"path": "github.com/aws/aws-sdk-go/private/signer/v4",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/private/waiter",
+			"path": "github.com/aws/aws-sdk-go/private/waiter",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/service/ec2",
+			"path": "github.com/aws/aws-sdk-go/service/ec2",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/codegangsta/negroni",
+			"path": "github.com/codegangsta/negroni",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/diego-araujo/go-saml",
+			"path": "github.com/diego-araujo/go-saml",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/diego-araujo/go-saml/util",
+			"path": "github.com/diego-araujo/go-saml/util",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/digitalocean/godo",
+			"path": "github.com/digitalocean/godo",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient",
+			"path": "github.com/fsouza/go-dockerclient",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/Sirupsen/logrus",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/Sirupsen/logrus",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/opts",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/opts",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/archive",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/archive",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/fileutils",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/fileutils",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/homedir",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/homedir",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/idtools",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/idtools",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/ioutils",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/ioutils",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/longpath",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/longpath",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/pools",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/pools",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/promise",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/promise",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/stdcopy",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/stdcopy",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/system",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/system",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/docker/go-units",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/docker/go-units",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/gorilla/context",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/gorilla/context",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/gorilla/mux",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/gorilla/mux",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/hashicorp/go-cleanhttp",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/hashicorp/go-cleanhttp",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/github.com/opencontainers/runc/libcontainer/user",
+			"path": "github.com/fsouza/go-dockerclient/external/github.com/opencontainers/runc/libcontainer/user",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/golang.org/x/net/context",
+			"path": "github.com/fsouza/go-dockerclient/external/golang.org/x/net/context",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/external/golang.org/x/sys/unix",
+			"path": "github.com/fsouza/go-dockerclient/external/golang.org/x/sys/unix",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient/testing",
+			"path": "github.com/fsouza/go-dockerclient/testing",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/garyburd/redigo/redis",
+			"path": "github.com/garyburd/redigo/redis",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/go-ini/ini",
+			"path": "github.com/go-ini/ini",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/golang/protobuf/proto",
+			"path": "github.com/golang/protobuf/proto",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/google/go-querystring/query",
+			"path": "github.com/google/go-querystring/query",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/gorilla/context",
+			"path": "github.com/gorilla/context",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/gorilla/mux",
+			"path": "github.com/gorilla/mux",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/howeyc/fsnotify",
+			"path": "github.com/howeyc/fsnotify",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/jmespath/go-jmespath",
+			"path": "github.com/jmespath/go-jmespath",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/kardianos/osext",
+			"path": "github.com/kardianos/osext",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/nu7hatch/gouuid",
+			"path": "github.com/nu7hatch/gouuid",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/sajari/fuzzy",
+			"path": "github.com/sajari/fuzzy",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/tent/http-link-go",
+			"path": "github.com/tent/http-link-go",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/tsuru/config",
+			"path": "github.com/tsuru/config",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/tsuru/docker-cluster/cluster",
+			"path": "github.com/tsuru/docker-cluster/cluster",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/tsuru/docker-cluster/log",
+			"path": "github.com/tsuru/docker-cluster/log",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/tsuru/docker-cluster/storage",
+			"path": "github.com/tsuru/docker-cluster/storage",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/tsuru/docker-cluster/storage/mongodb",
+			"path": "github.com/tsuru/docker-cluster/storage/mongodb",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/gnuflag",
+			"revision": "86b8c1b864aadcf9c94d67bc607ce3f19cbb9aa2",
+			"revisionTime": "2015-12-17T14:20:21-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/tsuru/monsterqueue",
+			"path": "github.com/tsuru/monsterqueue",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/tsuru/monsterqueue/log",
+			"path": "github.com/tsuru/monsterqueue/log",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/tsuru/monsterqueue/mongodb",
+			"path": "github.com/tsuru/monsterqueue/mongodb",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/action",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/api",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/api/context",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/api/shutdown",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/app",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/app/bind",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/auth",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/auth/native",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/auth/oauth",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/auth/saml",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/cmd",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/cmd/cmdtest",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/db",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/db/storage",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/errors",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/exec",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/fs",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/git",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/hc",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/iaas",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/iaas/cloudstack",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/iaas/digitalocean",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/iaas/ec2",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/io",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/log",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/net",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/permission",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/provision",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/provision/docker",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/provision/docker/bs",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/provision/docker/container",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/provision/docker/healer",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/provision/provisiontest",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/queue",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/quota",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/rec",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/repository",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/router",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/router/galeb",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/router/galeb/client",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/router/hipache",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/router/routertest",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/router/vulcand",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/safe",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/service",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "github.com/tsuru/tsuru/validation",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/predicate",
+			"path": "github.com/vulcand/predicate",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/route",
+			"path": "github.com/vulcand/route",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/codahale/hdrhistogram",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/codahale/hdrhistogram",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/codegangsta/cli",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/codegangsta/cli",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/coreos/go-etcd/etcd",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/coreos/go-etcd/etcd",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/gorilla/context",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/gorilla/context",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/gorilla/mux",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/gorilla/mux",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/iptools",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/iptools",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/log",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/log",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/manners",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/manners",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/metrics",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/metrics",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/minheap",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/minheap",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/multibuf",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/multibuf",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/scroll",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/scroll",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/scroll/registry",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/scroll/registry",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/scroll/vulcan",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/scroll/vulcan",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/scroll/vulcan/middleware",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/scroll/vulcan/middleware",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/timetools",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/timetools",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/ttlmap",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/ttlmap",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/ugorji/go/codec",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/ugorji/go/codec",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/cbreaker",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/cbreaker",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/connlimit",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/connlimit",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/memmetrics",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/memmetrics",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/ratelimit",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/ratelimit",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/stream",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/stream",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/trace",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/trace",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/utils",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/utils",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/predicate",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/predicate",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/route",
+			"path": "github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/route",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/anomaly",
+			"path": "github.com/vulcand/vulcand/anomaly",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/api",
+			"path": "github.com/vulcand/vulcand/api",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/engine",
+			"path": "github.com/vulcand/vulcand/engine",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/plugin",
+			"path": "github.com/vulcand/vulcand/plugin",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/plugin/cbreaker",
+			"path": "github.com/vulcand/vulcand/plugin/cbreaker",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/plugin/connlimit",
+			"path": "github.com/vulcand/vulcand/plugin/connlimit",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/plugin/ratelimit",
+			"path": "github.com/vulcand/vulcand/plugin/ratelimit",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/plugin/registry",
+			"path": "github.com/vulcand/vulcand/plugin/registry",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/plugin/rewrite",
+			"path": "github.com/vulcand/vulcand/plugin/rewrite",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/plugin/trace",
+			"path": "github.com/vulcand/vulcand/plugin/trace",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/github.com/vulcand/vulcand/router",
+			"path": "github.com/vulcand/vulcand/router",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/golang.org/x/crypto/bcrypt",
+			"path": "golang.org/x/crypto/bcrypt",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/golang.org/x/crypto/blowfish",
+			"path": "golang.org/x/crypto/blowfish",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/golang.org/x/crypto/ssh/terminal",
+			"path": "golang.org/x/crypto/ssh/terminal",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/golang.org/x/net/context",
+			"path": "golang.org/x/net/context",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/golang.org/x/net/netutil",
+			"path": "golang.org/x/net/netutil",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/golang.org/x/net/websocket",
+			"path": "golang.org/x/net/websocket",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/golang.org/x/oauth2",
+			"path": "golang.org/x/oauth2",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/golang.org/x/oauth2/internal",
+			"path": "golang.org/x/oauth2/internal",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal",
+			"path": "google.golang.org/appengine/internal",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal/base",
+			"path": "google.golang.org/appengine/internal/base",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal/datastore",
+			"path": "google.golang.org/appengine/internal/datastore",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal/log",
+			"path": "google.golang.org/appengine/internal/log",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal/remote_api",
+			"path": "google.golang.org/appengine/internal/remote_api",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal/urlfetch",
+			"path": "google.golang.org/appengine/internal/urlfetch",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/urlfetch",
+			"path": "google.golang.org/appengine/urlfetch",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"path": "gopkg.in/check.v1",
+			"revision": "64131543e7896d5bcc6bd5a76287eb75ea96c673",
+			"revisionTime": "2014-10-24T11:38:53-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/gopkg.in/mgo.v2",
+			"path": "gopkg.in/mgo.v2",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/gopkg.in/mgo.v2/bson",
+			"path": "gopkg.in/mgo.v2/bson",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/gopkg.in/mgo.v2/internal/sasl",
+			"path": "gopkg.in/mgo.v2/internal/sasl",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/gopkg.in/mgo.v2/internal/scram",
+			"path": "gopkg.in/mgo.v2/internal/scram",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/gopkg.in/tylerb/graceful.v1",
+			"path": "gopkg.in/tylerb/graceful.v1",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		},
+		{
+			"origin": "github.com/tsuru/tsuru/vendor/gopkg.in/yaml.v1",
+			"path": "gopkg.in/yaml.v1",
+			"revision": "010d540999c2b246d3777cc0c1550f6575787a0f",
+			"revisionTime": "2016-01-07T11:26:52-02:00"
+		}
+	]
+}
