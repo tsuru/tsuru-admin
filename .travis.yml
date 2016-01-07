@@ -1,18 +1,14 @@
 language: go
 sudo: false
 go:
-  - 1.4.2
   - 1.5.2
   - 1.6beta1
   - tip
 env:
   global:
-    - PATH="$HOME/gopath/bin:$PATH"
+    - GO15VENDOREXPERIMENT=1
   matrix:
     - GOARCH=amd64
     - GOARCH=386
-install:
-  - go get -x github.com/tools/godep
-  - godep restore
 script:
   - go test -x
