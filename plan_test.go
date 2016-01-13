@@ -74,7 +74,7 @@ func (s *S) TestPlanCreateFlags(c *check.C) {
 			c.Assert(err, check.IsNil)
 			expected := app.Plan{
 				Name:     "myplan",
-				Memory:   1024,
+				Memory:   4194304,
 				Swap:     512,
 				CpuShare: 100,
 				Default:  true,
@@ -86,7 +86,7 @@ func (s *S) TestPlanCreateFlags(c *check.C) {
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := planCreate{}
-	command.Flags().Parse(true, []string{"-c", "100", "-m", "1024", "-s", "512", "-d", "-r", "myrouter"})
+	command.Flags().Parse(true, []string{"-c", "100", "-m", "4194304", "-s", "512", "-d", "-r", "myrouter"})
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	c.Assert(stdout.String(), check.Equals, "Plan successfully created!\n")
@@ -107,9 +107,76 @@ func (s *S) TestPlanCreateError(c *check.C) {
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
 	command := planCreate{}
+	command.Flags().Parse(true, []string{"-c", "5"})
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
 	c.Assert(stdout.String(), check.Equals, "Failed to create plan!\n")
+}
+
+func (s *S) TestPlanCreateInvalidMemory(c *check.C) {
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Args:   []string{"myplan"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusCreated},
+		CondFunc: func(req *http.Request) bool {
+			var plan app.Plan
+			err := json.NewDecoder(req.Body).Decode(&plan)
+			c.Assert(err, check.IsNil)
+			expected := app.Plan{
+				Name:     "myplan",
+				Memory:   4,
+				Swap:     0,
+				CpuShare: 100,
+				Default:  false,
+				Router:   "",
+			}
+			c.Assert(plan, check.DeepEquals, expected)
+			return req.URL.Path == "/plans" && req.Method == "POST"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := planCreate{}
+	command.Flags().Parse(true, []string{"-c", "100", "-m", "4"})
+	err := command.Run(&context, client)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, "Minimum memory limit allowed is 4MB!\nFailed to create plan!\n")
+}
+
+func (s *S) TestPlanCreateInvalidCpushare(c *check.C) {
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Args:   []string{"myplan"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusCreated},
+		CondFunc: func(req *http.Request) bool {
+			var plan app.Plan
+			err := json.NewDecoder(req.Body).Decode(&plan)
+			c.Assert(err, check.IsNil)
+			expected := app.Plan{
+				Name:     "myplan",
+				Memory:   0,
+				Swap:     0,
+				CpuShare: 1,
+				Default:  false,
+				Router:   "",
+			}
+			c.Assert(plan, check.DeepEquals, expected)
+			return req.URL.Path == "/plans" && req.Method == "POST"
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := planCreate{}
+	command.Flags().Parse(true, []string{"-c", "1", "-m", "4194304"})
+	err := command.Run(&context, client)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, "The minimum allowed cpu-shares is 2!\nFailed to create plan!\n")
 }
 
 func (s *S) TestPlanRemoveInfo(c *check.C) {

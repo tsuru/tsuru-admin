@@ -62,6 +62,14 @@ func (c *planCreate) Run(context *cmd.Context, client *cmd.Client) error {
 	if err != nil {
 		return err
 	}
+	if c.cpushare < 2 {
+		fmt.Fprintf(context.Stdout, "The minimum allowed cpu-shares is 2!\nFailed to create plan!\n")
+		return nil
+	}
+	if c.memory > 0 && c.memory < 4194304 {
+		fmt.Fprintf(context.Stdout, "Minimum memory limit allowed is 4MB!\nFailed to create plan!\n")
+		return nil
+	}
 	plan := app.Plan{
 		Name:     context.Args[0],
 		Memory:   c.memory,
