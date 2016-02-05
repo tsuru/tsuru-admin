@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -13,6 +13,7 @@ import (
 
 	"github.com/codegangsta/negroni"
 	"github.com/tsuru/config"
+	apiRouter "github.com/tsuru/tsuru/api/router"
 	"github.com/tsuru/tsuru/api/shutdown"
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/auth"
@@ -83,7 +84,7 @@ func RunServer(dry bool) http.Handler {
 	}
 	fmt.Printf("Using mongodb database %q from the server %q.\n", dbName, connString)
 
-	m := &delayedRouter{}
+	m := &apiRouter.DelayedRouter{}
 
 	for _, handler := range tsuruHandlerList {
 		m.Add(handler.method, handler.path, handler.h)
@@ -98,11 +99,13 @@ func RunServer(dry bool) http.Handler {
 	m.Add("Get", "/services/{service}/instances/{instance}", AuthorizationRequiredHandler(serviceInstance))
 	m.Add("Delete", "/services/{service}/instances/{instance}", AuthorizationRequiredHandler(removeServiceInstance))
 	m.Add("Post", "/services/instances", AuthorizationRequiredHandler(createServiceInstance))
+	m.Add("Post", "/services/{service}/instances/{instance}/update", AuthorizationRequiredHandler(updateServiceInstance))
 	m.Add("Put", "/services/{service}/instances/{instance}/{app}", AuthorizationRequiredHandler(bindServiceInstance))
 	m.Add("Delete", "/services/{service}/instances/{instance}/{app}", AuthorizationRequiredHandler(unbindServiceInstance))
 	m.Add("Get", "/services/{service}/instances/{instance}/status", AuthorizationRequiredHandler(serviceInstanceStatus))
 	m.Add("Put", "/services/{service}/instances/permission/{instance}/{team}", AuthorizationRequiredHandler(serviceInstanceGrantTeam))
 	m.Add("Delete", "/services/{service}/instances/permission/{instance}/{team}", AuthorizationRequiredHandler(serviceInstanceRevokeTeam))
+	m.Add("Get", "/services/{service}/instances/{instance}/info", AuthorizationRequiredHandler(serviceInstanceInfo))
 
 	m.AddAll("/services/{service}/proxy/{instance}", AuthorizationRequiredHandler(serviceInstanceProxy))
 	m.AddAll("/services/proxy/service/{service}", AuthorizationRequiredHandler(serviceProxy))
@@ -122,20 +125,20 @@ func RunServer(dry bool) http.Handler {
 	m.Add("Get", "/apps/{app}", AuthorizationRequiredHandler(appInfo))
 	m.Add("Post", "/apps/{app}/cname", AuthorizationRequiredHandler(setCName))
 	m.Add("Delete", "/apps/{app}/cname", AuthorizationRequiredHandler(unsetCName))
-	m.Add("Post", "/apps/{app}/plan", AuthorizationRequiredHandler(changePlan))
 	runHandler := AuthorizationRequiredHandler(runCommand)
 	m.Add("Post", "/apps/{app}/run", runHandler)
 	m.Add("Post", "/apps/{app}/restart", AuthorizationRequiredHandler(restart))
 	m.Add("Post", "/apps/{app}/start", AuthorizationRequiredHandler(start))
 	m.Add("Post", "/apps/{app}/stop", AuthorizationRequiredHandler(stop))
+	m.Add("Post", "/apps/{app}/sleep", AuthorizationRequiredHandler(sleep))
 	m.Add("Get", "/apps/{appname}/quota", AuthorizationRequiredHandler(getAppQuota))
 	m.Add("Post", "/apps/{appname}/quota", AuthorizationRequiredHandler(changeAppQuota))
+	m.Add("Post", "/apps/{appname}", AuthorizationRequiredHandler(updateApp))
 	m.Add("Get", "/apps/{app}/env", AuthorizationRequiredHandler(getEnv))
 	m.Add("Post", "/apps/{app}/env", AuthorizationRequiredHandler(setEnv))
 	m.Add("Delete", "/apps/{app}/env", AuthorizationRequiredHandler(unsetEnv))
 	m.Add("Get", "/apps", AuthorizationRequiredHandler(appList))
 	m.Add("Post", "/apps", AuthorizationRequiredHandler(createApp))
-	m.Add("Post", "/apps/{app}/team-owner", AuthorizationRequiredHandler(setTeamOwner))
 	forceDeleteLockHandler := AuthorizationRequiredHandler(forceDeleteLock)
 	m.Add("Delete", "/apps/{app}/lock", forceDeleteLockHandler)
 	m.Add("Put", "/apps/{app}/units", AuthorizationRequiredHandler(addUnits))
@@ -150,7 +153,6 @@ func RunServer(dry bool) http.Handler {
 	logPostHandler := AuthorizationRequiredHandler(addLog)
 	m.Add("Post", "/apps/{app}/log", logPostHandler)
 	m.Add("Post", "/apps/{appname}/deploy/rollback", AuthorizationRequiredHandler(deployRollback))
-	m.Add("Post", "/apps/{app}/pool", AuthorizationRequiredHandler(appChangePool))
 	m.Add("Get", "/apps/{app}/metric/envs", AuthorizationRequiredHandler(appMetricEnvs))
 	m.Add("Post", "/apps/{app}/routes", AuthorizationRequiredHandler(appRebuildRoutes))
 
@@ -230,6 +232,7 @@ func RunServer(dry bool) http.Handler {
 
 	m.Add("Get", "/roles", AuthorizationRequiredHandler(listRoles))
 	m.Add("Post", "/roles", AuthorizationRequiredHandler(addRole))
+	m.Add("Get", "/roles/{name}", AuthorizationRequiredHandler(roleInfo))
 	m.Add("Delete", "/roles/{name}", AuthorizationRequiredHandler(removeRole))
 	m.Add("Post", "/roles/{name}/permissions", AuthorizationRequiredHandler(addPermissions))
 	m.Add("Delete", "/roles/{name}/permissions/{permission}", AuthorizationRequiredHandler(removePermissions))

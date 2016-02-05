@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -40,9 +40,10 @@ func createServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 		return err
 	}
 	instance := service.ServiceInstance{
-		Name:      body["name"],
-		PlanName:  body["plan"],
-		TeamOwner: body["owner"],
+		Name:        body["name"],
+		PlanName:    body["plan"],
+		TeamOwner:   body["owner"],
+		Description: body["description"],
 	}
 	if instance.TeamOwner == "" {
 		teamOwner, err := permission.TeamForPermission(t, permission.PermServiceInstanceCreate)
@@ -68,6 +69,44 @@ func createServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 	}
 	rec.Log(user.Email, "create-service-instance", string(b))
 	return service.CreateServiceInstance(instance, &srv, user)
+}
+
+func updateServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	var body map[string]string
+	err = json.Unmarshal(b, &body)
+	if err != nil {
+		return err
+	}
+	serviceName := r.URL.Query().Get(":service")
+	instanceName := r.URL.Query().Get(":instance")
+	description, ok := body["description"]
+	if !ok || description == "" {
+		return &errors.HTTP{
+			Code:    http.StatusBadRequest,
+			Message: "Invalid value for description",
+		}
+	}
+	si, err := getServiceInstanceOrError(serviceName, instanceName)
+	if err != nil {
+		return err
+	}
+	allowed := permission.Check(t, permission.PermServiceInstanceUpdateDescription,
+		permission.Context(permission.CtxServiceInstance, si.Name),
+	)
+	if !allowed {
+		return permission.ErrUnauthorized
+	}
+	user, err := t.User()
+	if err != nil {
+		return err
+	}
+	rec.Log(user.Email, "update-service-instance", string(b))
+	si.Description = description
+	return service.UpdateService(si)
 }
 
 func removeServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -262,6 +301,58 @@ func serviceInstanceStatus(w http.ResponseWriter, r *http.Request, t auth.Token)
 	if n != len(b) {
 		return &errors.HTTP{Code: http.StatusInternalServerError, Message: "Failed to write response body"}
 	}
+	return nil
+}
+
+type ServiceInstanceInfo struct {
+	Apps            []string
+	Teams           []string
+	TeamOwner       string
+	Description     string
+	PlanName        string
+	PlanDescription string
+	CustomInfo      map[string]string
+}
+
+func serviceInstanceInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	instanceName := r.URL.Query().Get(":instance")
+	serviceName := r.URL.Query().Get(":service")
+	serviceInstance, err := getServiceInstanceOrError(serviceName, instanceName)
+	if err != nil {
+		return err
+	}
+	permissionValue := serviceName + "/" + instanceName
+	allowed := permission.Check(t, permission.PermServiceInstanceRead,
+		append(permission.Contexts(permission.CtxTeam, serviceInstance.Teams),
+			permission.Context(permission.CtxServiceInstance, permissionValue),
+		)...,
+	)
+	if !allowed {
+		return permission.ErrUnauthorized
+	}
+	rec.Log(t.GetUserName(), "service-instance-info", serviceName, instanceName)
+	info, err := serviceInstance.Info()
+	if err != nil {
+		return err
+	}
+	plan, err := service.GetPlanByServiceNameAndPlanName(serviceName, serviceInstance.PlanName)
+	if err != nil {
+		return err
+	}
+	sInfo := ServiceInstanceInfo{
+		Apps:            serviceInstance.Apps,
+		Teams:           serviceInstance.Teams,
+		TeamOwner:       serviceInstance.TeamOwner,
+		Description:     serviceInstance.Description,
+		PlanName:        plan.Name,
+		PlanDescription: plan.Description,
+		CustomInfo:      info,
+	}
+	b, err := json.Marshal(sInfo)
+	if err != nil {
+		return nil
+	}
+	w.Write(b)
 	return nil
 }
 

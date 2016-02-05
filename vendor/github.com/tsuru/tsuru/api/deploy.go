@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -34,19 +34,12 @@ func deploy(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 			}
 		}
 	}
-	version := r.PostFormValue("version")
 	archiveURL := r.PostFormValue("archive-url")
 	image := r.PostFormValue("image")
-	if image == "" && version == "" && archiveURL == "" && file == nil {
+	if image == "" && archiveURL == "" && file == nil {
 		return &errors.HTTP{
 			Code:    http.StatusBadRequest,
-			Message: "you must specify either the version, the archive-url, a image url or upload a file.",
-		}
-	}
-	if version != "" && archiveURL != "" {
-		return &errors.HTTP{
-			Code:    http.StatusBadRequest,
-			Message: "you must specify either the version or the archive-url, but not both",
+			Message: "you must specify either the archive-url, a image url or upload a file.",
 		}
 	}
 	commit := r.PostFormValue("commit")
@@ -57,7 +50,7 @@ func deploy(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		origin = "image"
 	}
 	if origin != "" {
-		if !validateOrigin(origin) {
+		if !app.ValidateOrigin(origin) {
 			return &errors.HTTP{
 				Code:    http.StatusBadRequest,
 				Message: "Invalid deployment origin",
@@ -90,9 +83,19 @@ func deploy(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	}
 	writer := io.NewKeepAliveWriter(w, 30*time.Second, "please wait...")
 	defer writer.Stop()
+	var build bool
+	buildString := r.URL.Query().Get("build")
+	if buildString != "" {
+		build, err = strconv.ParseBool(buildString)
+		if err != nil {
+			return &errors.HTTP{
+				Code:    http.StatusBadRequest,
+				Message: err.Error(),
+			}
+		}
+	}
 	err = app.Deploy(app.DeployOptions{
 		App:          instance,
-		Version:      version,
 		Commit:       commit,
 		File:         file,
 		ArchiveURL:   archiveURL,
@@ -100,21 +103,12 @@ func deploy(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		User:         userName,
 		Image:        image,
 		Origin:       origin,
+		Build:        build,
 	})
 	if err == nil {
 		fmt.Fprintln(w, "\nOK")
 	}
 	return err
-}
-
-func validateOrigin(origin string) bool {
-	originList := []string{"app-deploy", "git", "rollback", "drag-and-drop", "image"}
-	for _, ol := range originList {
-		if ol == origin {
-			return true
-		}
-	}
-	return false
 }
 
 func diffDeploy(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -171,7 +165,7 @@ func deployRollback(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 	}
 	origin := r.URL.Query().Get("origin")
 	if origin != "" {
-		if !validateOrigin(origin) {
+		if !app.ValidateOrigin(origin) {
 			return &errors.HTTP{
 				Code:    http.StatusBadRequest,
 				Message: "Invalid deployment origin",

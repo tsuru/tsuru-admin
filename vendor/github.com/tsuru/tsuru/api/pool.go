@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -64,9 +64,18 @@ func listPoolsToUser(w http.ResponseWriter, r *http.Request, t auth.Token) error
 	if err != nil {
 		return err
 	}
+	allowedDefault := permission.Check(t, permission.PermPoolUpdate)
+	defaultPool := []provision.Pool{}
+	if allowedDefault {
+		defaultPool, err = provision.ListPools(bson.M{"default": true})
+		if err != nil {
+			return err
+		}
+	}
 	p := map[string]interface{}{
 		"pools_by_team": poolsByTeam,
 		"public_pools":  publicPools,
+		"default_pool":  defaultPool,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(p)

@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -37,6 +37,7 @@ type DockerProvisioner interface {
 }
 
 type Container struct {
+	MongoID                 bson.ObjectId `bson:"_id,omitempty"`
 	ID                      string
 	AppName                 string
 	ProcessName             string
@@ -103,6 +104,7 @@ func (c *Container) Create(args *CreateArgs) error {
 	config := docker.Config{
 		Image:        args.ImageID,
 		Cmd:          args.Commands,
+		Entrypoint:   []string{},
 		User:         user,
 		ExposedPorts: exposedPorts,
 		AttachStdin:  false,
@@ -208,8 +210,8 @@ func (c *Container) NetworkInfo(p DockerProvisioner) (NetworkInfo, error) {
 	return netInfo, err
 }
 
-func (c *Container) SetStatus(p DockerProvisioner, status string, updateDB bool) error {
-	c.Status = status
+func (c *Container) SetStatus(p DockerProvisioner, status provision.Status, updateDB bool) error {
+	c.Status = status.String()
 	c.LastStatusUpdate = time.Now().In(time.UTC)
 	updateData := bson.M{
 		"status":           c.Status,
@@ -342,7 +344,6 @@ func (c *Container) Exec(p DockerProvisioner, stdout, stderr io.Writer, cmd stri
 		return &execErr{code: execData.ExitCode}
 	}
 	return nil
-
 }
 
 // Commits commits the container, creating an image in Docker. It then returns
@@ -387,6 +388,17 @@ func (c *Container) Commit(p DockerProvisioner, writer io.Writer) (string, error
 	return c.BuildingImage, nil
 }
 
+func (c *Container) Sleep(p DockerProvisioner) error {
+	if c.Status != provision.StatusStarted.String() && c.Status != provision.StatusStarting.String() {
+		return fmt.Errorf("container %s is not starting or started", c.ID)
+	}
+	err := p.Cluster().StopContainer(c.ID, 10)
+	if err != nil {
+		log.Errorf("error on stop container %s: %s", c.ID, err)
+	}
+	return c.SetStatus(p, provision.StatusAsleep, true)
+}
+
 func (c *Container) Stop(p DockerProvisioner) error {
 	if c.Status == provision.StatusStopped.String() {
 		return nil
@@ -395,7 +407,7 @@ func (c *Container) Stop(p DockerProvisioner) error {
 	if err != nil {
 		log.Errorf("error on stop container %s: %s", c.ID, err)
 	}
-	c.SetStatus(p, provision.StatusStopped.String(), true)
+	c.SetStatus(p, provision.StatusStopped, true)
 	return nil
 }
 
@@ -424,11 +436,15 @@ func (c *Container) Start(args *StartArgs) error {
 		hostConfig.PortBindings = map[docker.Port][]docker.PortBinding{
 			docker.Port(port + "/tcp"): {{HostIP: "", HostPort: ""}},
 		}
+		logConf := DockerLog{}
+		pool := args.App.GetPool()
+		driver, opts, logErr := logConf.LogOpts(pool)
+		if logErr != nil {
+			return err
+		}
 		hostConfig.LogConfig = docker.LogConfig{
-			Type: "syslog",
-			Config: map[string]string{
-				"syslog-address": "udp://localhost:" + strconv.Itoa(BsSysLogPort()),
-			},
+			Type:   driver,
+			Config: opts,
 		}
 	}
 	hostConfig.SecurityOpt, _ = config.GetList("docker:security-opts")
@@ -462,9 +478,9 @@ func (c *Container) Start(args *StartArgs) error {
 	if err != nil {
 		return err
 	}
-	initialStatus := provision.StatusStarting.String()
+	initialStatus := provision.StatusStarting
 	if args.Deploy {
-		initialStatus = provision.StatusBuilding.String()
+		initialStatus = provision.StatusBuilding
 	}
 	return c.SetStatus(args.Provisioner, initialStatus, false)
 }

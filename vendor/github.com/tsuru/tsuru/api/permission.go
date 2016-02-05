@@ -1,3 +1,7 @@
+// Copyright 2016 tsuru authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package api
 
 import (
@@ -29,7 +33,12 @@ func removeRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleDelete) {
 		return permission.ErrUnauthorized
 	}
-	err := permission.DestroyRole(r.URL.Query().Get(":name"))
+	roleName := r.URL.Query().Get(":name")
+	err := auth.RemoveRoleFromAllUsers(roleName)
+	if err != nil {
+		return err
+	}
+	err = permission.DestroyRole(roleName)
 	if err == permission.ErrRoleNotFound {
 		return &errors.HTTP{Code: http.StatusNotFound, Message: err.Error()}
 	}
@@ -52,6 +61,28 @@ func listRoles(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		return err
 	}
 	b, err := json.Marshal(roles)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, err = w.Write(b)
+	return err
+}
+
+func roleInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	if !(permission.Check(t, permission.PermRoleUpdate) ||
+		permission.Check(t, permission.PermRoleUpdateAssign) ||
+		permission.Check(t, permission.PermRoleUpdateDissociate) ||
+		permission.Check(t, permission.PermRoleCreate) ||
+		permission.Check(t, permission.PermRoleDelete)) {
+		return permission.ErrUnauthorized
+	}
+	roleName := r.URL.Query().Get(":name")
+	role, err := permission.FindRole(roleName)
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(role)
 	if err != nil {
 		return err
 	}

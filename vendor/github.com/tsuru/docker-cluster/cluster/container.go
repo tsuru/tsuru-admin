@@ -261,6 +261,16 @@ func (c *Cluster) AttachToContainer(opts docker.AttachToContainerOptions) error 
 	return wrapError(node, node.AttachToContainer(opts))
 }
 
+// AttachToContainerNonBlocking attaches to a container and returns a docker.CloseWaiter, using given options.
+func (c *Cluster) AttachToContainerNonBlocking(opts docker.AttachToContainerOptions) (docker.CloseWaiter, error) {
+	node, err := c.getNodeForContainer(opts.Container)
+	if err != nil {
+		return nil, err
+	}
+	node.setPersistentClient()
+	return node.AttachToContainerNonBlocking(opts)
+}
+
 // Logs retrieves the logs of the specified container.
 func (c *Cluster) Logs(opts docker.LogsOptions) error {
 	node, err := c.getNodeForContainer(opts.Container)
@@ -354,4 +364,12 @@ func (c *Cluster) InspectExec(execId, containerId string) (*docker.ExecInspect, 
 		return nil, wrapError(node, err)
 	}
 	return execInspect, nil
+}
+
+func (c *Cluster) UploadToContainer(containerId string, opts docker.UploadToContainerOptions) error {
+	node, err := c.getNodeForContainer(containerId)
+	if err != nil {
+		return err
+	}
+	return node.UploadToContainer(containerId, opts)
 }

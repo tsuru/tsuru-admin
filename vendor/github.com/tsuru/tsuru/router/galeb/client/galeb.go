@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -29,6 +29,8 @@ type GalebClient struct {
 	ApiUrl        string
 	Username      string
 	Password      string
+	Token         string
+	TokenHeader   string
 	Environment   string
 	Project       string
 	BalancePolicy string
@@ -60,7 +62,15 @@ func (c *GalebClient) doRequest(method, path string, params interface{}) (*http.
 	if err != nil {
 		return nil, err
 	}
-	req.SetBasicAuth(c.Username, c.Password)
+	if c.Token != "" {
+		header := c.TokenHeader
+		if header == "" {
+			header = "x-auth-token"
+		}
+		req.Header.Set(header, c.Token)
+	} else {
+		req.SetBasicAuth(c.Username, c.Password)
+	}
 	req.Header.Set("Content-Type", contentType)
 	rsp, err := net.Dial5Full60Client.Do(req)
 	if c.Debug {
@@ -382,11 +392,11 @@ func (c *GalebClient) waitStatusOK(resourceURI string) error {
 	path := strings.TrimPrefix(resourceURI, c.ApiUrl)
 	maxWaitTime := 30 * time.Second
 	timeout := time.After(maxWaitTime)
-	status := STATUS_PENDING
+	var status string
 	var err error
 	for {
 		status, err = c.fetchPathStatus(path)
-		if err != nil || status != STATUS_PENDING {
+		if err != nil || (status != STATUS_PENDING && status != STATUS_SYNCHRONIZING) {
 			break
 		}
 		select {

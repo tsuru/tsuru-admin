@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -296,8 +296,15 @@ func (a *FakeApp) Run(cmd string, w io.Writer, once bool) error {
 	return nil
 }
 
-func (app *FakeApp) GetUpdatePlatform() bool {
-	return app.UpdatePlatform
+func (a *FakeApp) GetUpdatePlatform() bool {
+	return a.UpdatePlatform
+}
+
+func (a *FakeApp) SetUpdatePlatform(check bool) error {
+	a.commMut.Lock()
+	a.UpdatePlatform = check
+	a.commMut.Unlock()
+	return nil
 }
 
 func (app *FakeApp) GetRouter() (string, error) {
@@ -384,6 +391,13 @@ func (p *FakeProvisioner) Stops(app provision.App, process string) int {
 	return p.apps[app.GetName()].stops[process]
 }
 
+// Sleeps returns the number of sleeps for a given app.
+func (p *FakeProvisioner) Sleeps(app provision.App, process string) int {
+	p.mut.RLock()
+	defer p.mut.RUnlock()
+	return p.apps[app.GetName()].sleeps[process]
+}
+
 func (p *FakeProvisioner) CustomData(app provision.App) map[string]interface{} {
 	p.mut.RLock()
 	defer p.mut.RUnlock()
@@ -426,13 +440,6 @@ func (p *FakeProvisioner) GetUnits(app provision.App) []provision.Unit {
 	pApp, _ := p.apps[app.GetName()]
 	p.mut.RUnlock()
 	return pApp.units
-}
-
-// Version returns the last deployed for a given app.
-func (p *FakeProvisioner) Version(app provision.App) string {
-	p.mut.RLock()
-	defer p.mut.RUnlock()
-	return p.apps[app.GetName()].version
 }
 
 // PrepareOutput sends the given slice of bytes to a queue of outputs.
@@ -485,22 +492,6 @@ func (p *FakeProvisioner) Swap(app1, app2 provision.App) error {
 	return routertest.FakeRouter.Swap(app1.GetName(), app2.GetName())
 }
 
-func (p *FakeProvisioner) GitDeploy(app provision.App, version string, w io.Writer) (string, error) {
-	if err := p.getError("GitDeploy"); err != nil {
-		return "", err
-	}
-	p.mut.Lock()
-	defer p.mut.Unlock()
-	pApp, ok := p.apps[app.GetName()]
-	if !ok {
-		return "", errNotProvisioned
-	}
-	w.Write([]byte("Git deploy called"))
-	pApp.version = version
-	p.apps[app.GetName()] = pApp
-	return "app-image", nil
-}
-
 func (p *FakeProvisioner) ArchiveDeploy(app provision.App, archiveURL string, w io.Writer) (string, error) {
 	if err := p.getError("ArchiveDeploy"); err != nil {
 		return "", err
@@ -517,7 +508,7 @@ func (p *FakeProvisioner) ArchiveDeploy(app provision.App, archiveURL string, w 
 	return "app-image", nil
 }
 
-func (p *FakeProvisioner) UploadDeploy(app provision.App, file io.ReadCloser, w io.Writer) (string, error) {
+func (p *FakeProvisioner) UploadDeploy(app provision.App, file io.ReadCloser, build bool, w io.Writer) (string, error) {
 	if err := p.getError("UploadDeploy"); err != nil {
 		return "", err
 	}
@@ -543,6 +534,7 @@ func (p *FakeProvisioner) ImageDeploy(app provision.App, img string, w io.Writer
 	if !ok {
 		return "", errNotProvisioned
 	}
+	pApp.image = img
 	w.Write([]byte("Image deploy called"))
 	p.apps[app.GetName()] = pApp
 	return img, nil
@@ -581,6 +573,7 @@ func (p *FakeProvisioner) Provision(app provision.App) error {
 		restarts: make(map[string]int),
 		starts:   make(map[string]int),
 		stops:    make(map[string]int),
+		sleeps:   make(map[string]int),
 	}
 	return nil
 }
@@ -924,6 +917,22 @@ func (p *FakeProvisioner) Stop(app provision.App, process string) error {
 	return nil
 }
 
+func (p *FakeProvisioner) Sleep(app provision.App, process string) error {
+	p.mut.Lock()
+	defer p.mut.Unlock()
+	pApp, ok := p.apps[app.GetName()]
+	if !ok {
+		return errNotProvisioned
+	}
+	pApp.sleeps[process]++
+	for i, u := range pApp.units {
+		u.Status = provision.StatusAsleep
+		pApp.units[i] = u
+	}
+	p.apps[app.GetName()] = pApp
+	return nil
+}
+
 func (p *FakeProvisioner) RegisterUnit(unit provision.Unit, customData map[string]interface{}) error {
 	p.mut.Lock()
 	defer p.mut.Unlock()
@@ -1076,12 +1085,13 @@ type provisionedApp struct {
 	restarts    map[string]int
 	starts      map[string]int
 	stops       map[string]int
-	version     string
+	sleeps      map[string]int
 	lastArchive string
 	lastFile    io.ReadCloser
 	cnames      []string
 	unitLen     int
 	lastData    map[string]interface{}
+	image       string
 }
 
 type provisionedPlatform struct {

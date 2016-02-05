@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -63,14 +63,6 @@ func randomString() string {
 	h.Write([]byte(time.Now().Format(time.RFC3339Nano)))
 	io.CopyN(h, rand.Reader, 10)
 	return fmt.Sprintf("%x", h.Sum(nil))[:20]
-}
-
-func (p *dockerProvisioner) gitDeploy(app provision.App, version string, w io.Writer) (string, error) {
-	commands, err := gitDeployCmds(app, version)
-	if err != nil {
-		return "", err
-	}
-	return p.deployPipeline(app, p.getBuildImage(app), commands, w)
 }
 
 func (p *dockerProvisioner) archiveDeploy(app provision.App, image, archiveURL string, w io.Writer) (string, error) {

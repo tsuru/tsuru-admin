@@ -7,6 +7,7 @@ package docker
 import (
 	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	stderr "errors"
 	"fmt"
 	"io"
@@ -37,11 +38,11 @@ import (
 	_ "github.com/tsuru/tsuru/router/hipache"
 	_ "github.com/tsuru/tsuru/router/routertest"
 	_ "github.com/tsuru/tsuru/router/vulcand"
-	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
 var mainDockerProvisioner *dockerProvisioner
+var ErrEntrypointOrProcfileNotFound = stderr.New("You should provide a entrypoint in image or a Procfile in the following locations: /home/application/current or /app/user or /.")
 
 func init() {
 	mainDockerProvisioner = &dockerProvisioner{}
@@ -253,6 +254,10 @@ func (p *dockerProvisioner) Initialize() error {
 	if err != nil {
 		return err
 	}
+	err = registerRoutesRebuildTask()
+	if err != nil {
+		return err
+	}
 	return p.initDockerCluster()
 }
 
@@ -288,6 +293,7 @@ func (p *dockerProvisioner) Restart(a provision.App, process string, w io.Writer
 		toAdd[c.ProcessName].Status = provision.StatusStarted
 	}
 	_, err = p.runReplaceUnitsPipeline(writer, a, toAdd, containers, imageId)
+	routesRebuildOrEnqueue(a.GetName())
 	return err
 }
 
@@ -304,7 +310,7 @@ func (p *dockerProvisioner) Start(app provision.App, process string) error {
 		if err != nil {
 			return err
 		}
-		c.SetStatus(p, provision.StatusStarting.String(), true)
+		c.SetStatus(p, provision.StatusStarting, true)
 		if info, err := c.NetworkInfo(p); err == nil {
 			p.fixContainer(c, info)
 		}
@@ -327,6 +333,21 @@ func (p *dockerProvisioner) Stop(app provision.App, process string) error {
 	}, nil, true)
 }
 
+func (p *dockerProvisioner) Sleep(app provision.App, process string) error {
+	containers, err := p.listContainersByProcess(app.GetName(), process)
+	if err != nil {
+		log.Errorf("Got error while getting app containers: %s", err)
+		return nil
+	}
+	return runInContainers(containers, func(c *container.Container, _ chan *container.Container) error {
+		err := c.Sleep(p)
+		if err != nil {
+			log.Errorf("Failed to sleep %q: %s", app.GetName(), err)
+		}
+		return err
+	}, nil, true)
+}
+
 func (p *dockerProvisioner) Swap(app1, app2 provision.App) error {
 	r, err := getRouterForApp(app1)
 	if err != nil {
@@ -340,15 +361,59 @@ func (p *dockerProvisioner) Rollback(app provision.App, imageId string, w io.Wri
 }
 
 func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.Writer) (string, error) {
-	return imageId, p.deploy(app, imageId, w)
-}
-
-func (p *dockerProvisioner) GitDeploy(app provision.App, version string, w io.Writer) (string, error) {
-	imageId, err := p.gitDeploy(app, version, w)
+	cluster := p.Cluster()
+	pullOpts := docker.PullImageOptions{
+		Repository: imageId,
+	}
+	err := cluster.PullImage(pullOpts, docker.AuthConfiguration{})
 	if err != nil {
 		return "", err
 	}
-	return imageId, p.deployAndClean(app, imageId, w)
+	cmd := "cat /home/application/current/Procfile || cat /app/user/Procfile || cat /Procfile"
+	output, err := p.runCommandInContainer(imageId, cmd, app)
+	if err != nil {
+		return "", err
+	}
+	procfile := getProcessesFromProcfile(output.String())
+	if len(procfile) == 0 {
+		imageInspect, inspectErr := cluster.InspectImage(imageId)
+		if inspectErr != nil {
+			return "", inspectErr
+		}
+		if len(imageInspect.Config.Entrypoint) == 0 {
+			return "", ErrEntrypointOrProcfileNotFound
+		}
+		procfile["web"] = strings.Join(imageInspect.Config.Entrypoint, " ")
+	}
+	newImage, err := appNewImageName(app.GetName())
+	if err != nil {
+		return "", err
+	}
+	imageInfo := strings.Split(newImage, ":")
+	err = cluster.TagImage(imageId, docker.TagImageOptions{Repo: strings.Join(imageInfo[:len(imageInfo)-1], ":"), Tag: imageInfo[len(imageInfo)-1], Force: true})
+	if err != nil {
+		return "", err
+	}
+	registry, err := config.GetString("docker:registry")
+	if err != nil {
+		return "", err
+	}
+	pushOpts := docker.PushImageOptions{
+		Name:     strings.Join(imageInfo[:len(imageInfo)-1], ":"),
+		Tag:      imageInfo[len(imageInfo)-1],
+		Registry: registry,
+	}
+	err = cluster.PushImage(pushOpts, mainDockerProvisioner.RegistryAuthConfig())
+	if err != nil {
+		return "", err
+	}
+	imageData := createImageMetadata(newImage, procfile)
+	err = saveImageCustomData(newImage, imageData.CustomData)
+	if err != nil {
+		return "", err
+	}
+	app.SetUpdatePlatform(true)
+	return newImage, p.deploy(app, newImage, w)
 }
 
 func (p *dockerProvisioner) ArchiveDeploy(app provision.App, archiveURL string, w io.Writer) (string, error) {
@@ -359,12 +424,30 @@ func (p *dockerProvisioner) ArchiveDeploy(app provision.App, archiveURL string, 
 	return imageId, p.deployAndClean(app, imageId, w)
 }
 
-func (p *dockerProvisioner) UploadDeploy(app provision.App, archiveFile io.ReadCloser, w io.Writer) (string, error) {
-	defer archiveFile.Close()
-	filePath := "/home/application/archive.tar.gz"
+func (p *dockerProvisioner) UploadDeploy(app provision.App, archiveFile io.ReadCloser, build bool, w io.Writer) (string, error) {
+	dirPath := "/home/application/"
+	filePath := fmt.Sprintf("%sarchive.tar.gz", dirPath)
 	user, err := config.GetString("docker:user")
 	if err != nil {
 		user, _ = config.GetString("docker:ssh:user")
+	}
+	var imageName string
+	var buildErr error
+	defer archiveFile.Close()
+	var fileBuf bytes.Buffer
+	_, err = fileBuf.ReadFrom(archiveFile)
+	fileBytes := bytes.NewReader(fileBuf.Bytes())
+	if err != nil {
+		return "", err
+	}
+	if build {
+		imageName, buildErr = p.BuildImageWithDockerfile(app, &fileBuf, w)
+		if buildErr != nil {
+			return "", buildErr
+		}
+	}
+	if imageName == "" {
+		imageName = p.getBuildImage(app)
 	}
 	options := docker.CreateContainerOptions{
 		Config: &docker.Config{
@@ -374,8 +457,8 @@ func (p *dockerProvisioner) UploadDeploy(app provision.App, archiveFile io.ReadC
 			OpenStdin:    true,
 			StdinOnce:    true,
 			User:         user,
-			Image:        p.getBuildImage(app),
-			Cmd:          []string{"/bin/bash", "-c", "cat > " + filePath},
+			Image:        imageName,
+			Cmd:          []string{"/bin/bash", "-c", "tail -f /dev/null"},
 		},
 	}
 	cluster := p.Cluster()
@@ -388,34 +471,65 @@ func (p *dockerProvisioner) UploadDeploy(app provision.App, archiveFile io.ReadC
 	if err != nil {
 		return "", err
 	}
-	var output bytes.Buffer
-	opts := docker.AttachToContainerOptions{
-		Container:    cont.ID,
-		OutputStream: &output,
-		ErrorStream:  &output,
-		InputStream:  archiveFile,
-		Stream:       true,
-		Stdin:        true,
-		Stdout:       true,
-		Stderr:       true,
-	}
-	status, err := container.SafeAttachWaitContainer(p, opts)
+	var buf bytes.Buffer
+	var archiveFileBuf bytes.Buffer
+	tarball := tar.NewWriter(&buf)
 	if err != nil {
 		return "", err
 	}
-	if status != 0 {
-		log.Errorf("Failed to deploy container from upload: %s", &output)
-		return "", fmt.Errorf("container exited with status %d", status)
+	n, err := archiveFileBuf.ReadFrom(fileBytes)
+	if err != nil {
+		return "", err
+	}
+	header := tar.Header{
+		Name: "archive.tar.gz",
+		Mode: 0666,
+		Size: n,
+	}
+	tarball.WriteHeader(&header)
+	archiveReader := bytes.NewReader(archiveFileBuf.Bytes())
+	_, err = io.Copy(&buf, archiveReader)
+	if err != nil {
+		return "", err
+	}
+	defer tarball.Close()
+	uploadOpts := docker.UploadToContainerOptions{
+		InputStream: &buf,
+		Path:        dirPath,
+	}
+	err = cluster.UploadToContainer(cont.ID, uploadOpts)
+	if err != nil {
+		return "", err
+	}
+	err = cluster.StopContainer(cont.ID, 10)
+	if err != nil {
+		return "", err
 	}
 	image, err := cluster.CommitContainer(docker.CommitContainerOptions{Container: cont.ID})
-	if err != nil {
-		return "", err
-	}
 	imageId, err := p.archiveDeploy(app, image.ID, "file://"+filePath, w)
 	if err != nil {
 		return "", err
 	}
 	return imageId, p.deployAndClean(app, imageId, w)
+}
+
+func (p *dockerProvisioner) BuildImageWithDockerfile(app provision.App, archiveFile io.Reader, w io.Writer) (string, error) {
+	cluster := p.Cluster()
+	archive, err := gzip.NewReader(archiveFile)
+	if err != nil {
+		return "", err
+	}
+	defer archive.Close()
+	imageName := app.GetName() + randomString()
+	buildOpts := docker.BuildImageOptions{
+		Name:           imageName,
+		NoCache:        true,
+		RmTmpContainer: true,
+		InputStream:    archive,
+		OutputStream:   w,
+	}
+	err = cluster.BuildImage(buildOpts)
+	return imageName, err
 }
 
 func (p *dockerProvisioner) deployAndClean(a provision.App, imageId string, w io.Writer) error {
@@ -456,6 +570,7 @@ func (p *dockerProvisioner) deploy(a provision.App, imageId string, w io.Writer)
 		}
 		_, err = p.runReplaceUnitsPipeline(w, a, toAdd, containers, imageId)
 	}
+	routesRebuildOrEnqueue(a.GetName())
 	return err
 }
 
@@ -663,6 +778,7 @@ func (p *dockerProvisioner) AddUnits(a provision.App, units uint, process string
 		return nil, err
 	}
 	conts, err := p.runCreateUnitsPipeline(writer, a, map[string]*containersToAdd{process: {Quantity: int(units)}}, imageId)
+	routesRebuildOrEnqueue(a.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -748,13 +864,13 @@ func (p *dockerProvisioner) SetUnitStatus(unit provision.Unit, status provision.
 	if err != nil {
 		return err
 	}
-	if cont.Status == provision.StatusBuilding.String() {
+	if cont.Status == provision.StatusBuilding.String() || cont.Status == provision.StatusAsleep.String() {
 		return nil
 	}
 	if unit.AppName != "" && cont.AppName != unit.AppName {
 		return stderr.New("wrong app name")
 	}
-	err = cont.SetStatus(p, status.String(), true)
+	err = cont.SetStatus(p, status, true)
 	if err != nil {
 		return err
 	}
@@ -824,6 +940,8 @@ func (p *dockerProvisioner) AdminCommands() []cmd.Command {
 		&bs.EnvSetCmd{},
 		&bs.InfoCmd{},
 		&bs.UpgradeCmd{},
+		&dockerLogInfo{},
+		&dockerLogUpdate{},
 	}
 }
 
@@ -924,7 +1042,7 @@ func (p *dockerProvisioner) Units(app provision.App) ([]provision.Unit, error) {
 
 func (p *dockerProvisioner) RoutableUnits(app provision.App) ([]provision.Unit, error) {
 	imageId, err := appCurrentImageName(app.GetName())
-	if err != nil {
+	if err != nil && err != errNoImagesAvailable {
 		return nil, err
 	}
 	webProcessName, err := getImageWebProcessName(imageId)
@@ -955,7 +1073,7 @@ func (p *dockerProvisioner) RegisterUnit(unit provision.Unit, customData map[str
 		}
 		return nil
 	}
-	err = cont.SetStatus(p, provision.StatusStarted.String(), true)
+	err = cont.SetStatus(p, provision.StatusStarted, true)
 	if err != nil {
 		return err
 	}
@@ -1025,15 +1143,12 @@ func (p *dockerProvisioner) Nodes(app provision.App) ([]cluster.Node, error) {
 
 func (p *dockerProvisioner) MetricEnvs(app provision.App) map[string]string {
 	envMap := map[string]string{}
-	bsConf, err := bs.LoadConfig(nil)
-	if err != nil {
-		return envMap
-	}
-	envs, err := bsConf.EnvListForEndpoint("", app.GetPool())
+	envs, err := bs.EnvListForEndpoint("", app.GetPool())
 	if err != nil {
 		return envMap
 	}
 	for _, env := range envs {
+		// TODO(cezarsa): ugly as hell
 		if strings.HasPrefix(env, "METRICS_") {
 			slice := strings.SplitN(env, "=", 2)
 			envMap[slice[0]] = slice[1]
@@ -1048,14 +1163,21 @@ func (p *dockerProvisioner) LogsEnabled(app provision.App) (bool, string, error)
 		logDocKeyFormat     = "LOG_%s_DOC"
 		tsuruLogBackendName = "tsuru"
 	)
-	config, err := bs.LoadConfig([]string{app.GetPool()})
+	logConf := container.DockerLog{}
+	isBS, err := logConf.IsBS(app.GetPool())
 	if err != nil {
-		if err == mgo.ErrNotFound {
-			return true, "", nil
-		}
 		return false, "", err
 	}
-	enabledBackends := config.EnvValueForPool(logBackendsEnv, app.GetPool())
+	if !isBS {
+		driver, _, _ := logConf.LogOpts(app.GetPool())
+		msg := fmt.Sprintf("Logs not available through tsuru. Enabled log driver is %q.", driver)
+		return false, msg, nil
+	}
+	config, err := bs.LoadConfig([]string{app.GetPool()})
+	if err != nil {
+		return false, "", err
+	}
+	enabledBackends := config.PoolEntry(app.GetPool(), logBackendsEnv)
 	if enabledBackends == "" {
 		return true, "", nil
 	}
@@ -1069,7 +1191,7 @@ func (p *dockerProvisioner) LogsEnabled(app provision.App) (bool, string, error)
 	var docs []string
 	for _, backendName := range backendsList {
 		keyName := fmt.Sprintf(logDocKeyFormat, strings.ToUpper(backendName))
-		backendDoc := config.EnvValueForPool(keyName, app.GetPool())
+		backendDoc := config.PoolEntry(app.GetPool(), keyName)
 		var docLine string
 		if backendDoc == "" {
 			docLine = fmt.Sprintf("* %s", backendName)

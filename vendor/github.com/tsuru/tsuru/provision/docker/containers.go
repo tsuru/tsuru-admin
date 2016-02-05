@@ -1,10 +1,11 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package docker
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/fsouza/go-dockerclient"
+	"github.com/tsuru/config"
 	"github.com/tsuru/tsuru/action"
 	"github.com/tsuru/tsuru/app"
 	tsuruErrors "github.com/tsuru/tsuru/errors"
@@ -54,6 +57,7 @@ func (l *appLocker) Unlock(appName string) {
 	l.refCount[appName]--
 	if l.refCount[appName] <= 0 {
 		l.refCount[appName] = 0
+		routesRebuildOrEnqueue(appName)
 		app.ReleaseApplicationLock(appName)
 	}
 }
@@ -320,4 +324,44 @@ func (p *dockerProvisioner) rebalanceContainersByHost(address string, w io.Write
 func (p *dockerProvisioner) rebalanceContainers(writer io.Writer, dryRun bool) error {
 	_, err := p.rebalanceContainersByFilter(writer, nil, nil, dryRun)
 	return err
+}
+
+func (p *dockerProvisioner) runCommandInContainer(image string, command string, app provision.App) (bytes.Buffer, error) {
+	var output bytes.Buffer
+	user, err := config.GetString("docker:user")
+	if err != nil {
+		user, _ = config.GetString("docker:ssh:user")
+	}
+	createOptions := docker.CreateContainerOptions{
+		Config: &docker.Config{
+			AttachStdout: true,
+			AttachStderr: true,
+			User:         user,
+			Image:        image,
+			Entrypoint:   []string{"/bin/bash", "-c"},
+			Cmd:          []string{command},
+		},
+	}
+	cluster := p.Cluster()
+	_, cont, err := cluster.CreateContainerSchedulerOpts(createOptions, []string{app.GetName(), ""})
+	if err != nil {
+		return output, err
+	}
+	attachOptions := docker.AttachToContainerOptions{
+		Container:    cont.ID,
+		OutputStream: &output,
+		Stream:       true,
+		Stdout:       true,
+	}
+	waiter, err := cluster.AttachToContainerNonBlocking(attachOptions)
+	if err != nil {
+		return output, err
+	}
+	defer cluster.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID, Force: true})
+	err = cluster.StartContainer(cont.ID, nil)
+	if err != nil {
+		return output, err
+	}
+	waiter.Wait()
+	return output, nil
 }

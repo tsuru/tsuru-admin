@@ -252,24 +252,58 @@ func CreateApp(app *App, user *auth.User) error {
 	return nil
 }
 
-// ChangePlan changes the plan of the application.
-//
-// It may change the state of the application if the new plan includes a new
-// router or a change in the amount of available memory.
-func (app *App) ChangePlan(planName string, w io.Writer) error {
-	plan, err := findPlanByName(planName)
+// Update changes informations of the application.
+func (app *App) Update(updateData App, w io.Writer) error {
+	description := updateData.Description
+	planName := updateData.Plan.Name
+	poolName := updateData.Pool
+	teamOwner := updateData.TeamOwner
+	if description != "" {
+		app.Description = description
+	}
+	if poolName != "" {
+		app.Pool = poolName
+		_, err := app.GetPoolForApp(app.Pool)
+		if err != nil {
+			return err
+		}
+	}
+	conn, err := db.Conn()
 	if err != nil {
 		return err
 	}
-	var oldPlan Plan
-	oldPlan, app.Plan = app.Plan, *plan
-	actions := []*action.Action{
-		&moveRouterUnits,
-		&saveApp,
-		&restartApp,
-		&removeOldBackend,
+	defer conn.Close()
+	if planName != "" {
+		plan, err := findPlanByName(planName)
+		if err != nil {
+			return err
+		}
+		var oldPlan Plan
+		oldPlan, app.Plan = app.Plan, *plan
+		actions := []*action.Action{
+			&moveRouterUnits,
+			&saveApp,
+			&restartApp,
+			&removeOldBackend,
+		}
+		err = action.NewPipeline(actions...).Execute(app, &oldPlan, w)
+		if err != nil {
+			return err
+		}
 	}
-	return action.NewPipeline(actions...).Execute(app, &oldPlan, w)
+	if teamOwner != "" {
+		team, err := auth.GetTeam(teamOwner)
+		if err != nil {
+			return err
+		}
+		app.TeamOwner = team.Name
+		err = app.validateTeamOwner()
+		if err != nil {
+			return err
+		}
+		app.Grant(team)
+	}
+	return conn.Apps().Update(bson.M{"name": app.Name}, app)
 }
 
 // unbind takes all service instances that are bound to the app, and unbind
@@ -624,26 +658,6 @@ func (app *App) GetTeams() []auth.Team {
 	return teams
 }
 
-// SetTeamOwner sets the TeamOwner value.
-func (app *App) SetTeamOwner(team *auth.Team, u *auth.User) error {
-	app.TeamOwner = team.Name
-	err := app.validateTeamOwner()
-	if err != nil {
-		return err
-	}
-	app.Grant(team)
-	conn, err := db.Conn()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	err = conn.Apps().Update(bson.M{"name": app.Name}, app)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (app *App) validateTeamOwner() error {
 	_, err := auth.GetTeam(app.TeamOwner)
 	return err
@@ -706,29 +720,6 @@ func (app *App) GetDefaultPool() (string, error) {
 		return "", stderr.New("No default pool.")
 	}
 	return pools[0].Name, nil
-}
-
-func (app *App) ChangePool(newPoolName string) error {
-	poolName, err := app.GetPoolForApp(newPoolName)
-	if err != nil {
-		return err
-	}
-	if poolName == "" {
-		return stderr.New("This pool doesn't exists.")
-	}
-	conn, err := db.Conn()
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	err = conn.Apps().Update(
-		bson.M{"name": app.Name},
-		bson.M{"$set": bson.M{"pool": poolName}},
-	)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // setEnv sets the given environment variable in the app.
@@ -822,6 +813,10 @@ func (app *App) Restart(process string, w io.Writer) error {
 		log.Errorf("[restart] error on restart the app %s - %s", app.Name, err)
 		return err
 	}
+	_, err = app.RebuildRoutes()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -834,6 +829,48 @@ func (app *App) Stop(w io.Writer, process string) error {
 	err := Provisioner.Stop(app, process)
 	if err != nil {
 		log.Errorf("[stop] error on stop the app %s - %s", app.Name, err)
+		return err
+	}
+	return nil
+}
+
+func (app *App) Sleep(w io.Writer, process string, proxyURL *url.URL) error {
+	msg := fmt.Sprintf("\n ---> Putting the process %q to sleep\n", process)
+	if process == "" {
+		msg = fmt.Sprintf("\n ---> Putting the app %q to sleep\n", app.Name)
+	}
+	log.Write(w, []byte(msg))
+	routerName, err := app.GetRouter()
+	if err != nil {
+		log.Errorf("[sleep] error on sleep the app %s - %s", app.Name, err)
+		return err
+	}
+	r, err := router.Get(routerName)
+	if err != nil {
+		log.Errorf("[sleep] error on sleep the app %s - %s", app.Name, err)
+		return err
+	}
+	oldRoutes, err := r.Routes(app.GetName())
+	if err != nil {
+		log.Errorf("[sleep] error on sleep the app %s - %s", app.Name, err)
+		return err
+	}
+	for _, route := range oldRoutes {
+		r.RemoveRoute(app.GetName(), route)
+	}
+	err = r.AddRoute(app.GetName(), proxyURL)
+	if err != nil {
+		log.Errorf("[sleep] error on sleep the app %s - %s", app.Name, err)
+		return err
+	}
+	err = Provisioner.Sleep(app, process)
+	if err != nil {
+		log.Errorf("[sleep] error on sleep the app %s - %s", app.Name, err)
+		for _, route := range oldRoutes {
+			r.AddRoute(app.GetName(), route)
+		}
+		r.RemoveRoute(app.GetName(), proxyURL)
+		log.Errorf("[sleep] rolling back the sleep %s", app.Name)
 		return err
 	}
 	return nil
@@ -1421,6 +1458,10 @@ func (app *App) Start(w io.Writer, process string) error {
 	err := Provisioner.Start(app, process)
 	if err != nil {
 		log.Errorf("[start] error on start the app %s - %s", app.Name, err)
+		return err
+	}
+	_, err = app.RebuildRoutes()
+	if err != nil {
 		return err
 	}
 	return nil
