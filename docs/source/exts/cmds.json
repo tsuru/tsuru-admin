@@ -1,0 +1,221 @@
+{
+  "machine-template-remove": {
+    "usage": "tsuru-admin machine-template-remove <name>", 
+    "desc": "Remove an existing machine template.\n\nMinimum # of arguments: 1\n"
+  }, 
+  "help": {
+    "usage": "tsuru-admin command [args]", 
+    "desc": ""
+  }, 
+  "bs-env-set": {
+    "usage": "tsuru-admin bs-env-set <NAME=value> [NAME=value]... [-p/--pool poolname]", 
+    "desc": "Set environment variables used when starting bs (big sibling) container.\n\nFlags:\n  \n  -p, --pool (= \"\")\n      Pool name where set variables will apply\n  \nMinimum # of arguments: 1\n"
+  }, 
+  "target-list": {
+    "usage": "tsuru-admin target-list", 
+    "desc": "Displays the list of targets, marking the current.\n\nOther commands related to target:\n\n  - target-add: adds a new target to the list of targets\n  - target-set: defines one of the targets in the list as the current target\n  - target-remove: removes one target from the list\n\n"
+  }, 
+  "docker-node-list": {
+    "usage": "tsuru-admin docker-node-list [--filter/-f <metadata>=<value>]...", 
+    "desc": "List available nodes in the cluster\n\nFlags:\n  \n  -f, --filter  (= {})\n      Filter by metadata value\n  \n"
+  }, 
+  "user-list": {
+    "usage": "tsuru-admin user-list", 
+    "desc": "This command was removed. You should use `tsuru user-list` instead.\n\n"
+  }, 
+  "pool-add": {
+    "usage": "tsuru-admin pool-add <pool> [-p/--public] [-d/--default] [-f/--force]", 
+    "desc": "Add a pool to cluster.\nUse [-p/--public] flag to create a public pool.\nUse [-d/--default] flag to create default pool.\nUse [-f/--force] flag to force overwrite default pool.\n\nFlags:\n  \n  -d, --default  (= false)\n      Make pool default\n  -f, --force  (= false)\n      Force overwrite default pool.\n  -p, --public  (= false)\n      Make pool public\n  \nMinimum # of arguments: 1\n"
+  }, 
+  "bs-info": {
+    "usage": "tsuru-admin bs-info", 
+    "desc": "Prints information about bs (big sibling) containers.\n\n"
+  }, 
+  "containers-rebalance": {
+    "usage": "tsuru-admin containers-rebalance [--dry] [-y/--assume-yes] [-m/--metadata <metadata>=<value>]... [-a/--app <appname>]...", 
+    "desc": "Move containers creating a more even distribution between docker nodes.\nInstead of specifying hosts as in the containers-move command, this command\nwill automatically choose to which host each unit should be moved, trying to\ndistribute the units as evenly as possible.\n\nThe --dry flag runs the balancing algorithm without doing any real\nmodification. It will only print which units would be moved and where they\nwould be created.\n\nFlags:\n  \n  -a, --app  (= [])\n      Filter by app name\n  --dry  (= false)\n      Dry run, only shows what would be done\n  -m, --metadata  (= {})\n      Filter by host metadata\n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \n"
+  }, 
+  "machine-template-list": {
+    "usage": "tsuru-admin machine-template-list", 
+    "desc": "List all machine templates.\n\n"
+  }, 
+  "user-quota-view": {
+    "usage": "tsuru-admin user-quota-view <user-email>", 
+    "desc": "Displays the current usage and limit of the user\n\nMinimum # of arguments: 1\n"
+  }, 
+  "docker-autoscale-rule-remove": {
+    "usage": "tsuru-admin docker-autoscale-rule-remove [rule-name] [-y/--assume-yes]", 
+    "desc": "Removes an auto-scale rule. The name of the rule may be omited, which means \"remove the default rule\".\n\nFlags:\n  \n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \n"
+  }, 
+  "docker-autoscale-rule-set": {
+    "usage": "tsuru-admin docker-autoscale-rule-set [-f/--filter-value metadata-filter-value] [-c/--max-container-count 0] [-m/--max-memory-ratio 0.9] [-d/--scale-down-ratio 1.33] [-r/--rebalance-on-scale false] [-e/--enabled true]", 
+    "desc": "Creates or update an auto-scale rule. Using resources limitation (amount of container or memory usage).\n\nFlags:\n  \n  -c, --max-container-count  (= 0)\n      The maximum amount of containers on every node. Might be zero, which means no maximum value. Whenever this value is reached, tsuru will trigger a new auto scale event.\n  -d, --scale-down-ratio  (= 1.33)\n      The ratio for triggering an scale down event. The default value is 1.33, which mean that whenever it gets one third of the resource utilization (memory ratio or container count).\n  -e, --enabled  (= true)\n      A boolean flag indicating whether the rule should be enabled or disabled\n  -f, --filter-value (= \"\")\n      The value of the metadata filter matching the rule. This is the unique identifier of the rule.\n  -m, --max-memory-ratio  (= 0)\n      The maximum memory usage per node. 0 means no limit, 1 means 100%. It is fine to use values greater than 1, which means that tsuru will overcommit memory in Docker nodes. Keep in mind that container count has higher precedence than memory ratio, so if --max-container-count is defined, the value of --max-memory-ratio will be ignored.\n  -r, --rebalance-on-scale  (= true)\n      A boolean flag indicating whether containers should be rebalanced after running an scale. The default behavior is to always rebalance the containers.\n  \n"
+  }, 
+  "app-routes-rebuild": {
+    "usage": "tsuru-admin app-routes-rebuild -a <app-name>", 
+    "desc": "Rebuild routes for an application.\nThis can be used to recover from some failure in the router that caused\nexisting routes to be lost.\n\nFlags:\n  \n  -a, --app (= \"\")\n      The name of the app.\n  \n"
+  }, 
+  "docker-autoscale-list": {
+    "usage": "tsuru-admin docker-autoscale-list [--page/-p 1]", 
+    "desc": "List node auto scale history.\n\nFlags:\n  \n  -p, --page  (= 1)\n      Current page\n  \n"
+  }, 
+  "plan-remove": {
+    "usage": "tsuru-admin plan-remove <name>", 
+    "desc": "Removes a plan from the database.\n\nMinimum # of arguments: 1\n"
+  }, 
+  "docker-node-add": {
+    "usage": "tsuru-admin docker-node-add [param_name=param_value]... [--register]", 
+    "desc": "Creates or registers a new node in the cluster.\nBy default, this command will call the configured IaaS to create a new\nmachine. Every param will be sent to the IaaS implementation.\n\nParameters with special meaning:\n  iaas=<iaas name>          Which iaas provider should be used, if not set\n                            tsuru will use the default iaas specified in\n                            tsuru.conf file.\n  template=<template name>  A machine template with predefined parameters,\n                            additional parameters will override template\n                            ones. See 'machine-template-add' command.\n\n--register: Registers an existing docker endpoint. The IaaS won't be called.\n            Having a address=<docker_api_url> param is mandatory.\n\n\nFlags:\n  \n  --register  (= false)\n      Register an already created node\n  \n"
+  }, 
+  "platform-remove": {
+    "usage": "tsuru-admin platform-remove <platform name> [-y]", 
+    "desc": "Remove a platform from tsuru.\n\nFlags:\n  \n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
+  }, 
+  "user-info": {
+    "usage": "tsuru-admin user-info", 
+    "desc": "Displays information about the current user.\n\n"
+  }, 
+  "app-unlock": {
+    "usage": "tsuru-admin app-unlock -a <app-name> [-y]", 
+    "desc": "Forces the removal of an app lock.\nUse with caution, removing an active lock may cause inconsistencies.\n\nFlags:\n  \n  -a, --app (= \"\")\n      The name of the app.\n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \n"
+  }, 
+  "plan-create": {
+    "usage": "tsuru-admin plan-create <name> -c cpushare [-m memory] [-s swap] [-r router] [--default]", 
+    "desc": "Creates a new plan for being used when creating apps.\n\nFlags:\n  \n  -c, --cpushare  (= 0)\n      Relative cpu share each unit will have available.\n  -d, --default  (= false)\n      Set plan as default, this will remove the default flag from any other plan.\n  -m, --memory  (= 0)\n      Amount of available memory for units in bytes.\n  -r, --router (= \"\")\n      The name of the router used by this plan.\n  -s, --swap  (= 0)\n      Amount of available swap space for units in bytes.\n  \nMinimum # of arguments: 1\n"
+  }, 
+  "pool-update": {
+    "usage": "tsuru-admin pool-update <pool> [--public=true/false] [--default=true/false] [-f/--force]", 
+    "desc": "Update a pool.\nUse [--public=true/false] to change the pool attribute.\nUse [--default=true/false] to change the pool attribute.\nUse [-f/--force] to force pool to be default.\n\nFlags:\n  \n  --default  (= &main.pointerBoolFlag{value:(*bool)(nil)})\n      Make pool default.\n  -f, --force  (= false)\n      Force pool to be default.\n  --public  (= &main.pointerBoolFlag{value:(*bool)(nil)})\n      Make pool public.\n  \nMinimum # of arguments: 1\n"
+  }, 
+  "router-list": {
+    "usage": "tsuru-admin router-list", 
+    "desc": "List all routers available for plan creation.\n\n"
+  }, 
+  "version": {
+    "usage": "tsuru-admin version", 
+    "desc": "display the current version\n\n"
+  }, 
+  "target-set": {
+    "usage": "tsuru-admin target-set <label>", 
+    "desc": "Change current target (tsuru server)\n\n\nMinimum # of arguments: 1\n"
+  }, 
+  "container-move": {
+    "usage": "tsuru-admin container-move <container id> <to host>", 
+    "desc": "Move specified container to another host.\nThis command allow you to specify a container id and a destination host, this\nwill create a new container on the destination host and remove the container\nfrom its previous host.\n\nMinimum # of arguments: 2\n"
+  }, 
+  "docker-autoscale-info": {
+    "usage": "tsuru-admin docker-autoscale-info", 
+    "desc": "Display the current configuration for tsuru autoscale,\nincluding the set of rules and the current metadata filter.\n\nThe metadata filter is the value that defines which node metadata will be used\nto group autoscale rules. A common approach is to use the \"pool\" as the\nfilter. Then autoscale can be configured for each matching rule value.\n\n"
+  }, 
+  "platform-add": {
+    "usage": "tsuru-admin platform-add <platform name> [--dockerfile/-d Dockerfile] [--image/-i image]", 
+    "desc": "Adds new platform to tsuru.\n\nThe name of the image can be automatically inferred in case you're using an official platform. Check https://github.com/tsuru/platforms for a list of official platforms.\n\nExamples:\n\n\ttsuru-admin platform-add java # uses the default Java image\n\ttsuru-admin platform-add java -i registry.company.com/tsuru/java # uses custom Java image\n\ttsuru-admin platform-add java -d /data/projects/java/Dockerfile # uses local Dockerfile\n\ttsuru-admin platform-add java -d https://platforms.com/java/Dockerfile #uses remote Dockerfile\n\nFlags:\n  \n  -d, --dockerfile (= \"\")\n      URL or path to the Dockerfile used for building the image of the platform\n  -i, --image (= \"\")\n      Name of the prebuilt Docker image\n  \nMinimum # of arguments: 1\n"
+  }, 
+  "machine-list": {
+    "usage": "tsuru-admin machine-list", 
+    "desc": "List all machines created using a IaaS.\n\n"
+  }, 
+  "log-remove": {
+    "usage": "tsuru-admin log-remove [--app appname]", 
+    "desc": "remove all app logs.\n\nFlags:\n  \n  -a, --app (= \"\")\n      The name of the app.\n  \n"
+  }, 
+  "docker-node-remove": {
+    "usage": "tsuru-admin docker-node-remove <address> [--no-rebalance] [--destroy] [-y]", 
+    "desc": "Removes a node from the cluster.\n\n--destroy: Destroy the machine in the IaaS used to create it, if it exists.\n--no-rebalance: Do not rebalance containers of removed node.\n\n\nFlags:\n  \n  --destroy  (= false)\n      Destroy node from IaaS\n  --no-rebalance  (= false)\n      Do not rebalance containers of removed node.\n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
+  }, 
+  "docker-autoscale-run": {
+    "usage": "tsuru-admin docker-autoscale-run [-y/--assume-yes]", 
+    "desc": "Run node auto scale checks once. This command will work even if [[docker:auto-\nscale:enabled]] config entry is set to false. Auto scaling checks may trigger\nthe addition, removal or rebalancing of docker nodes, as long as these nodes\nwere created using an IaaS provider registered in tsuru.\n\nFlags:\n  \n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \n"
+  }, 
+  "app-quota-view": {
+    "usage": "tsuru-admin app-quota-view <app-name>", 
+    "desc": "Displays the current usage and limit of the given app\n\nMinimum # of arguments: 1\n"
+  }, 
+  "target-add": {
+    "usage": "tsuru-admin target-add <label> <target> [--set-current|-s]", 
+    "desc": "Adds a new entry to the list of available targets\n\nFlags:\n  \n  -s, --set-current  (= false)\n      Add and define the target as the current target\n  \nMinimum # of arguments: 2\n"
+  }, 
+  "bs-upgrade": {
+    "usage": "tsuru-admin bs-upgrade", 
+    "desc": "Upgrade the version of bs containers.\n\n"
+  }, 
+  "target-remove": {
+    "usage": "tsuru-admin target-remove", 
+    "desc": "Remove a target from target-list (tsuru server)\n\n\nMinimum # of arguments: 1\n"
+  }, 
+  "pool-teams-add": {
+    "usage": "tsuru-admin pool-teams-add <pool> <teams>", 
+    "desc": "Add team to a pool\n\nMinimum # of arguments: 2\n"
+  }, 
+  "user-quota-change": {
+    "usage": "tsuru-admin user-quota-change <user-email> <new-limit>", 
+    "desc": "Changes the limit of apps that a user can create\n\nThe new limit must be an integer, it may also be \"unlimited\".\n\nMinimum # of arguments: 2\n"
+  }, 
+  "logout": {
+    "usage": "tsuru-admin logout", 
+    "desc": "Logout will terminate the session with the tsuru server.\n\n"
+  }, 
+  "docker-log-update": {
+    "usage": "tsuru-admin docker-log-update [-r/--restart] [-p/--pool poolname] --log-driver <driver> [--log-opt name=value]...", 
+    "desc": "Set custom configuration for container logs. By default tsuru configures\napplication containers to send all logs to the tsuru/bs container through\nsyslog.\n\nSetting a custom log-driver allow users to change this behavior and make\ncontainers send their logs directly using the driver bypassing tsuru/bs\ncompletely. In this situation the 'tsuru app-log' command will not work\nanymore.\n\nThe --log-driver option accepts either the value 'bs' restoring tsuru default\nbehavior or any log-driver supported by docker along with their --log-opt. See\nhttps://docs.docker.com/engine/reference/logging/overview/ for more details.\n\nIf --pool is specified the log-driver will only be used on containers started\non the chosen pool.\n\nFlags:\n  \n  --log-driver (= \"\")\n      Chosen log driver. Supported log drivers depend on the docker version running on nodes.\n  --log-opt  (= {})\n      Log options send to the specified log-driver\n  -p, --pool (= \"\")\n      Pool name where log options will be used.\n  -r, --restart  (= false)\n      Whether tsuru should restart all apps on the specified pool.\n  \n"
+  }, 
+  "machine-destroy": {
+    "usage": "tsuru-admin machine-destroy <machine id>", 
+    "desc": "Destroy an existing machine created using a IaaS.\n\nMinimum # of arguments: 1\n"
+  }, 
+  "pool-teams-remove": {
+    "usage": "tsuru-admin pool-teams-remove <pool> <teams>", 
+    "desc": "Remove team from pool\n\nMinimum # of arguments: 2\n"
+  }, 
+  "machine-template-add": {
+    "usage": "tsuru-admin machine-template-add <name> <iaas> <param>=<value>...", 
+    "desc": "Add a new machine template.\n\nMinimum # of arguments: 3\n"
+  }, 
+  "docker-log-info": {
+    "usage": "tsuru-admin docker-log-info", 
+    "desc": "Prints information about docker log configuration for each pool.\n\n"
+  }, 
+  "target": {
+    "topic": "In tsuru, a target is the address of the remote tsuru server.\n\nEach target is identified by a label and a HTTP/HTTPS address. The client\nrequires at least one target to connect to, there's no default target. A user\nmay have multiple targets, but he/she will be able to use only per session."
+  }, 
+  "pool-remove": {
+    "usage": "tsuru-admin pool-remove <pool> [-y]", 
+    "desc": "Remove a pool to cluster\n\nFlags:\n  \n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
+  }, 
+  "docker-healing-list": {
+    "usage": "tsuru-admin docker-healing-list [--node] [--container]", 
+    "desc": "List healing history for nodes or containers.\n\nFlags:\n  \n  --container  (= false)\n      List only healing process started for containers\n  --node  (= false)\n      List only healing process started for nodes\n  \n"
+  }, 
+  "containers-move": {
+    "usage": "tsuru-admin containers-move <from host> <to host>", 
+    "desc": "Move all containers from one host to another.\nThis command allows you to move all containers from one host to another. This\nis useful when doing maintenance on hosts. <from host> and <to host> must be\nhost names of existing docker nodes.\n\nThis command will go through the following steps:\n\n* Enumerate all units at the origin host;\n* For each unit, create a new unit at the destination host;\n* Erase each unit from the origin host.\n\nMinimum # of arguments: 2\n"
+  }, 
+  "platform-update": {
+    "usage": "tsuru-admin platform-update <platform name> [--dockerfile/-d Dockerfile] [--disable/--enable] [--image/-i image]", 
+    "desc": "Update a platform in tsuru.\"\n\nThe name of the image can be automatically inferred in case you're using an official platform. Check https://github.com/tsuru/platforms for a list of official platforms.\n\nThe flags --enable and --disable can be used for enabling or disabling a platform.\n\nExamples:\n\n\ttsuru-admin platform-update java # uses the default Java image\n\ttsuru-admin platform-update java -i registry.company.com/tsuru/java # uses custom Java image\n\ttsuru-admin platform-update java -d /data/projects/java/Dockerfile # uses local Dockerfile\n\ttsuru-admin platform-update java -d https://platforms.com/java/Dockerfile #uses remote Dockerfile\n\nFlags:\n  \n  -d, --dockerfile (= \"\")\n      URL or path to the Dockerfile used for building the image of the platform\n  --disable  (= false)\n      Disable the platform\n  --enable  (= false)\n      Enable the platform\n  -i, --image (= \"\")\n      Name of the prebuilt Docker image\n  \nMinimum # of arguments: 1\n"
+  }, 
+  "machine-template-update": {
+    "usage": "tsuru-admin machine-template-update <name> <param>=<value>...", 
+    "desc": "Update an existing machine template.\n\nMinimum # of arguments: 2\n"
+  }, 
+  "app-shell": {
+    "usage": "tsuru-admin app-shell [unit-id] -a/--app <appname>", 
+    "desc": "Opens a remote shell inside unit, using the API server as a proxy. You\ncan access an app unit just giving app name, or specifying the id of the unit.\nYou can get the ID of the unit using the app-info command.\n\nFlags:\n  \n  -a, --app (= \"\")\n      The name of the app.\n  \n"
+  }, 
+  "login": {
+    "usage": "tsuru-admin login [email]", 
+    "desc": "Initiates a new tsuru session for a user. If using tsuru native authentication\nscheme, it will ask for the email and the password and check if the user is\nsuccessfully authenticated. If using OAuth, it will open a web browser for the\nuser to complete the login.\n\nAfter that, the token generated by the tsuru server will be stored in\n[[${HOME}/.tsuru/token]].\n\nAll tsuru actions require the user to be authenticated (except [[tsuru login]]\nand [[tsuru version]]).\n\n"
+  }, 
+  "docker-node-update": {
+    "usage": "tsuru-admin docker-node-update <address> [param_name=param_value...] --disable", 
+    "desc": "Modifies metadata associated to a docker node.\n--disable: Disable node in scheduler.\n--enable: Enable node in scheduler.\n\nFlags:\n  \n  --disable  (= false)\n      Disable node in scheduler.\n  --enable  (= false)\n      Enable node in scheduler.\n  \nMinimum # of arguments: 1\n"
+  }, 
+  "pool-list": {
+    "usage": "tsuru-admin pool-list", 
+    "desc": "This command was removed. You should use `tsuru pool-list` instead.\n\n"
+  }, 
+  "app-quota-change": {
+    "usage": "tsuru-admin app-quota-change <app-name> <new-limit>", 
+    "desc": "Changes the limit of units that an app can have\n\nThe new limit must be an integer, it may also be \"unlimited\".\n\nMinimum # of arguments: 2\n"
+  }
+}

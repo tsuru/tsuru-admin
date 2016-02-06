@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style
 #  license that can be found in the LICENSE file.
 
+doc: docs-clean
+	@python docs/source/exts/tsuru_cmd.py && cd docs && make html SPHINXOPTS="-N -W"
+
+docs: doc
+
+docs-clean:
+	@rm -rf ./docs/build
+
 release:
 	@if [ ! $(version) ]; then \
 		echo "version parameter is required... use: make release version=<value>"; \
@@ -23,7 +31,3 @@ release:
 	@git push origin master
 
 	@echo "$(version) released!"
-
-godep:
-	go get $(GO_EXTRAFLAGS) github.com/tools/godep
-	godep restore ./...
