@@ -112,7 +112,10 @@ type pointerBoolFlag struct {
 }
 
 func (p *pointerBoolFlag) String() string {
-	return fmt.Sprintf("%#v", p)
+	if p.value == nil {
+		return "not set"
+	}
+	return fmt.Sprintf("%v", *p.value)
 }
 
 func (p *pointerBoolFlag) Set(value string) error {

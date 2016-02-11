@@ -53,6 +53,7 @@ def render_topic(app, node, topic):
 idregex = re.compile(r'[^a-zA-Z0-9]')
 inline_literal_regex = re.compile(r'\[\[|\]\]')
 link_regex = re.compile(r'\[(.+?)\]\((.+?)\)', re.DOTALL | re.MULTILINE)
+flag_default_regex = re.compile(r'(\w\s)\((= .+?)\)')
 
 
 def render_cmd(app, node, usage, description):
@@ -76,6 +77,7 @@ def render_cmd(app, node, usage, description):
     parser = docutils.parsers.rst.Parser()
     description = inline_literal_regex.sub('``', description)
     description = link_regex.sub(r'`\1 <\2>`_', description)
+    description = flag_default_regex.sub(r'\1 (\2)', description)
     parser.parse(description, document)
     for el in document.children:
         section.append(el)

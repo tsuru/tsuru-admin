@@ -122,16 +122,8 @@ Pool management
 Healer
 ======
 
-docker-healing-list
--------------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin docker-healing-list [--node] [--container]
-
-This command will list all healing processes started for nodes or containers.
+.. tsuru-command:: docker-healing-list
+   :title: List latest healing events
 
 Platform management
 ===================
@@ -143,51 +135,17 @@ Platform management
 
 .. _tsuru_admin_platform_add_cmd:
 
-platform-add
-------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin platform-add <name> [--dockerfile]
-
-This command allow you to add a new platform to your tsuru installation.
-It will automatically create and build a whole new platform on tsuru server and
-will allow your users to create apps based on that platform.
-
-The --dockerfile flag is an URL to a dockerfile which will create your platform.
+.. tsuru-command:: platform-add
+   :title: Add a new platform
 
 .. _tsuru_admin_platform_update_cmd:
 
-platform-update
----------------
+.. tsuru-command:: platform-update
+   :title: Update an existing platform
 
-.. highlight:: bash
+.. tsuru-command:: platform-remove
+   :title: Remove an existing platform
 
-::
-
-    $ tsuru-admin platform-update <name> [-d/--dockerfile]
-
-This command allow you to update a platform in your tsuru installation.
-It will automatically rebuild your platform and will flag apps to update
-platform on next deploy.
-
-The --dockerfile flag is an URL to a dockerfile which will update your platform.
-
-platform-remove
----------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin platform-remove <platform name> [-y]
-
-This command allow you to remove a platform. This command will not
-remove a platform that is used by an application.
-
-The -y flag assume "yes" as answer to all prompts and run non-interactively.
 
 Plan management
 ===============

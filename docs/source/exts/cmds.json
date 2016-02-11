@@ -69,7 +69,7 @@
   }, 
   "platform-remove": {
     "usage": "tsuru-admin platform-remove <platform name> [-y]", 
-    "desc": "Remove a platform from tsuru.\n\nFlags:\n  \n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
+    "desc": "Remove a platform from tsuru. This command will fail if there are application\nstill using the platform.\n\nFlags:\n  \n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
   }, 
   "user-info": {
     "usage": "tsuru-admin user-info", 
@@ -85,7 +85,7 @@
   }, 
   "pool-update": {
     "usage": "tsuru-admin pool-update <pool> [--public=true/false] [--default=true/false] [-f/--force]", 
-    "desc": "Updates attributes for a pool.\n\nFlags:\n  \n  --default  (= &main.pointerBoolFlag{value:(*bool)(nil)})\n      Make pool default (when none is specified during [[app-create]] this pool will be used)\n  -f, --force  (= false)\n      Force pool to be default.\n  --public  (= &main.pointerBoolFlag{value:(*bool)(nil)})\n      Make pool public (all teams can use it)\n  \nMinimum # of arguments: 1\n"
+    "desc": "Updates attributes for a pool.\n\nFlags:\n  \n  --default  (= not set)\n      Make pool default (when none is specified during [[app-create]] this pool will be used)\n  -f, --force  (= false)\n      Force pool to be default.\n  --public  (= not set)\n      Make pool public (all teams can use it)\n  \nMinimum # of arguments: 1\n"
   }, 
   "router-list": {
     "usage": "tsuru-admin router-list", 
@@ -109,7 +109,7 @@
   }, 
   "platform-add": {
     "usage": "tsuru-admin platform-add <platform name> [--dockerfile/-d Dockerfile] [--image/-i image]", 
-    "desc": "Adds new platform to tsuru.\n\nThe name of the image can be automatically inferred in case you're using an official platform. Check https://github.com/tsuru/platforms for a list of official platforms.\n\nExamples:\n\n\ttsuru-admin platform-add java # uses the default Java image\n\ttsuru-admin platform-add java -i registry.company.com/tsuru/java # uses custom Java image\n\ttsuru-admin platform-add java -d /data/projects/java/Dockerfile # uses local Dockerfile\n\ttsuru-admin platform-add java -d https://platforms.com/java/Dockerfile #uses remote Dockerfile\n\nFlags:\n  \n  -d, --dockerfile (= \"\")\n      URL or path to the Dockerfile used for building the image of the platform\n  -i, --image (= \"\")\n      Name of the prebuilt Docker image\n  \nMinimum # of arguments: 1\n"
+    "desc": "Adds a new platform to tsuru.\n\nThe name of the image can be automatically inferred in case you're using an\nofficial platform. Check https://github.com/tsuru/platforms for a list of\nofficial platforms and instructions on how to create a custom platform.\n\nExamples:\n\n\t[[tsuru-admin platform-add java # uses official tsuru/java image from docker hub]]\n\t[[tsuru-admin platform-add java -i registry.company.com/tsuru/java # uses custom Java image]]\n\t[[tsuru-admin platform-add java -d /data/projects/java/Dockerfile # uses local Dockerfile]]\n\t[[tsuru-admin platform-add java -d https://platforms.com/java/Dockerfile # uses remote Dockerfile]]\n\nFlags:\n  \n  -d, --dockerfile (= \"\")\n      URL or path to the Dockerfile used for building the image of the platform\n  -i, --image (= \"\")\n      Name of the prebuilt Docker image\n  \nMinimum # of arguments: 1\n"
   }, 
   "machine-list": {
     "usage": "tsuru-admin machine-list", 
@@ -192,7 +192,7 @@
   }, 
   "platform-update": {
     "usage": "tsuru-admin platform-update <platform name> [--dockerfile/-d Dockerfile] [--disable/--enable] [--image/-i image]", 
-    "desc": "Update a platform in tsuru.\"\n\nThe name of the image can be automatically inferred in case you're using an official platform. Check https://github.com/tsuru/platforms for a list of official platforms.\n\nThe flags --enable and --disable can be used for enabling or disabling a platform.\n\nExamples:\n\n\ttsuru-admin platform-update java # uses the default Java image\n\ttsuru-admin platform-update java -i registry.company.com/tsuru/java # uses custom Java image\n\ttsuru-admin platform-update java -d /data/projects/java/Dockerfile # uses local Dockerfile\n\ttsuru-admin platform-update java -d https://platforms.com/java/Dockerfile #uses remote Dockerfile\n\nFlags:\n  \n  -d, --dockerfile (= \"\")\n      URL or path to the Dockerfile used for building the image of the platform\n  --disable  (= false)\n      Disable the platform\n  --enable  (= false)\n      Enable the platform\n  -i, --image (= \"\")\n      Name of the prebuilt Docker image\n  \nMinimum # of arguments: 1\n"
+    "desc": "Updates a platform in tsuru.\n\nThe name of the image can be automatically inferred in case you're using an\nofficial platform. Check https://github.com/tsuru/platforms for a list of\nofficial platforms.\n\nThe flags --enable and --disable can be used for enabling or disabling a\nplatform.\n\nExamples:\n\n[[tsuru-admin platform-update java # uses official tsuru/java image from docker hub]]\n[[tsuru-admin platform-update java -i registry.company.com/tsuru/java # uses custom Java image]]\n[[tsuru-admin platform-update java -d /data/projects/java/Dockerfile # uses local Dockerfile]]\n[[tsuru-admin platform-update java -d https://platforms.com/java/Dockerfile # uses remote Dockerfile]]\n\nFlags:\n  \n  -d, --dockerfile (= \"\")\n      URL or path to the Dockerfile used for building the image of the platform\n  --disable  (= false)\n      Disable the platform\n  --enable  (= false)\n      Enable the platform\n  -i, --image (= \"\")\n      Name of the prebuilt Docker image\n  \nMinimum # of arguments: 1\n"
   }, 
   "machine-template-update": {
     "usage": "tsuru-admin machine-template-update <name> <param>=<value>...", 

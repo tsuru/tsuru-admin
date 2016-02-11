@@ -458,16 +458,6 @@ func (s *S) TestPlatformRemoveRun(c *check.C) {
 	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestPlatformRemoveInfo(c *check.C) {
-	expected := &cmd.Info{
-		Name:    "platform-remove",
-		Usage:   "platform-remove <platform name> [-y]",
-		Desc:    "Remove a platform from tsuru.",
-		MinArgs: 1,
-	}
-	c.Assert((&platformRemove{}).Info(), check.DeepEquals, expected)
-}
-
 func (s *S) TestPlatformRemoveConfirmation(c *check.C) {
 	var stdout bytes.Buffer
 	context := cmd.Context{
