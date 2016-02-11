@@ -16,16 +16,6 @@ import (
 	"gopkg.in/check.v1"
 )
 
-func (s *S) TestPlanCreateInfo(c *check.C) {
-	expected := &cmd.Info{
-		Name:    "plan-create",
-		Usage:   "plan-create <name> -c cpushare [-m memory] [-s swap] [-r router] [--default]",
-		Desc:    "Creates a new plan for being used when creating apps.",
-		MinArgs: 1,
-	}
-	c.Assert((&planCreate{}).Info(), check.DeepEquals, expected)
-}
-
 func (s *S) TestPlanCreate(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
@@ -179,16 +169,6 @@ func (s *S) TestPlanCreateInvalidCpushare(c *check.C) {
 	c.Assert(stdout.String(), check.Equals, "Failed to create plan!\n")
 }
 
-func (s *S) TestPlanRemoveInfo(c *check.C) {
-	expected := &cmd.Info{
-		Name:    "plan-remove",
-		Usage:   "plan-remove <name>",
-		Desc:    "Removes a plan from the database.",
-		MinArgs: 1,
-	}
-	c.Assert((&planRemove{}).Info(), check.DeepEquals, expected)
-}
-
 func (s *S) TestPlanRemove(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
@@ -227,16 +207,6 @@ func (s *S) TestPlanRemoveError(c *check.C) {
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
 	c.Assert(stdout.String(), check.Equals, "Failed to remove plan!\n")
-}
-
-func (s *S) TestPlanRoutersListInfo(c *check.C) {
-	expected := &cmd.Info{
-		Name:    "router-list",
-		Usage:   "router-list",
-		Desc:    "List all routers available for plan creation.",
-		MinArgs: 0,
-	}
-	c.Assert((&planRoutersList{}).Info(), check.DeepEquals, expected)
 }
 
 func (s *S) TestPlanRoutersListRun(c *check.C) {

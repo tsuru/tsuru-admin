@@ -81,7 +81,7 @@
   }, 
   "plan-create": {
     "usage": "tsuru-admin plan-create <name> -c cpushare [-m memory] [-s swap] [-r router] [--default]", 
-    "desc": "Creates a new plan for being used when creating apps.\n\nFlags:\n  \n  -c, --cpushare  (= 0)\n      Relative cpu share each unit will have available.\n  -d, --default  (= false)\n      Set plan as default, this will remove the default flag from any other plan.\n  -m, --memory  (= 0)\n      Amount of available memory for units in bytes.\n  -r, --router (= \"\")\n      The name of the router used by this plan.\n  -s, --swap  (= 0)\n      Amount of available swap space for units in bytes.\n  \nMinimum # of arguments: 1\n"
+    "desc": "Creates a new plan for being used when creating apps.\n\nFlags:\n  \n  -c, --cpushare  (= 0)\n      Relative cpu share each unit will have available. This value is unitless and\n      relative, so specifying the same value for all plans means all units will\n      equally share processing power.\n  -d, --default  (= false)\n      Set plan as default, this will remove the default flag from any other plan.\n      The default plan will be used when creating an application without explicitly\n      setting a plan.\n  -m, --memory  (= 0)\n      Amount of available memory for units in bytes.\n  -r, --router (= \"\")\n      The name of the router used by this plan.\n  -s, --swap  (= 0)\n      Amount of available swap space for units in bytes.\n  \nMinimum # of arguments: 1\n"
   }, 
   "pool-update": {
     "usage": "tsuru-admin pool-update <pool> [--public=true/false] [--default=true/false] [-f/--force]", 
@@ -116,8 +116,8 @@
     "desc": "Lists all machines created using an IaaS provider.\nThese machines were created with the [[docker-node-add]] command.\n\n"
   }, 
   "log-remove": {
-    "usage": "tsuru-admin log-remove [--app appname]", 
-    "desc": "remove all app logs.\n\nFlags:\n  \n  -a, --app (= \"\")\n      The name of the app.\n  \n"
+    "usage": "tsuru-admin log-remove", 
+    "desc": "This command was removed. This action is no longer supported.\n\n"
   }, 
   "docker-node-remove": {
     "usage": "tsuru-admin docker-node-remove <address> [--no-rebalance] [--destroy] [-y]", 
