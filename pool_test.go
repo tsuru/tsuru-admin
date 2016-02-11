@@ -16,20 +16,6 @@ import (
 	"gopkg.in/check.v1"
 )
 
-func (s *S) TestAddPoolToSchedulerCmdInfo(c *check.C) {
-	expected := cmd.Info{
-		Name:  "pool-add",
-		Usage: "pool-add <pool> [-p/--public] [-d/--default] [-f/--force]",
-		Desc: `Add a pool to cluster.
-Use [-p/--public] flag to create a public pool.
-Use [-d/--default] flag to create default pool.
-Use [-f/--force] flag to force overwrite default pool.`,
-		MinArgs: 1,
-	}
-	cmd := addPoolToSchedulerCmd{}
-	c.Assert(cmd.Info(), check.DeepEquals, &expected)
-}
-
 func (s *S) TestAddPoolToTheSchedulerCmd(c *check.C) {
 	var buf bytes.Buffer
 	context := cmd.Context{Args: []string{"poolTest"}, Stdout: &buf}
@@ -211,20 +197,6 @@ func (s *S) TestAskOverwriteDefaultPool(c *check.C) {
 	c.Assert(buf.String(), check.Equals, expected)
 }
 
-func (s *S) TestUpdatePoolToSchedulerCmdInfo(c *check.C) {
-	expected := cmd.Info{
-		Name:  "pool-update",
-		Usage: "pool-update <pool> [--public=true/false] [--default=true/false] [-f/--force]",
-		Desc: `Update a pool.
-Use [--public=true/false] to change the pool attribute.
-Use [--default=true/false] to change the pool attribute.
-Use [-f/--force] to force pool to be default.`,
-		MinArgs: 1,
-	}
-	cmd := updatePoolToSchedulerCmd{}
-	c.Assert(cmd.Info(), check.DeepEquals, &expected)
-}
-
 func (s *S) TestUpdatePoolToTheSchedulerCmd(c *check.C) {
 	var buf bytes.Buffer
 	context := cmd.Context{Args: []string{"poolTest"}, Stdout: &buf}
@@ -360,17 +332,6 @@ func (s *S) TestAskOverwriteDefaultPoolInUpdate(c *check.C) {
 	c.Assert(buf.String(), check.Equals, expected)
 }
 
-func (s *S) TestRemovePoolFromSchedulerCmdInfo(c *check.C) {
-	expected := cmd.Info{
-		Name:    "pool-remove",
-		Usage:   "pool-remove <pool> [-y]",
-		Desc:    "Remove a pool to cluster",
-		MinArgs: 1,
-	}
-	cmd := removePoolFromSchedulerCmd{}
-	c.Assert(cmd.Info(), check.DeepEquals, &expected)
-}
-
 func (s *S) TestRemovePoolFromTheSchedulerCmd(c *check.C) {
 	var buf bytes.Buffer
 	context := cmd.Context{Args: []string{"poolTest"}, Stdout: &buf}
@@ -401,17 +362,6 @@ func (s *S) TestRemovePoolFromTheSchedulerCmdConfirmation(c *check.C) {
 	c.Assert(stdout.String(), check.Equals, "Are you sure you want to remove \"poolX\" pool? (y/n) Abort.\n")
 }
 
-func (s *S) TestAddTeamsToPoolCmdInfo(c *check.C) {
-	expected := cmd.Info{
-		Name:    "pool-teams-add",
-		Usage:   "pool-teams-add <pool> <teams>",
-		Desc:    "Add team to a pool",
-		MinArgs: 2,
-	}
-	cmd := addTeamsToPoolCmd{}
-	c.Assert(cmd.Info(), check.DeepEquals, &expected)
-}
-
 func (s *S) TestAddTeamsToPoolCmdRun(c *check.C) {
 	var buf bytes.Buffer
 	ctx := cmd.Context{Stdout: &buf, Args: []string{"pool1", "team1", "team2"}}
@@ -425,17 +375,6 @@ func (s *S) TestAddTeamsToPoolCmdRun(c *check.C) {
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, &manager)
 	err := addTeamsToPoolCmd{}.Run(&ctx, client)
 	c.Assert(err, check.IsNil)
-}
-
-func (s *S) TestRemoveTeamsFromPoolCmdInfo(c *check.C) {
-	expected := cmd.Info{
-		Name:    "pool-teams-remove",
-		Usage:   "pool-teams-remove <pool> <teams>",
-		Desc:    "Remove team from pool",
-		MinArgs: 2,
-	}
-	cmd := removeTeamsFromPoolCmd{}
-	c.Assert(cmd.Info(), check.DeepEquals, &expected)
 }
 
 func (s *S) TestRemoveTeamsFromPoolCmdRun(c *check.C) {

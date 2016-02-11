@@ -104,62 +104,20 @@ Machine management
 Pool management
 ===============
 
-pool-add
----------------
+.. tsuru-command:: pool-add
+   :title: Add a new pool
 
-.. highlight:: bash
+.. tsuru-command:: pool-update
+   :title: Update pool attributes
 
-::
+.. tsuru-command:: pool-remove
+   :title: Remove a pool
 
-    $ tsuru-admin pool-add <pool>
+.. tsuru-command:: pool-teams-add
+   :title: Add team to a pool
 
-This command adds a new pool (cluster).
-
-pool-list
-----------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin pool-list
-
-This command list available pools.
-
-pool-remove
-------------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin pool-remove <pool> [-y]
-
-This command removes a pool.
-
-The -y flag assume "yes" as answer to all prompts and run non-interactively.
-
-pool-teams-add
----------------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin pool-teams-add <pool> <teams>
-
-This command adds one or more teams to a poll. You can add one or more teams at once.
-
-pool-teams-remove
-------------------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin pool-teams-remove <pool> <teams>
-
-This command removes one or more teams from a pool. You can remove one or more teams at once.
+.. tsuru-command:: pool-teams-remove
+   :title: Remove a team from a pool
 
 Healer
 ======

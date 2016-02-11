@@ -25,7 +25,7 @@
   }, 
   "pool-add": {
     "usage": "tsuru-admin pool-add <pool> [-p/--public] [-d/--default] [-f/--force]", 
-    "desc": "Add a pool to cluster.\nUse [-p/--public] flag to create a public pool.\nUse [-d/--default] flag to create default pool.\nUse [-f/--force] flag to force overwrite default pool.\n\nFlags:\n  \n  -d, --default  (= false)\n      Make pool default\n  -f, --force  (= false)\n      Force overwrite default pool.\n  -p, --public  (= false)\n      Make pool public\n  \nMinimum # of arguments: 1\n"
+    "desc": "Adds a new pool.\n\nEach docker node added using [[docker-node-add]] command belongs to one pool.\nAlso, when creating a new application a pool must be chosen and this means\nthat all units of the created application will be spawned in nodes belonging\nto the chosen pool.\n\nFlags:\n  \n  -d, --default  (= false)\n      Make pool default (when none is specified during [[app-create]] this pool will be used)\n  -f, --force  (= false)\n      Force overwrite default pool\n  -p, --public  (= false)\n      Make pool public (all teams can use it)\n  \nMinimum # of arguments: 1\n"
   }, 
   "bs-info": {
     "usage": "tsuru-admin bs-info", 
@@ -85,7 +85,7 @@
   }, 
   "pool-update": {
     "usage": "tsuru-admin pool-update <pool> [--public=true/false] [--default=true/false] [-f/--force]", 
-    "desc": "Update a pool.\nUse [--public=true/false] to change the pool attribute.\nUse [--default=true/false] to change the pool attribute.\nUse [-f/--force] to force pool to be default.\n\nFlags:\n  \n  --default  (= &main.pointerBoolFlag{value:(*bool)(nil)})\n      Make pool default.\n  -f, --force  (= false)\n      Force pool to be default.\n  --public  (= &main.pointerBoolFlag{value:(*bool)(nil)})\n      Make pool public.\n  \nMinimum # of arguments: 1\n"
+    "desc": "Updates attributes for a pool.\n\nFlags:\n  \n  --default  (= &main.pointerBoolFlag{value:(*bool)(nil)})\n      Make pool default (when none is specified during [[app-create]] this pool will be used)\n  -f, --force  (= false)\n      Force pool to be default.\n  --public  (= &main.pointerBoolFlag{value:(*bool)(nil)})\n      Make pool public (all teams can use it)\n  \nMinimum # of arguments: 1\n"
   }, 
   "router-list": {
     "usage": "tsuru-admin router-list", 
@@ -144,8 +144,8 @@
     "desc": "Remove a target from target-list (tsuru server)\n\n\nMinimum # of arguments: 1\n"
   }, 
   "pool-teams-add": {
-    "usage": "tsuru-admin pool-teams-add <pool> <teams>", 
-    "desc": "Add team to a pool\n\nMinimum # of arguments: 2\n"
+    "usage": "tsuru-admin pool-teams-add <pool> <teams>...", 
+    "desc": "Adds teams to a pool. This will make the specified pool available when\ncreating a new application for one of the added teams.\n\nMinimum # of arguments: 2\n"
   }, 
   "user-quota-change": {
     "usage": "tsuru-admin user-quota-change <user-email> <new-limit>", 
@@ -164,8 +164,8 @@
     "desc": "Destroys an existing machine created using a IaaS.\n\nMinimum # of arguments: 1\n"
   }, 
   "pool-teams-remove": {
-    "usage": "tsuru-admin pool-teams-remove <pool> <teams>", 
-    "desc": "Remove team from pool\n\nMinimum # of arguments: 2\n"
+    "usage": "tsuru-admin pool-teams-remove <pool> <teams>...", 
+    "desc": "Removes teams from a pool. Listed teams will be no longer able to use this\npool when creating a new application.\n\nMinimum # of arguments: 2\n"
   }, 
   "machine-template-add": {
     "usage": "tsuru-admin machine-template-add <name> <iaas> <param>=<value>...", 
@@ -180,7 +180,7 @@
   }, 
   "pool-remove": {
     "usage": "tsuru-admin pool-remove <pool> [-y]", 
-    "desc": "Remove a pool to cluster\n\nFlags:\n  \n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
+    "desc": "Remove an existing pool.\n\nFlags:\n  \n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
   }, 
   "docker-healing-list": {
     "usage": "tsuru-admin docker-healing-list [--node] [--container]", 
