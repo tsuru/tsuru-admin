@@ -16,16 +16,6 @@ import (
 	"gopkg.in/check.v1"
 )
 
-func (s *S) TestMachineListInfo(c *check.C) {
-	expected := &cmd.Info{
-		Name:    "machine-list",
-		Usage:   "machine-list",
-		Desc:    "List all machines created using a IaaS.",
-		MinArgs: 0,
-	}
-	c.Assert((&machineList{}).Info(), check.DeepEquals, expected)
-}
-
 func (s *S) TestMachineListRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
@@ -63,16 +53,6 @@ func (s *S) TestMachineListRun(c *check.C) {
 	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestMachineDestroyInfo(c *check.C) {
-	expected := &cmd.Info{
-		Name:    "machine-destroy",
-		Usage:   "machine-destroy <machine id>",
-		Desc:    "Destroy an existing machine created using a IaaS.",
-		MinArgs: 1,
-	}
-	c.Assert((&machineDestroy{}).Info(), check.DeepEquals, expected)
-}
-
 func (s *S) TestMachineDestroyRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{
@@ -91,16 +71,6 @@ func (s *S) TestMachineDestroyRun(c *check.C) {
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	c.Assert(stdout.String(), check.Equals, "Machine successfully destroyed.\n")
-}
-
-func (s *S) TestTemplateListInfo(c *check.C) {
-	expected := &cmd.Info{
-		Name:    "machine-template-list",
-		Usage:   "machine-template-list",
-		Desc:    "List all machine templates.",
-		MinArgs: 0,
-	}
-	c.Assert((&templateList{}).Info(), check.DeepEquals, expected)
 }
 
 func (s *S) TestTemplateListRun(c *check.C) {
@@ -142,17 +112,6 @@ func (s *S) TestTemplateListRun(c *check.C) {
 	c.Assert(stdout.String(), check.Equals, expected)
 }
 
-func (s *S) TestTemplateAddCmdInfo(c *check.C) {
-	expected := cmd.Info{
-		Name:    "machine-template-add",
-		Usage:   "machine-template-add <name> <iaas> <param>=<value>...",
-		Desc:    "Add a new machine template.",
-		MinArgs: 3,
-	}
-	cmd := templateAdd{}
-	c.Assert(cmd.Info(), check.DeepEquals, &expected)
-}
-
 func (s *S) TestTemplateAddCmdRun(c *check.C) {
 	var buf bytes.Buffer
 	context := cmd.Context{Args: []string{"my-tpl", "ec2", "zone=xyz", "image=ami-something"}, Stdout: &buf}
@@ -172,17 +131,6 @@ func (s *S) TestTemplateAddCmdRun(c *check.C) {
 	err := cmd.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	c.Assert(buf.String(), check.Equals, "Template successfully added.\n")
-}
-
-func (s *S) TestTemplateRemoveCmdInfo(c *check.C) {
-	expected := cmd.Info{
-		Name:    "machine-template-remove",
-		Usage:   "machine-template-remove <name>",
-		Desc:    "Remove an existing machine template.",
-		MinArgs: 1,
-	}
-	cmd := templateRemove{}
-	c.Assert(cmd.Info(), check.DeepEquals, &expected)
 }
 
 func (s *S) TestTemplateRemoveCmdRun(c *check.C) {
