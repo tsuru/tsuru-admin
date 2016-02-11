@@ -1,0 +1,20 @@
+# This is the official list of people who have contributed code to
+# tsuru-admin.
+# The AUTHORS file lists the copyright holders; this file lists people.
+# For example, Globo.com employees are listed here but not in AUTHORS,
+# because Globo.com holds the copyright.
+#
+# You can update this list using the following command:
+#
+#   % git shortlog -se | awk '{$1=""; print $0}' | sed -e 's/^ //'
+#
+# Please keep this file sorted, and group users with multiple emails.
+
+Andrews Medina <andrewsmedina@gmail.com>
+Cezar Sa Espinola <cezar.sa@corp.globo.com> <cezarsa@gmail.com>
+Francisco Souza <f@souza.cc> <fss@corp.globo.com>
+Joao Paulo Vieira <vieira.joaopaulo@hotmail.com>
+Leandro Souza <lsouzarj@gmail.com>
+Lucas Weiblen <lucasweiblen@gmail.com>
+Philip Tzou <philip.npc@gmail.com>
+Tarsis Azevedo <tarsis.azevedo@gmail.com>
