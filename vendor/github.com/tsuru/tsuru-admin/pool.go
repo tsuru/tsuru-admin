@@ -27,10 +27,12 @@ func (addPoolToSchedulerCmd) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:  "pool-add",
 		Usage: "pool-add <pool> [-p/--public] [-d/--default] [-f/--force]",
-		Desc: `Add a pool to cluster.
-Use [-p/--public] flag to create a public pool.
-Use [-d/--default] flag to create default pool.
-Use [-f/--force] flag to force overwrite default pool.`,
+		Desc: `Adds a new pool.
+
+Each docker node added using [[docker-node-add]] command belongs to one pool.
+Also, when creating a new application a pool must be chosen and this means
+that all units of the created application will be spawned in nodes belonging
+to the chosen pool.`,
 		MinArgs: 1,
 	}
 }
@@ -38,12 +40,15 @@ Use [-f/--force] flag to force overwrite default pool.`,
 func (c *addPoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
 	if c.fs == nil {
 		c.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
-		c.fs.BoolVar(&c.public, "public", false, "Make pool public")
-		c.fs.BoolVar(&c.public, "p", false, "Make pool public")
-		c.fs.BoolVar(&c.defaultPool, "default", false, "Make pool default")
-		c.fs.BoolVar(&c.defaultPool, "d", false, "Make pool default")
-		c.fs.BoolVar(&c.forceDefault, "force", false, "Force overwrite default pool.")
-		c.fs.BoolVar(&c.forceDefault, "f", false, "Force overwrite default pool.")
+		msg := "Make pool public (all teams can use it)"
+		c.fs.BoolVar(&c.public, "public", false, msg)
+		c.fs.BoolVar(&c.public, "p", false, msg)
+		msg = "Make pool default (when none is specified during [[app-create]] this pool will be used)"
+		c.fs.BoolVar(&c.defaultPool, "default", false, msg)
+		c.fs.BoolVar(&c.defaultPool, "d", false, msg)
+		msg = "Force overwrite default pool"
+		c.fs.BoolVar(&c.forceDefault, "force", false, msg)
+		c.fs.BoolVar(&c.forceDefault, "f", false, msg)
 	}
 	return c.fs
 }
@@ -107,7 +112,10 @@ type pointerBoolFlag struct {
 }
 
 func (p *pointerBoolFlag) String() string {
-	return fmt.Sprintf("%#v", p)
+	if p.value == nil {
+		return "not set"
+	}
+	return fmt.Sprintf("%v", *p.value)
 }
 
 func (p *pointerBoolFlag) Set(value string) error {
@@ -131,12 +139,9 @@ type updatePoolToSchedulerCmd struct {
 
 func (updatePoolToSchedulerCmd) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:  "pool-update",
-		Usage: "pool-update <pool> [--public=true/false] [--default=true/false] [-f/--force]",
-		Desc: `Update a pool.
-Use [--public=true/false] to change the pool attribute.
-Use [--default=true/false] to change the pool attribute.
-Use [-f/--force] to force pool to be default.`,
+		Name:    "pool-update",
+		Usage:   "pool-update <pool> [--public=true/false] [--default=true/false] [-f/--force]",
+		Desc:    `Updates attributes for a pool.`,
 		MinArgs: 1,
 	}
 }
@@ -144,8 +149,10 @@ Use [-f/--force] to force pool to be default.`,
 func (c *updatePoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
 	if c.fs == nil {
 		c.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
-		c.fs.Var(&c.public, "public", "Make pool public.")
-		c.fs.Var(&c.defaultPool, "default", "Make pool default.")
+		msg := "Make pool public (all teams can use it)"
+		c.fs.Var(&c.public, "public", msg)
+		msg = "Make pool default (when none is specified during [[app-create]] this pool will be used)"
+		c.fs.Var(&c.defaultPool, "default", msg)
 		c.fs.BoolVar(&c.forceDefault, "force", false, "Force pool to be default.")
 		c.fs.BoolVar(&c.forceDefault, "f", false, "Force pool to be default.")
 	}
@@ -185,7 +192,7 @@ func (c *removePoolFromSchedulerCmd) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "pool-remove",
 		Usage:   "pool-remove <pool> [-y]",
-		Desc:    "Remove a pool to cluster",
+		Desc:    "Remove an existing pool.",
 		MinArgs: 1,
 	}
 }
@@ -218,9 +225,10 @@ type addTeamsToPoolCmd struct{}
 
 func (addTeamsToPoolCmd) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "pool-teams-add",
-		Usage:   "pool-teams-add <pool> <teams>",
-		Desc:    "Add team to a pool",
+		Name:  "pool-teams-add",
+		Usage: "pool-teams-add <pool> <teams>...",
+		Desc: `Adds teams to a pool. This will make the specified pool available when
+creating a new application for one of the added teams.`,
 		MinArgs: 2,
 	}
 }
@@ -250,9 +258,10 @@ type removeTeamsFromPoolCmd struct{}
 
 func (removeTeamsFromPoolCmd) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "pool-teams-remove",
-		Usage:   "pool-teams-remove <pool> <teams>",
-		Desc:    "Remove team from pool",
+		Name:  "pool-teams-remove",
+		Usage: "pool-teams-remove <pool> <teams>...",
+		Desc: `Removes teams from a pool. Listed teams will be no longer able to use this
+pool when creating a new application.`,
 		MinArgs: 2,
 	}
 }

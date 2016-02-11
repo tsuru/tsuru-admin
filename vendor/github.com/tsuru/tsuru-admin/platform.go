@@ -29,16 +29,18 @@ func (p *platformAdd) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:  "platform-add",
 		Usage: "platform-add <platform name> [--dockerfile/-d Dockerfile] [--image/-i image]",
-		Desc: `Adds new platform to tsuru.
+		Desc: `Adds a new platform to tsuru.
 
-The name of the image can be automatically inferred in case you're using an official platform. Check https://github.com/tsuru/platforms for a list of official platforms.
+The name of the image can be automatically inferred in case you're using an
+official platform. Check https://github.com/tsuru/platforms for a list of
+official platforms and instructions on how to create a custom platform.
 
 Examples:
 
-	tsuru-admin platform-add java # uses the default Java image
-	tsuru-admin platform-add java -i registry.company.com/tsuru/java # uses custom Java image
-	tsuru-admin platform-add java -d /data/projects/java/Dockerfile # uses local Dockerfile
-	tsuru-admin platform-add java -d https://platforms.com/java/Dockerfile #uses remote Dockerfile`,
+	[[tsuru-admin platform-add java # uses official tsuru/java image from docker hub]]
+	[[tsuru-admin platform-add java -i registry.company.com/tsuru/java # uses custom Java image]]
+	[[tsuru-admin platform-add java -d /data/projects/java/Dockerfile # uses local Dockerfile]]
+	[[tsuru-admin platform-add java -d https://platforms.com/java/Dockerfile # uses remote Dockerfile]]`,
 		MinArgs: 1,
 	}
 }
@@ -69,11 +71,12 @@ func (p *platformAdd) Run(context *cmd.Context, client *cmd.Client) error {
 func (p *platformAdd) Flags() *gnuflag.FlagSet {
 	dockerfileMessage := "URL or path to the Dockerfile used for building the image of the platform"
 	if p.fs == nil {
-		p.fs = gnuflag.NewFlagSet("platform-add", gnuflag.ExitOnError)
+		p.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
 		p.fs.StringVar(&p.dockerfile, "dockerfile", "", dockerfileMessage)
 		p.fs.StringVar(&p.dockerfile, "d", "", dockerfileMessage)
-		p.fs.StringVar(&p.image, "image", "", "Name of the prebuilt Docker image")
-		p.fs.StringVar(&p.image, "i", "", "Name of the prebuilt Docker image")
+		msg := "Name of the prebuilt Docker image"
+		p.fs.StringVar(&p.image, "image", "", msg)
+		p.fs.StringVar(&p.image, "i", "", msg)
 	}
 	return p.fs
 }
@@ -92,18 +95,21 @@ func (p *platformUpdate) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:  "platform-update",
 		Usage: "platform-update <platform name> [--dockerfile/-d Dockerfile] [--disable/--enable] [--image/-i image]",
-		Desc: `Update a platform in tsuru."
+		Desc: `Updates a platform in tsuru.
 
-The name of the image can be automatically inferred in case you're using an official platform. Check https://github.com/tsuru/platforms for a list of official platforms.
+The name of the image can be automatically inferred in case you're using an
+official platform. Check https://github.com/tsuru/platforms for a list of
+official platforms.
 
-The flags --enable and --disable can be used for enabling or disabling a platform.
+The flags --enable and --disable can be used for enabling or disabling a
+platform.
 
 Examples:
 
-	tsuru-admin platform-update java # uses the default Java image
-	tsuru-admin platform-update java -i registry.company.com/tsuru/java # uses custom Java image
-	tsuru-admin platform-update java -d /data/projects/java/Dockerfile # uses local Dockerfile
-	tsuru-admin platform-update java -d https://platforms.com/java/Dockerfile #uses remote Dockerfile`,
+[[tsuru-admin platform-update java # uses official tsuru/java image from docker hub]]
+[[tsuru-admin platform-update java -i registry.company.com/tsuru/java # uses custom Java image]]
+[[tsuru-admin platform-update java -d /data/projects/java/Dockerfile # uses local Dockerfile]]
+[[tsuru-admin platform-update java -d https://platforms.com/java/Dockerfile # uses remote Dockerfile]]`,
 		MinArgs: 1,
 	}
 }
@@ -116,8 +122,9 @@ func (p *platformUpdate) Flags() *gnuflag.FlagSet {
 		p.fs.StringVar(&p.dockerfile, "d", "", dockerfileMessage)
 		p.fs.BoolVar(&p.disable, "disable", false, "Disable the platform")
 		p.fs.BoolVar(&p.enable, "enable", false, "Enable the platform")
-		p.fs.StringVar(&p.image, "image", "", "Name of the prebuilt Docker image")
-		p.fs.StringVar(&p.image, "i", "", "Name of the prebuilt Docker image")
+		msg := "Name of the prebuilt Docker image"
+		p.fs.StringVar(&p.image, "image", "", msg)
+		p.fs.StringVar(&p.image, "i", "", msg)
 	}
 	return p.fs
 }
@@ -163,9 +170,10 @@ type platformRemove struct {
 
 func (p *platformRemove) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "platform-remove",
-		Usage:   "platform-remove <platform name> [-y]",
-		Desc:    "Remove a platform from tsuru.",
+		Name:  "platform-remove",
+		Usage: "platform-remove <platform name> [-y]",
+		Desc: `Remove a platform from tsuru. This command will fail if there are application
+still using the platform.`,
 		MinArgs: 1,
 	}
 }

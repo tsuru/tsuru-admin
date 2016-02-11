@@ -20,7 +20,7 @@ const (
 
 func buildManager(name string) *cmd.Manager {
 	m := cmd.BuildBaseManager(name, version, header, nil)
-	m.Register(&logRemove{})
+	m.RegisterRemoved("log-remove", "This action is no longer supported.")
 	m.Register(&platformAdd{})
 	m.Register(&platformUpdate{})
 	m.Register(&platformRemove{})

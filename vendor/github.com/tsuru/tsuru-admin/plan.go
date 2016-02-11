@@ -34,16 +34,19 @@ func (c *planCreate) Flags() *gnuflag.FlagSet {
 		swap := "Amount of available swap space for units in bytes."
 		c.fs.Int64Var(&c.swap, "swap", 0, swap)
 		c.fs.Int64Var(&c.swap, "s", 0, swap)
-		cpushare := "Relative cpu share each unit will have available."
+		cpushare := `Relative cpu share each unit will have available. This value is unitless and
+relative, so specifying the same value for all plans means all units will
+equally share processing power.`
 		c.fs.IntVar(&c.cpushare, "cpushare", 0, cpushare)
 		c.fs.IntVar(&c.cpushare, "c", 0, cpushare)
-		setDefault := "Set plan as default, this will remove the default flag from any other plan."
+		setDefault := `Set plan as default, this will remove the default flag from any other plan.
+The default plan will be used when creating an application without explicitly
+setting a plan.`
 		c.fs.BoolVar(&c.setDefault, "default", false, setDefault)
 		c.fs.BoolVar(&c.setDefault, "d", false, setDefault)
 		router := "The name of the router used by this plan."
 		c.fs.StringVar(&c.router, "router", "", router)
 		c.fs.StringVar(&c.router, "r", "", router)
-
 	}
 	return c.fs
 }
@@ -92,9 +95,12 @@ type planRemove struct{}
 
 func (c *planRemove) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "plan-remove",
-		Usage:   "plan-remove <name>",
-		Desc:    `Removes a plan from the database.`,
+		Name:  "plan-remove",
+		Usage: "plan-remove <name>",
+		Desc: `Removes an existing plan. It will no longer be available for newly created
+apps. However, this won't change anything for existing apps that were created
+using the removed plan. They will keep using the same value amount of
+resources described by the plan.`,
 		MinArgs: 1,
 	}
 }
