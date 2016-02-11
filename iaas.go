@@ -20,9 +20,10 @@ type machineList struct{}
 
 func (c *machineList) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "machine-list",
-		Usage:   "machine-list",
-		Desc:    "List all machines created using a IaaS.",
+		Name:  "machine-list",
+		Usage: "machine-list",
+		Desc: `Lists all machines created using an IaaS provider.
+These machines were created with the [[docker-node-add]] command.`,
 		MinArgs: 0,
 	}
 }
@@ -67,7 +68,7 @@ func (c *machineDestroy) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "machine-destroy",
 		Usage:   "machine-destroy <machine id>",
-		Desc:    "Destroy an existing machine created using a IaaS.",
+		Desc:    "Destroys an existing machine created using a IaaS.",
 		MinArgs: 1,
 	}
 }
@@ -95,7 +96,7 @@ func (c *templateList) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "machine-template-list",
 		Usage:   "machine-template-list",
-		Desc:    "List all machine templates.",
+		Desc:    "Lists all machine templates.",
 		MinArgs: 0,
 	}
 }
@@ -138,9 +139,13 @@ type templateAdd struct{}
 
 func (c *templateAdd) Info() *cmd.Info {
 	return &cmd.Info{
-		Name:    "machine-template-add",
-		Usage:   "machine-template-add <name> <iaas> <param>=<value>...",
-		Desc:    "Add a new machine template.",
+		Name:  "machine-template-add",
+		Usage: "machine-template-add <name> <iaas> <param>=<value>...",
+		Desc: `Creates a new machine template.
+
+Templates can be used with the [[docker-node-add]] command running it with
+the [[template=<template name>]] parameter. Templates can contain a list of
+parameters that will be sent to the IaaS provider.`,
 		MinArgs: 3,
 	}
 }
@@ -185,7 +190,7 @@ func (c *templateRemove) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "machine-template-remove",
 		Usage:   "machine-template-remove <name>",
-		Desc:    "Remove an existing machine template.",
+		Desc:    "Removes an existing machine template.",
 		MinArgs: 1,
 	}
 }

@@ -1,7 +1,7 @@
 {
   "machine-template-remove": {
     "usage": "tsuru-admin machine-template-remove <name>", 
-    "desc": "Remove an existing machine template.\n\nMinimum # of arguments: 1\n"
+    "desc": "Removes an existing machine template.\n\nMinimum # of arguments: 1\n"
   }, 
   "help": {
     "usage": "tsuru-admin command [args]", 
@@ -9,7 +9,7 @@
   }, 
   "bs-env-set": {
     "usage": "tsuru-admin bs-env-set <NAME=value> [NAME=value]... [-p/--pool poolname]", 
-    "desc": "Set environment variables used when starting bs (big sibling) container.\n\nFlags:\n  \n  -p, --pool (= \"\")\n      Pool name where set variables will apply\n  \nMinimum # of arguments: 1\n"
+    "desc": "Sets environment variables used when starting bs (big sibling) container.\n\nIf the [standard bs image](https://github.com/tsuru/bs) is being used, it's\npossible to find which environment variables can be configured in [bs readme\nfile](https://github.com/tsuru/bs#environment-variables).\n\nIf pool name is omited the enviroment variable will apply to all pools, unless\noverriden on a specific pool.\n\nFlags:\n  \n  -p, --pool (= \"\")\n      Pool name where set variables will apply\n  \nMinimum # of arguments: 1\n"
   }, 
   "target-list": {
     "usage": "tsuru-admin target-list", 
@@ -17,7 +17,7 @@
   }, 
   "docker-node-list": {
     "usage": "tsuru-admin docker-node-list [--filter/-f <metadata>=<value>]...", 
-    "desc": "List available nodes in the cluster\n\nFlags:\n  \n  -f, --filter  (= {})\n      Filter by metadata value\n  \n"
+    "desc": "Lists nodes in the cluster. It will also show you metadata associated to each\nnode and the IaaS ID if the node was added using tsuru IaaS providers.\n\nUsing the [[-f/--filter]] flag, the user is able to filter the nodes that\nappear in the list based on the key pairs displayed in the metadata column.\nUsers can also combine filters using [[-f]] multiple times.\n\nFlags:\n  \n  -f, --filter  (= {})\n      Filter by metadata name and value\n  \n"
   }, 
   "user-list": {
     "usage": "tsuru-admin user-list", 
@@ -29,7 +29,7 @@
   }, 
   "bs-info": {
     "usage": "tsuru-admin bs-info", 
-    "desc": "Prints information about bs (big sibling) containers.\n\n"
+    "desc": "Shows information about the bs (big sibling) containers. Includes environment\nvariables for each pool and docker image being used.\n\n"
   }, 
   "containers-rebalance": {
     "usage": "tsuru-admin containers-rebalance [--dry] [-y/--assume-yes] [-m/--metadata <metadata>=<value>]... [-a/--app <appname>]...", 
@@ -37,7 +37,7 @@
   }, 
   "machine-template-list": {
     "usage": "tsuru-admin machine-template-list", 
-    "desc": "List all machine templates.\n\n"
+    "desc": "Lists all machine templates.\n\n"
   }, 
   "user-quota-view": {
     "usage": "tsuru-admin user-quota-view <user-email>", 
@@ -65,7 +65,7 @@
   }, 
   "docker-node-add": {
     "usage": "tsuru-admin docker-node-add [param_name=param_value]... [--register]", 
-    "desc": "Creates or registers a new node in the cluster.\nBy default, this command will call the configured IaaS to create a new\nmachine. Every param will be sent to the IaaS implementation.\n\nParameters with special meaning:\n  iaas=<iaas name>          Which iaas provider should be used, if not set\n                            tsuru will use the default iaas specified in\n                            tsuru.conf file.\n  template=<template name>  A machine template with predefined parameters,\n                            additional parameters will override template\n                            ones. See 'machine-template-add' command.\n\n--register: Registers an existing docker endpoint. The IaaS won't be called.\n            Having a address=<docker_api_url> param is mandatory.\n\n\nFlags:\n  \n  --register  (= false)\n      Register an already created node\n  \n"
+    "desc": "Creates or registers a new node in the cluster.\nBy default, this command will call the configured IaaS to create a new\nmachine. Every param will be sent to the IaaS implementation.\n\nIaaS providers should have been previously configured in the [[tsuru.conf]]\nfile. See tsuru.conf reference docs for more information.\n\nIf using an IaaS to create a node is not wanted it's possible to simply\nregister an existing docker node with the [[--register]] flag.\n\nParameters with special meaning:\n  iaas=<iaas name>\n    Which iaas provider should be used, if not set tsuru will use the default\n    iaas specified in tsuru.conf file.\n\n  template=<template name>\n    A machine template with predefined parameters, additional parameters will\n    override template ones. See 'machine-template-add' command.\n\n  address=<docker api url>\n    Only used if [[--register]] flag is used. Should point to the endpoint of\n    a working docker server.\n\n\nFlags:\n  \n  --register  (= false)\n      Registers an existing docker endpoint, the IaaS won't be called.\n  \n"
   }, 
   "platform-remove": {
     "usage": "tsuru-admin platform-remove <platform name> [-y]", 
@@ -113,7 +113,7 @@
   }, 
   "machine-list": {
     "usage": "tsuru-admin machine-list", 
-    "desc": "List all machines created using a IaaS.\n\n"
+    "desc": "Lists all machines created using an IaaS provider.\nThese machines were created with the [[docker-node-add]] command.\n\n"
   }, 
   "log-remove": {
     "usage": "tsuru-admin log-remove [--app appname]", 
@@ -121,7 +121,7 @@
   }, 
   "docker-node-remove": {
     "usage": "tsuru-admin docker-node-remove <address> [--no-rebalance] [--destroy] [-y]", 
-    "desc": "Removes a node from the cluster.\n\n--destroy: Destroy the machine in the IaaS used to create it, if it exists.\n--no-rebalance: Do not rebalance containers of removed node.\n\n\nFlags:\n  \n  --destroy  (= false)\n      Destroy node from IaaS\n  --no-rebalance  (= false)\n      Do not rebalance containers of removed node.\n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
+    "desc": "Removes a node from the cluster.\n\nBy default tsuru will redistribute all containers present on the removed node\namong other nodes. This behavior can be inhibited using the [[--no-rebalance]]\nflag.\n\nIf the node being removed was created using a IaaS provider tsuru will NOT\ndestroy the machine on the IaaS, unless the [[--destroy]] flag is used.\n\nFlags:\n  \n  --destroy  (= false)\n      Destroy node from IaaS\n  --no-rebalance  (= false)\n      Do not rebalance containers from removed node.\n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
   }, 
   "docker-autoscale-run": {
     "usage": "tsuru-admin docker-autoscale-run [-y/--assume-yes]", 
@@ -137,7 +137,7 @@
   }, 
   "bs-upgrade": {
     "usage": "tsuru-admin bs-upgrade", 
-    "desc": "Upgrade the version of bs containers.\n\n"
+    "desc": "Upgrades the bs (big sibling) image. You can check the current image with the\n[[bs-info]] command.\n\nRunning this command will restart the bs container on all nodes and the image\nspecified at tsuru.conf file will be pulled from the registry.\n\n"
   }, 
   "target-remove": {
     "usage": "tsuru-admin target-remove", 
@@ -161,7 +161,7 @@
   }, 
   "machine-destroy": {
     "usage": "tsuru-admin machine-destroy <machine id>", 
-    "desc": "Destroy an existing machine created using a IaaS.\n\nMinimum # of arguments: 1\n"
+    "desc": "Destroys an existing machine created using a IaaS.\n\nMinimum # of arguments: 1\n"
   }, 
   "pool-teams-remove": {
     "usage": "tsuru-admin pool-teams-remove <pool> <teams>", 
@@ -169,7 +169,7 @@
   }, 
   "machine-template-add": {
     "usage": "tsuru-admin machine-template-add <name> <iaas> <param>=<value>...", 
-    "desc": "Add a new machine template.\n\nMinimum # of arguments: 3\n"
+    "desc": "Creates a new machine template.\n\nTemplates can be used with the [[docker-node-add]] command running it with\nthe [[template=<template name>]] parameter. Templates can contain a list of\nparameters that will be sent to the IaaS provider.\n\nMinimum # of arguments: 3\n"
   }, 
   "docker-log-info": {
     "usage": "tsuru-admin docker-log-info", 
@@ -207,8 +207,8 @@
     "desc": "Initiates a new tsuru session for a user. If using tsuru native authentication\nscheme, it will ask for the email and the password and check if the user is\nsuccessfully authenticated. If using OAuth, it will open a web browser for the\nuser to complete the login.\n\nAfter that, the token generated by the tsuru server will be stored in\n[[${HOME}/.tsuru/token]].\n\nAll tsuru actions require the user to be authenticated (except [[tsuru login]]\nand [[tsuru version]]).\n\n"
   }, 
   "docker-node-update": {
-    "usage": "tsuru-admin docker-node-update <address> [param_name=param_value...] --disable", 
-    "desc": "Modifies metadata associated to a docker node.\n--disable: Disable node in scheduler.\n--enable: Enable node in scheduler.\n\nFlags:\n  \n  --disable  (= false)\n      Disable node in scheduler.\n  --enable  (= false)\n      Enable node in scheduler.\n  \nMinimum # of arguments: 1\n"
+    "usage": "tsuru-admin docker-node-update <address> [param_name=param_value...] [--disable] [--enable]", 
+    "desc": "Modifies metadata associated to a docker node. If a parameter is set to an\nempty value, it will be removed from the node's metadata.\n\nIf the [[--disable]] flag is used, the node will be marked as disabled and the\nscheduler won't consider it when selecting a node to receive containers.\n\nFlags:\n  \n  --disable  (= false)\n      Disable node in scheduler.\n  --enable  (= false)\n      Enable node in scheduler.\n  \nMinimum # of arguments: 1\n"
   }, 
   "pool-list": {
     "usage": "tsuru-admin pool-list", 

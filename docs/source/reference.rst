@@ -47,206 +47,59 @@ bs management
 
 .. _tsuru_admin_bs_management:
 
-bs-info
--------
+.. tsuru-command:: bs-info
+   :title: Show bs container information
 
-.. highlight:: bash
+.. tsuru-command:: bs-env-set
+   :title: Set environment variables for bs container
 
-::
-
-    $ tsuru-admin bs-info
-
-This command displays the current configuration of bs, including environment
-variables and image.
-
-bs-env-set
-----------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin bs-env-set <NAME=value> [NAME=value]... [-p/--pool poolname]
-
-This command sets environment variables used when starting bs (big sibling)
-container.
-
-If the `standard bs image <https://github.com/tsuru/bs>`_ is being used, it's
-possible to find which environment variables can be configured in `bs readme
-file <https://github.com/tsuru/bs#environment-variables>`_.
-
-bs-upgrade
-----------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin bs-upgrade
-
-This command upgrades the bs image. You can check the current image with the
-``bs-info`` command.
+.. tsuru-command:: bs-upgrade
+   :title: Upgrade bs image
 
 Node management
 ===============
 
 .. _tsuru_admin_docker_node_add_cmd:
 
-docker-node-add
----------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin docker-node-add [param_name=param_value]... [--register]
-
-This command add a node to your docker cluster. By default, this command will
-call the configured IaaS to create a new machine. Every param will be sent to
-the IaaS implementation.
-
-You should configure in **tsuru.conf** the protocol and port for IaaS be able
-to access your node (`you can see it here <config.html#iaas-configuration>`_).
-
-If you want to just register an docker node, you should use the --register
-flag with an **address=http://your-docker-node:docker-port**
-
-Parameters have special meaning
-+++++++++++++++++++++++++++++++
-
-* ``iaas=<iaas name>`` Which iaas provider should be used, if not set tsuru will use
-  the default iaas specified in tsuru.conf file.
-
-* ``template=<template name>`` A machine template with predefined parameters,
-  additional parameters will override template ones. See
-  :ref:`machine-template-add <tsuru_admin_machine_template_add_cmd>` command.
+.. tsuru-command:: docker-node-add
+   :title: Add a new docker node
 
 .. _tsuru_admin_docker_node_list_cmd:
 
-docker-node-list
-----------------
+.. tsuru-command:: docker-node-list
+   :title: List docker nodes in cluster
 
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin docker-node-list [-f/--filter <metadata>=<value>]
-
-This command list all nodes present in the cluster. It will also show you metadata
-associated to each node and the IaaS ID if the node was added using tsuru builtin
-IaaS providers.
-
-Using the ``-f/--filter`` flag, the user is able to filter the nodes that
-appear in the list based on the key pairs displayed in the metadata column.
-Users can also combine filters with multiple listings of ``-f``:
-
-docker-node-update
-------------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin docker-node-update <address> [param_name=param_value...] --disable
-
-This command modifies metadata associated to a docker node. If a parameter is set
-to an empty value, it will be removed from the node's metadata.
-
-Using the ``--disable`` flag, the node will be disabled in scheduler. It means
-this node will not receive any containers.
-
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin docker-node-list -f pool=mypool -f LastSuccess=2014-10-20T15:28:28-02:00
+.. tsuru-command:: docker-node-update
+   :title: Update a docker node
 
 .. _tsuru_admin_docker_node_remove_cmd:
 
-docker-node-remove
-------------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin docker-node-remove <address> [--destroy] --no-rebalance
-
-This command removes a node from the cluster and rebalance the containers in
-node to others nodes in cluster. Optionally it also destroys the created IaaS
-machine if the ``--destroy`` flag is passed.
-
-Using the ``--no-rebalance`` flag the node will be removed without rebalance.
-
-.. _tsuru_admin_platform_add_cmd:
+.. tsuru-command:: docker-node-remove
+   :title: Remove a docker node
 
 Machine management
 ==================
 
 .. _tsuru_admin_machines_list_cmd:
 
-machine-list
-------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin machine-list
-
-This command will list all machines created using ``docker-node-add`` and a IaaS
-provider.
+.. tsuru-command:: machine-list
+   :title: List IaaS machines
 
 .. _tsuru_admin_machine_destroy_cmd:
 
-machine-destroy
----------------
+.. tsuru-command:: machine-destroy
+   :title: Destroy IaaS machine
 
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin machine-destroy <machine id>
-
-This command will destroy a IaaS machine based on its ID.
-
-machine-template-list
----------------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin machine-template-list
-
-This command will list all templates created using ``machine-template-add``.
+.. tsuru-command:: machine-template-list
+   :title: List machine templates
 
 .. _tsuru_admin_machine_template_add_cmd:
 
-machine-template-add
---------------------
+.. tsuru-command:: machine-template-add
+   :title: Add machine template
 
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin machine-template-add <name> <iaas> <param>=<value>...
-
-This command creates a new machine template to be used with ``docker-node-add``
-command. This template will contain a list of parameters that will be sent to the
-IaaS provider.
-
-machine-template-remove
------------------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin machine-template-remove <name>
-
-This command removes a machine template by name.
+.. tsuru-command:: machine-template-remove
+   :title: Remove machine template
 
 Pool management
 ===============
@@ -329,6 +182,8 @@ Platform management
 
     All the **platform** commands below only exist when using the docker
     provisioner.
+
+.. _tsuru_admin_platform_add_cmd:
 
 platform-add
 ------------
