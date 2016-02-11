@@ -256,73 +256,8 @@ user-quota-view
 
 Displays the current usage and limit of the user.
 
-Another commands
-================
-
-.. _tsuru_admin_app_shell_cmd:
-
-
-app-shell
----------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin app-shell [container-id] -a myapp
-
-This command opens a remote shell inside container, using the API server as a proxy.
-You can access an app container just giving app name. Also, you can access a specific container from this app too.
-The user may specify part of the ID of the container. For example:
-
-.. highlight:: bash
-
-::
-
-    $ tsuru app-info -a myapp
-    Application: tsuru-dashboard
-    Repository: git@54.94.9.232:tsuru-dashboard.git
-    Platform: python
-    Teams: admin
-    Address: tsuru-dashboard.54.94.9.232.xip.io
-    Owner: admin@example.com
-    Deploys: 1
-    Units:
-    +------------------------------------------------------------------+---------+
-    | Unit                                                             | State   |
-    +------------------------------------------------------------------+---------+
-    | 39f82550514af3bbbec1fd204eba000546217a2fe6049e80eb28899db0419b2f | started |
-    +------------------------------------------------------------------+---------+
-    $ tsuru-admin app-shell 39f8 -a myapp
-    Welcome to Ubuntu 14.04 LTS (GNU/Linux 3.13.0-24-generic x86_64)
-    ubuntu@ip-10-253-6-84:~$
-
-log-remove
-----------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin log-remove [--app appname]
-
-This command removes the application log from the tsuru database.
-
-fix-containers
---------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin fix-containers
-
-In some cases, like when a node is restarted, information about the containers
-can be outdated in tsuru database, because docker changes the container
-exposed port when the container is restarted.
-
-This command verify if has a container with wrong data stored in the database
-and fix this information.
+Other commands
+==============
 
 app-unlock
 ----------

@@ -11,13 +11,6 @@ import (
 	"gopkg.in/check.v1"
 )
 
-func (s *S) TestLogRemoveIsRegistered(c *check.C) {
-	manager := buildManager("tsuru-admin")
-	token, ok := manager.Commands["log-remove"]
-	c.Assert(ok, check.Equals, true)
-	c.Assert(token, check.FitsTypeOf, &logRemove{})
-}
-
 func (s *S) TestPlatformAddIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	token, ok := manager.Commands["platform-add"]
