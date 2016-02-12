@@ -1,1 +1,1 @@
-tsuru-sphinx
+tsuru-sphinx==0.1.2
