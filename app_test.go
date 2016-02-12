@@ -16,17 +16,6 @@ import (
 	"gopkg.in/check.v1"
 )
 
-func (s *S) TestAppLockDeleteInfo(c *check.C) {
-	expected := &cmd.Info{
-		Name:  "app-unlock",
-		Usage: "app-unlock -a <app-name> [-y]",
-		Desc: `Forces the removal of an app lock.
-Use with caution, removing an active lock may cause inconsistencies.`,
-		MinArgs: 0,
-	}
-	c.Assert((&appLockDelete{}).Info(), check.DeepEquals, expected)
-}
-
 func (s *S) TestAppLockDeleteRun(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{

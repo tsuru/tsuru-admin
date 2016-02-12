@@ -25,7 +25,7 @@ func (c *appLockDelete) Info() *cmd.Info {
 		Name:    "app-unlock",
 		MinArgs: 0,
 		Usage:   "app-unlock -a <app-name> [-y]",
-		Desc: `Forces the removal of an app lock.
+		Desc: `Forces the removal of an application lock.
 Use with caution, removing an active lock may cause inconsistencies.`,
 	}
 }

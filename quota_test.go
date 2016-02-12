@@ -14,16 +14,6 @@ import (
 	"gopkg.in/check.v1"
 )
 
-func (s *S) TestUserQuotaViewInfo(c *check.C) {
-	expected := &cmd.Info{
-		Name:    "user-quota-view",
-		MinArgs: 1,
-		Usage:   "user-quota-view <user-email>",
-		Desc:    "Displays the current usage and limit of the user",
-	}
-	c.Assert((&userQuotaView{}).Info(), check.DeepEquals, expected)
-}
-
 func (s *S) TestUserQuotaViewRun(c *check.C) {
 	result := `{"inuse":3,"limit":4}`
 	var stdout, stderr bytes.Buffer
@@ -57,19 +47,6 @@ func (s *S) TestUserQuotaViewRunFailure(c *check.C) {
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, "user not found")
-}
-
-func (s *S) TestUserChangeQuotaInfo(c *check.C) {
-	desc := `Changes the limit of apps that a user can create
-
-The new limit must be an integer, it may also be "unlimited".`
-	expected := &cmd.Info{
-		Name:    "user-quota-change",
-		MinArgs: 2,
-		Usage:   "user-quota-change <user-email> <new-limit>",
-		Desc:    desc,
-	}
-	c.Assert((&userChangeQuota{}).Info(), check.DeepEquals, expected)
 }
 
 func (s *S) TestUserChangeQuotaRun(c *check.C) {
@@ -156,16 +133,6 @@ func (s *S) TestUserChangeQuotaFailure(c *check.C) {
 	c.Assert(err.Error(), check.Equals, "user not found")
 }
 
-func (s *S) TestAppQuotaViewInfo(c *check.C) {
-	expected := &cmd.Info{
-		Name:    "app-quota-view",
-		MinArgs: 1,
-		Usage:   "app-quota-view <app-name>",
-		Desc:    "Displays the current usage and limit of the given app",
-	}
-	c.Assert((&appQuotaView{}).Info(), check.DeepEquals, expected)
-}
-
 func (s *S) TestAppQuotaViewRun(c *check.C) {
 	result := `{"inuse":3,"limit":4}`
 	var stdout, stderr bytes.Buffer
@@ -199,19 +166,6 @@ func (s *S) TestAppQuotaViewRunFailure(c *check.C) {
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, "app not found")
-}
-
-func (s *S) TestAppQuotaChangeInfo(c *check.C) {
-	desc := `Changes the limit of units that an app can have
-
-The new limit must be an integer, it may also be "unlimited".`
-	expected := &cmd.Info{
-		Name:    "app-quota-change",
-		MinArgs: 2,
-		Usage:   "app-quota-change <app-name> <new-limit>",
-		Desc:    desc,
-	}
-	c.Assert((&appQuotaChange{}).Info(), check.DeepEquals, expected)
 }
 
 func (s *S) TestAppQuotaChangeRun(c *check.C) {

@@ -162,18 +162,6 @@ Plan management
    :title: List available routers
 
 
-User management
-===============
-
-user-list
----------
-
-::
-
-    $ tsuru-admin user-list
-
-This command list all users in tsuru.
-
 Quota management
 ================
 
@@ -185,63 +173,21 @@ the maximum number of units that an application may have.
 
 **tsuru-admin** can be used to see and change quota data.
 
-app-quota-change
-----------------
 
-.. highlight:: bash
+.. tsuru-command:: app-quota-change
+   :title: Change application quota
 
-::
+.. tsuru-command:: user-quota-change
+   :title: Change user quota
 
-    $ tsuru-admin app-quota-change <app-name> <new-limit>
+.. tsuru-command:: app-quota-view
+   :title: View application quota
 
-Changes the limit of units that an app can have. The new limit must be an
-integer, it may also be "unlimited".
-
-user-quota-change
------------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin user-quota-change <user-email> <new-limit>
-
-Changes the limit of apps that a user can create. The new limit must be an
-integer, it may also be "unlimited".
-
-app-quota-view
---------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin app-quota-view <app-name>
-
-Displays the current usage and limit of the given app.
-
-user-quota-view
----------------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin user-quota-view <user-email>
-
-Displays the current usage and limit of the user.
+.. tsuru-command:: user-quota-view
+   :title: View user quota
 
 Other commands
 ==============
 
-app-unlock
-----------
-
-.. highlight:: bash
-
-::
-
-    $ tsuru-admin app-unlock -a <app-name> [-y]
-
-Forces the removal of an app lock.
-Use with caution, removing an active lock may cause inconsistencies.
+.. tsuru-command:: app-unlock
+   :title: Unlock an application

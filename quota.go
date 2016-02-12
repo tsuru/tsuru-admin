@@ -23,7 +23,7 @@ func (*userQuotaView) Info() *cmd.Info {
 		Name:    "user-quota-view",
 		MinArgs: 1,
 		Usage:   "user-quota-view <user-email>",
-		Desc:    "Displays the current usage and limit of the user",
+		Desc:    "Displays the current usage and limit of the user.",
 	}
 }
 
@@ -51,7 +51,7 @@ func (*userQuotaView) Run(context *cmd.Context, client *cmd.Client) error {
 type userChangeQuota struct{}
 
 func (*userChangeQuota) Info() *cmd.Info {
-	desc := `Changes the limit of apps that a user can create
+	desc := `Changes the limit of apps that a user can create.
 
 The new limit must be an integer, it may also be "unlimited".`
 	return &cmd.Info{
@@ -89,7 +89,7 @@ func (*appQuotaView) Info() *cmd.Info {
 		Name:    "app-quota-view",
 		MinArgs: 1,
 		Usage:   "app-quota-view <app-name>",
-		Desc:    "Displays the current usage and limit of the given app",
+		Desc:    "Displays the current usage and limit of the given app.",
 	}
 }
 
@@ -117,7 +117,7 @@ func (*appQuotaView) Run(context *cmd.Context, client *cmd.Client) error {
 type appQuotaChange struct{}
 
 func (*appQuotaChange) Info() *cmd.Info {
-	desc := `Changes the limit of units that an app can have
+	desc := `Changes the limit of units that an app can have.
 
 The new limit must be an integer, it may also be "unlimited".`
 	return &cmd.Info{
