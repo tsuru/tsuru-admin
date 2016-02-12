@@ -2,13 +2,16 @@
 # Use of this source code is governed by a BSD-style
 #  license that can be found in the LICENSE file.
 
-doc: docs-clean
-	@python docs/source/exts/tsuru_cmd.py && cd docs && make html SPHINXOPTS="-N -W"
+doc: docs-clean docs-requirements
+	@tsuru_sphinx tsuru-admin docs/ && cd docs && make html SPHINXOPTS="-N -W"
 
 docs: doc
 
 docs-clean:
 	@rm -rf ./docs/build
+
+docs-requirements:
+	@pip install -r docs/requirements.txt
 
 release:
 	@if [ ! $(version) ]; then \
