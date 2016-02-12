@@ -41,7 +41,7 @@
   }, 
   "user-quota-view": {
     "usage": "tsuru-admin user-quota-view <user-email>", 
-    "desc": "Displays the current usage and limit of the user\n\nMinimum # of arguments: 1\n"
+    "desc": "Displays the current usage and limit of the user.\n\nMinimum # of arguments: 1\n"
   }, 
   "docker-autoscale-rule-remove": {
     "usage": "tsuru-admin docker-autoscale-rule-remove [rule-name] [-y/--assume-yes]", 
@@ -61,11 +61,11 @@
   }, 
   "plan-remove": {
     "usage": "tsuru-admin plan-remove <name>", 
-    "desc": "Removes a plan from the database.\n\nMinimum # of arguments: 1\n"
+    "desc": "Removes an existing plan. It will no longer be available for newly created\napps. However, this won't change anything for existing apps that were created\nusing the removed plan. They will keep using the same value amount of\nresources described by the plan.\n\nMinimum # of arguments: 1\n"
   }, 
   "docker-node-add": {
     "usage": "tsuru-admin docker-node-add [param_name=param_value]... [--register]", 
-    "desc": "Creates or registers a new node in the cluster.\nBy default, this command will call the configured IaaS to create a new\nmachine. Every param will be sent to the IaaS implementation.\n\nIaaS providers should have been previously configured in the [[tsuru.conf]]\nfile. See tsuru.conf reference docs for more information.\n\nIf using an IaaS to create a node is not wanted it's possible to simply\nregister an existing docker node with the [[--register]] flag.\n\nParameters with special meaning:\n  iaas=<iaas name>\n    Which iaas provider should be used, if not set tsuru will use the default\n    iaas specified in tsuru.conf file.\n\n  template=<template name>\n    A machine template with predefined parameters, additional parameters will\n    override template ones. See 'machine-template-add' command.\n\n  address=<docker api url>\n    Only used if [[--register]] flag is used. Should point to the endpoint of\n    a working docker server.\n\n\nFlags:\n  \n  --register  (= false)\n      Registers an existing docker endpoint, the IaaS won't be called.\n  \n"
+    "desc": "Creates or registers a new node in the cluster.\nBy default, this command will call the configured IaaS to create a new\nmachine. Every param will be sent to the IaaS implementation.\n\nIaaS providers should have been previously configured in the [[tsuru.conf]]\nfile. See tsuru.conf reference docs for more information.\n\nIf using an IaaS to create a node is not wanted it's possible to simply\nregister an existing docker node with the [[--register]] flag.\n\nParameters with special meaning:\n  iaas=<iaas name>\n    Which iaas provider should be used, if not set tsuru will use the default\n    iaas specified in tsuru.conf file.\n\n  template=<template name>\n    A machine template with predefined parameters, additional parameters will\n    override template ones. See 'machine-template-add' command.\n\n  address=<docker api url>\n    Only used if [[--register]] flag is used. Should point to the endpoint of\n    a working docker server.\n\n  pool=<pool name>\n    Mandatory parameter specifying to which pool the added node will belong.\n    Available pools can be lister with the [[pool-list]] command.\n\n\nFlags:\n  \n  --register  (= false)\n      Registers an existing docker endpoint, the IaaS won't be called.\n  \n"
   }, 
   "platform-remove": {
     "usage": "tsuru-admin platform-remove <platform name> [-y]", 
@@ -77,7 +77,7 @@
   }, 
   "app-unlock": {
     "usage": "tsuru-admin app-unlock -a <app-name> [-y]", 
-    "desc": "Forces the removal of an app lock.\nUse with caution, removing an active lock may cause inconsistencies.\n\nFlags:\n  \n  -a, --app (= \"\")\n      The name of the app.\n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \n"
+    "desc": "Forces the removal of an application lock.\nUse with caution, removing an active lock may cause inconsistencies.\n\nFlags:\n  \n  -a, --app (= \"\")\n      The name of the app.\n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \n"
   }, 
   "plan-create": {
     "usage": "tsuru-admin plan-create <name> -c cpushare [-m memory] [-s swap] [-r router] [--default]", 
@@ -129,7 +129,7 @@
   }, 
   "app-quota-view": {
     "usage": "tsuru-admin app-quota-view <app-name>", 
-    "desc": "Displays the current usage and limit of the given app\n\nMinimum # of arguments: 1\n"
+    "desc": "Displays the current usage and limit of the given app.\n\nMinimum # of arguments: 1\n"
   }, 
   "target-add": {
     "usage": "tsuru-admin target-add <label> <target> [--set-current|-s]", 
@@ -149,7 +149,7 @@
   }, 
   "user-quota-change": {
     "usage": "tsuru-admin user-quota-change <user-email> <new-limit>", 
-    "desc": "Changes the limit of apps that a user can create\n\nThe new limit must be an integer, it may also be \"unlimited\".\n\nMinimum # of arguments: 2\n"
+    "desc": "Changes the limit of apps that a user can create.\n\nThe new limit must be an integer, it may also be \"unlimited\".\n\nMinimum # of arguments: 2\n"
   }, 
   "logout": {
     "usage": "tsuru-admin logout", 
@@ -216,6 +216,6 @@
   }, 
   "app-quota-change": {
     "usage": "tsuru-admin app-quota-change <app-name> <new-limit>", 
-    "desc": "Changes the limit of units that an app can have\n\nThe new limit must be an integer, it may also be \"unlimited\".\n\nMinimum # of arguments: 2\n"
+    "desc": "Changes the limit of units that an app can have.\n\nThe new limit must be an integer, it may also be \"unlimited\".\n\nMinimum # of arguments: 2\n"
   }
 }
