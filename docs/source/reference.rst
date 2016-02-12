@@ -162,6 +162,35 @@ Plan management
    :title: List available routers
 
 
+Auto Scale
+==========
+
+.. tsuru-command:: docker-autoscale-list
+   :title: List auto scale events
+
+.. tsuru-command:: docker-autoscale-run
+   :title: Run auto scale process algorithm once
+
+.. tsuru-command:: docker-autoscale-info
+   :title: Show auto scale rules
+
+.. tsuru-command:: docker-autoscale-rule-set
+   :title: Set a new auto scale rule
+
+.. tsuru-command:: docker-autoscale-rule-remove
+   :title: Remove an auto scale rule
+
+
+Application Logging
+===================
+
+.. tsuru-command:: docker-log-update
+   :title: Update logging configuration
+
+.. tsuru-command:: docker-log-info
+   :title: Show logging configuration
+
+
 Quota management
 ================
 
