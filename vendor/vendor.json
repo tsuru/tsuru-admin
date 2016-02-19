@@ -9,10 +9,9 @@
 			"revisionTime": "2015-09-21T21:08:33-06:00"
 		},
 		{
-			"origin": "github.com/vulcand/vulcand/vendor/github.com/Sirupsen/logrus",
 			"path": "github.com/Sirupsen/logrus",
-			"revision": "6ebb4e7b3c24b9fef150d7693e728cb1ebadf1f5",
-			"revisionTime": "2014-10-27T22:31:40+01:00"
+			"revision": "be52937128b38f1d99787bb476c789e2af1147f1",
+			"revisionTime": "2016-02-02T21:14:36Z"
 		},
 		{
 			"origin": "github.com/tsuru/tsuru/vendor/github.com/aws/aws-sdk-go/aws",
@@ -309,10 +308,9 @@
 			"revisionTime": "2013-10-23T11:31:56-07:00"
 		},
 		{
-			"origin": "github.com/tsuru/tsuru/vendor/github.com/go-ini/ini",
 			"path": "github.com/go-ini/ini",
-			"revision": "a4e5487f4a695680ed4a5444b9a094df8eaf48cb",
-			"revisionTime": "2015-12-11T16:51:11-05:00"
+			"revision": "193d1ecb466bf97aae8b454a5cfc192941c64809",
+			"revisionTime": "2016-02-07T11:33:30-05:00"
 		},
 		{
 			"origin": "github.com/tsuru/tsuru/vendor/github.com/golang/protobuf/proto",
@@ -357,6 +355,11 @@
 			"revisionTime": "2015-11-24T09:03:42-08:00"
 		},
 		{
+			"path": "github.com/mailgun/go-etcd/etcd",
+			"revision": "248e96a4ad7adfa23b531eb2d8e80d9050c33d24",
+			"revisionTime": "2014-09-24T20:42:07-07:00"
+		},
+		{
 			"origin": "github.com/vulcand/vulcand/vendor/github.com/mailgun/iptools",
 			"path": "github.com/mailgun/iptools",
 			"revision": "5349e5b95891ef5cb63ed867c31c5204cae280b2",
@@ -369,10 +372,9 @@
 			"revisionTime": "2015-05-29T12:38:17-07:00"
 		},
 		{
-			"origin": "github.com/vulcand/vulcand/vendor/github.com/mailgun/manners",
 			"path": "github.com/mailgun/manners",
-			"revision": "8518c51825e4aec9d3de17203b2b409dd0c5e5c5",
-			"revisionTime": "2015-04-10T12:21:48-07:00"
+			"revision": "fada45142db3f93097ca917da107aa3fad0ffcb5",
+			"revisionTime": "2015-11-20T16:57:10-08:00"
 		},
 		{
 			"origin": "github.com/vulcand/vulcand/vendor/github.com/mailgun/metrics",
