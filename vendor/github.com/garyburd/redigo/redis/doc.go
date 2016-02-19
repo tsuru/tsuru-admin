@@ -55,9 +55,9 @@
 //  Redis type              Go type
 //  error                   redis.Error
 //  integer                 int64
-//  simple string           string
-//  bulk string             []byte or nil if value not present.
-//  array                   []interface{} or nil if value not present.
+//  status                  string
+//  bulk                    []byte or nil if value not present.
+//  multi-bulk              []interface{} or nil if value not present.
 //
 // Use type assertions or the reply helper functions to convert from
 // interface{} to the specific Go type for the command result.
@@ -136,7 +136,6 @@
 //          fmt.Printf("%s: %s %d\n", v.Channel, v.Kind, v.Count)
 //      case error:
 //          return v
-//      }
 //  }
 //
 // Reply Helpers
@@ -153,7 +152,7 @@
 //      // handle error return from c.Do or type conversion error.
 //  }
 //
-// The Scan function converts elements of a array reply to Go types:
+// The Scan function converts elements of a multi-bulk reply to Go types:
 //
 //  var value1 int
 //  var value2 string

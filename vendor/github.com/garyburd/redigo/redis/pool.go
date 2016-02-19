@@ -15,22 +15,16 @@
 package redis
 
 import (
-	"bytes"
 	"container/list"
-	"crypto/rand"
-	"crypto/sha1"
 	"errors"
-	"io"
-	"strconv"
 	"sync"
 	"time"
 )
 
 var nowFunc = time.Now // for testing
 
-// ErrPoolExhausted is returned from a pool connection method (Do, Send,
-// Receive, Flush, Err) when the maximum number of database connections in the
-// pool has been reached.
+// ErrPoolExhausted is returned from pool connection methods when the maximum
+// number of database connections in the pool has been reached.
 var ErrPoolExhausted = errors.New("redigo: connection pool exhausted")
 
 var errPoolClosed = errors.New("redigo: connection pool closed")
@@ -41,51 +35,41 @@ var errPoolClosed = errors.New("redigo: connection pool closed")
 //
 // The following example shows how to use a pool in a web application. The
 // application creates a pool at application startup and makes it available to
-// request handlers using a global variable.
+// request handlers, possibly using a global variable:
 //
-//  func newPool(server, password string) *redis.Pool {
-//      return &redis.Pool{
-//          MaxIdle: 3,
-//          IdleTimeout: 240 * time.Second,
-//          Dial: func () (redis.Conn, error) {
-//              c, err := redis.Dial("tcp", server)
-//              if err != nil {
-//                  return nil, err
-//              }
-//              if _, err := c.Do("AUTH", password); err != nil {
-//                  c.Close()
-//                  return nil, err
-//              }
-//              return c, err
-//          },
-//          TestOnBorrow: func(c redis.Conn, t time.Time) error {
-//              _, err := c.Do("PING")
-//              return err
-//          },
-//      }
-//  }
-//
-//  var (
-//      pool *redis.Pool
-//      redisServer = flag.String("redisServer", ":6379", "")
-//      redisPassword = flag.String("redisPassword", "", "")
-//  )
-//
-//  func main() {
-//      flag.Parse()
-//      pool = newPool(*redisServer, *redisPassword)
+//      var server string           // host:port of server
+//      var password string
 //      ...
-//  }
+//
+//      pool = &redis.Pool{
+//              MaxIdle: 3,
+//              IdleTimeout: 240 * time.Second,
+//              Dial: func () (redis.Conn, error) {
+//                  c, err := redis.Dial("tcp", server)
+//                  if err != nil {
+//                      return nil, err
+//                  }
+//                  if _, err := c.Do("AUTH", password); err != nil {
+//                      c.Close()
+//                      return nil, err
+//                  }
+//                  return c, err
+//              },
+//				TestOnBorrow: func(c redis.Conn, t time.Time) error {
+//				    _, err := c.Do("PING")
+//                  return err
+//			    },
+//          }
+//
+// This pool has a maximum of three connections to the server specified by the
+// variable "server". Each connection is authenticated using a password.
 //
 // A request handler gets a connection from the pool and closes the connection
 // when the handler is done:
 //
-//  func serveHome(w http.ResponseWriter, r *http.Request) {
-//      conn := pool.Get()
-//      defer conn.Close()
-//      ....
-//  }
-//
+//  conn := pool.Get()
+//  defer conn.Close()
+//  // do something with the connection
 type Pool struct {
 
 	// Dial is an application supplied function for creating new connections.
@@ -124,17 +108,13 @@ type idleConn struct {
 	t time.Time
 }
 
-// NewPool creates a new pool. This function is deprecated. Applications should
-// initialize the Pool fields directly as shown in example.
+// NewPool returns a pool that uses newPool to create connections as needed.
+// The pool keeps a maximum of maxIdle idle connections.
 func NewPool(newFn func() (Conn, error), maxIdle int) *Pool {
 	return &Pool{Dial: newFn, MaxIdle: maxIdle}
 }
 
-// Get gets a connection. The application must close the returned connection.
-// The connection acquires an underlying connection on the first call to the
-// connection Do, Send, Receive, Flush or Err methods. An application can force
-// the connection to acquire an underlying connection without executing a Redis
-// command by calling the Err method.
+// Get gets a connection from the pool.
 func (p *Pool) Get() Conn {
 	return &pooledConnection{p: p}
 }
@@ -230,8 +210,8 @@ func (p *Pool) get() (Conn, error) {
 	return c, err
 }
 
-func (p *Pool) put(c Conn, forceClose bool) error {
-	if c.Err() == nil && !forceClose {
+func (p *Pool) put(c Conn) error {
+	if c.Err() == nil {
 		p.mu.Lock()
 		if !p.closed {
 			p.idle.PushFront(idleConn{t: nowFunc(), c: c})
@@ -253,10 +233,9 @@ func (p *Pool) put(c Conn, forceClose bool) error {
 }
 
 type pooledConnection struct {
-	c     Conn
-	err   error
-	p     *Pool
-	state int
+	c   Conn
+	err error
+	p   *Pool
 }
 
 func (c *pooledConnection) get() error {
@@ -266,53 +245,10 @@ func (c *pooledConnection) get() error {
 	return c.err
 }
 
-var (
-	sentinel     []byte
-	sentinelOnce sync.Once
-)
-
-func initSentinel() {
-	p := make([]byte, 64)
-	if _, err := rand.Read(p); err == nil {
-		sentinel = p
-	} else {
-		h := sha1.New()
-		io.WriteString(h, "Oops, rand failed. Use time instead.")
-		io.WriteString(h, strconv.FormatInt(time.Now().UnixNano(), 10))
-		sentinel = h.Sum(nil)
-	}
-}
-
 func (c *pooledConnection) Close() (err error) {
 	if c.c != nil {
-		if c.state&multiState != 0 {
-			c.c.Send("DISCARD")
-			c.state &^= (multiState | watchState)
-		} else if c.state&watchState != 0 {
-			c.c.Send("UNWATCH")
-			c.state &^= watchState
-		}
-		if c.state&subscribeState != 0 {
-			c.c.Send("UNSUBSCRIBE")
-			c.c.Send("PUNSUBSCRIBE")
-			// To detect the end of the message stream, ask the server to echo
-			// a sentinel value and read until we see that value.
-			sentinelOnce.Do(initSentinel)
-			c.c.Send("ECHO", sentinel)
-			c.c.Flush()
-			for {
-				p, err := c.c.Receive()
-				if err != nil {
-					break
-				}
-				if p, ok := p.([]byte); ok && bytes.Equal(p, sentinel) {
-					c.state &^= subscribeState
-					break
-				}
-			}
-		}
 		c.c.Do("")
-		c.p.put(c.c, c.state != 0)
+		c.p.put(c.c)
 		c.c = nil
 		c.err = errPoolClosed
 	}
@@ -330,8 +266,6 @@ func (c *pooledConnection) Do(commandName string, args ...interface{}) (reply in
 	if err := c.get(); err != nil {
 		return nil, err
 	}
-	ci := lookupCommandInfo(commandName)
-	c.state = (c.state | ci.set) &^ ci.clear
 	return c.c.Do(commandName, args...)
 }
 
@@ -339,8 +273,6 @@ func (c *pooledConnection) Send(commandName string, args ...interface{}) error {
 	if err := c.get(); err != nil {
 		return err
 	}
-	ci := lookupCommandInfo(commandName)
-	c.state = (c.state | ci.set) &^ ci.clear
 	return c.c.Send(commandName, args...)
 }
 

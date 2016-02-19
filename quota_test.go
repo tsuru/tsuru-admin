@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+    "strings"
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
@@ -26,7 +27,7 @@ func (s *S) TestUserQuotaViewRun(c *check.C) {
 	trans := cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: result, Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.Method == "GET" && req.URL.Path == "/users/fss@corp.globo.com/quota"
+			return req.Method == "GET" && strings.HasSuffix(req.URL.Path, "/users/fss@corp.globo.com/quota")
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
@@ -66,7 +67,7 @@ func (s *S) TestUserChangeQuotaRun(c *check.C) {
 			body, err := ioutil.ReadAll(req.Body)
 			c.Assert(err, check.IsNil)
 			c.Assert(string(body), check.Equals, `limit=5`)
-			return req.Method == "POST" && req.URL.Path == "/users/fss@corp.globo.com/quota"
+			return req.Method == "POST" && strings.HasSuffix(req.URL.Path, "/users/fss@corp.globo.com/quota")
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
@@ -95,7 +96,7 @@ func (s *S) TestUserChangeQuotaRunUnlimited(c *check.C) {
 			c.Assert(err, check.IsNil)
 			c.Assert(string(body), check.Equals, "limit=-1")
 			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
-			return req.Method == "POST" && req.URL.Path == "/users/fss@corp.globo.com/quota"
+			return req.Method == "POST" && strings.HasSuffix(req.URL.Path, "/users/fss@corp.globo.com/quota")
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
@@ -145,7 +146,7 @@ func (s *S) TestAppQuotaViewRun(c *check.C) {
 	trans := cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: result, Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.Method == "GET" && req.URL.Path == "/apps/hibria/quota"
+			return req.Method == "GET" && strings.HasSuffix(req.URL.Path, "/apps/hibria/quota")
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
@@ -185,7 +186,7 @@ func (s *S) TestAppQuotaChangeRun(c *check.C) {
 			body, err := ioutil.ReadAll(req.Body)
 			c.Assert(err, check.IsNil)
 			c.Assert(string(body), check.Equals, `limit=5`)
-			return req.Method == "POST" && req.URL.Path == "/apps/myapp/quota"
+			return req.Method == "POST" && strings.HasSuffix(req.URL.Path, "/apps/myapp/quota")
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
@@ -214,7 +215,7 @@ func (s *S) TestAppQuotaChangeRunUnlimited(c *check.C) {
 			c.Assert(err, check.IsNil)
 			c.Assert(string(body), check.Equals, "limit=-1")
 			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
-			return req.Method == "POST" && req.URL.Path == "/apps/myapp/quota"
+			return req.Method == "POST" && strings.HasSuffix(req.URL.Path, "/apps/myapp/quota")
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)

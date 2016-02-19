@@ -42,7 +42,7 @@ func (s *S) TestPlatformAddRun(c *check.C) {
 			data, err := ioutil.ReadAll(file)
 			c.Assert(err, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/java")
-			return req.URL.Path == "/platforms" && req.Method == "POST"
+			return strings.HasSuffix(req.URL.Path, "/platforms") && req.Method == "POST"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -73,7 +73,7 @@ func (s *S) TestPlatformAddRunLocalDockerFile(c *check.C) {
 			data, err := ioutil.ReadAll(file)
 			c.Assert(err, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM\ttsuru/java\nRUN\ttrue\n")
-			return req.URL.Path == "/platforms" && req.Method == "POST"
+			return strings.HasSuffix(req.URL.Path, "/platforms") && req.Method == "POST"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -104,7 +104,7 @@ func (s *S) TestPlatformAddPrebuiltImage(c *check.C) {
 			data, err := ioutil.ReadAll(file)
 			c.Assert(err, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/python")
-			return req.URL.Path == "/platforms" && req.Method == "POST"
+			return strings.HasSuffix(req.URL.Path, "/platforms") && req.Method == "POST"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -135,7 +135,7 @@ func (s *S) TestPlatformAddRunImplicitDockerfile(c *check.C) {
 			data, err := ioutil.ReadAll(file)
 			c.Assert(err, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/teste")
-			return req.URL.Path == "/platforms" && req.Method == "POST"
+			return strings.HasSuffix(req.URL.Path, "/platforms") && req.Method == "POST"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -239,7 +239,7 @@ func (s *S) TestPlatformUpdateRun(c *check.C) {
 			data, err := ioutil.ReadAll(file)
 			c.Assert(err, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/java")
-			return req.URL.Path == "/platforms/"+name && req.Method == "PUT"
+			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -271,7 +271,7 @@ func (s *S) TestPlatformUpdateRunLocalDockerfile(c *check.C) {
 			data, err := ioutil.ReadAll(file)
 			c.Assert(err, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM\ttsuru/java\nRUN\ttrue\n")
-			return req.URL.Path == "/platforms/"+name && req.Method == "PUT"
+			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -303,7 +303,7 @@ func (s *S) TestPlatformUpdateRunPrebuiltImage(c *check.C) {
 			data, err := ioutil.ReadAll(file)
 			c.Assert(err, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/python")
-			return req.URL.Path == "/platforms/"+name && req.Method == "PUT"
+			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -335,7 +335,7 @@ func (s *S) TestPlatformUpdateRunImplicitImage(c *check.C) {
 			data, err := ioutil.ReadAll(file)
 			c.Assert(err, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/teste")
-			return req.URL.Path == "/platforms/"+name && req.Method == "PUT"
+			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -362,7 +362,7 @@ func (s *S) TestPlatformUpdateWithFlagDisableTrue(c *check.C) {
 			_, _, err := req.FormFile("dockerfile_content")
 			c.Assert(err, check.NotNil)
 			c.Assert(req.FormValue("disabled"), check.Equals, "true")
-			return req.URL.Path == "/platforms/"+name && req.Method == "PUT"
+			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -390,7 +390,7 @@ func (s *S) TestPlatformUpdateWithFlagEnabledTrue(c *check.C) {
 			_, _, err := req.FormFile("dockerfile_content")
 			c.Assert(err, check.NotNil)
 			c.Assert(req.FormValue("disabled"), check.Equals, "false")
-			return req.URL.Path == "/platforms/"+name && req.Method == "PUT"
+			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -447,7 +447,7 @@ func (s *S) TestPlatformRemoveRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/platforms/"+name && req.Method == "DELETE"
+			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "DELETE"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)

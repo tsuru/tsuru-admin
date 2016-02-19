@@ -71,4 +71,3 @@ func (notFound) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Not found")
 
 }
-

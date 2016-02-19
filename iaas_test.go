@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+    "strings"
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
@@ -43,7 +44,7 @@ func (s *S) TestMachineListRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(data), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/iaas/machines" && req.Method == "GET"
+			return strings.HasSuffix(req.URL.Path, "/iaas/machines") && req.Method == "GET"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -63,7 +64,7 @@ func (s *S) TestMachineDestroyRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/iaas/machines/myid1" && req.Method == "DELETE"
+			return strings.HasSuffix(req.URL.Path, "/iaas/machines/myid1") && req.Method == "DELETE"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -102,7 +103,7 @@ func (s *S) TestTemplateListRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(data), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/iaas/templates" && req.Method == "GET"
+			return strings.HasSuffix(req.URL.Path, "/iaas/templates") && req.Method == "GET"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -122,7 +123,7 @@ func (s *S) TestTemplateAddCmdRun(c *check.C) {
 		CondFunc: func(req *http.Request) bool {
 			body, _ := ioutil.ReadAll(req.Body)
 			c.Assert(string(body), check.DeepEquals, expectedBody)
-			return req.URL.Path == "/iaas/templates" && req.Method == "POST"
+			return strings.HasSuffix(req.URL.Path, "/iaas/templates") && req.Method == "POST"
 		},
 	}
 	manager := cmd.Manager{}
@@ -139,7 +140,7 @@ func (s *S) TestTemplateRemoveCmdRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/iaas/templates/my-tpl" && req.Method == "DELETE"
+			return strings.HasSuffix(req.URL.Path, "/iaas/templates/my-tpl") && req.Method == "DELETE"
 		},
 	}
 	manager := cmd.Manager{}
@@ -160,7 +161,7 @@ func (s *S) TestTemplateUpdateCmdRun(c *check.C) {
 		CondFunc: func(req *http.Request) bool {
 			body, _ := ioutil.ReadAll(req.Body)
 			c.Assert(string(body), check.DeepEquals, expectedBody)
-			return req.URL.Path == "/iaas/templates/my-tpl" && req.Method == "PUT"
+			return strings.HasSuffix(req.URL.Path, "/iaas/templates/my-tpl") && req.Method == "PUT"
 		},
 	}
 	manager := cmd.Manager{}

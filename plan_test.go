@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+    "strings"
 
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
@@ -38,7 +39,7 @@ func (s *S) TestPlanCreate(c *check.C) {
 				Router:   "",
 			}
 			c.Assert(plan, check.DeepEquals, expected)
-			return req.URL.Path == "/plans" && req.Method == "POST"
+			return strings.HasSuffix(req.URL.Path, "/plans") && req.Method == "POST"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -71,7 +72,7 @@ func (s *S) TestPlanCreateFlags(c *check.C) {
 				Router:   "myrouter",
 			}
 			c.Assert(plan, check.DeepEquals, expected)
-			return req.URL.Path == "/plans" && req.Method == "POST"
+			return strings.HasSuffix(req.URL.Path, "/plans") && req.Method == "POST"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -92,7 +93,7 @@ func (s *S) TestPlanCreateError(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusConflict},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/plans" && req.Method == "POST"
+			return strings.HasSuffix(req.URL.Path, "/plans") && req.Method == "POST"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -125,7 +126,7 @@ func (s *S) TestPlanCreateInvalidMemory(c *check.C) {
 				Router:   "",
 			}
 			c.Assert(plan, check.DeepEquals, expected)
-			return req.URL.Path == "/plans" && req.Method == "POST"
+			return strings.HasSuffix(req.URL.Path, "/plans") && req.Method == "POST"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -158,7 +159,7 @@ func (s *S) TestPlanCreateInvalidCpushare(c *check.C) {
 				Router:   "",
 			}
 			c.Assert(plan, check.DeepEquals, expected)
-			return req.URL.Path == "/plans" && req.Method == "POST"
+			return strings.HasSuffix(req.URL.Path, "/plans") && req.Method == "POST"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -179,7 +180,7 @@ func (s *S) TestPlanRemove(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/plans/myplan" && req.Method == "DELETE"
+			return strings.HasSuffix(req.URL.Path, "/plans/myplan") && req.Method == "DELETE"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -199,7 +200,7 @@ func (s *S) TestPlanRemoveError(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusInternalServerError},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/plans/myplan" && req.Method == "DELETE"
+			return strings.HasSuffix(req.URL.Path, "/plans/myplan") && req.Method == "DELETE"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -231,7 +232,7 @@ func (s *S) TestPlanRoutersListRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(data), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return req.URL.Path == "/plans/routers" && req.Method == "GET"
+			return strings.HasSuffix(req.URL.Path, "/plans/routers") && req.Method == "GET"
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)

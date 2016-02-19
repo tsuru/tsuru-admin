@@ -95,29 +95,25 @@ func convertAssignInt(d reflect.Value, s int64) (err error) {
 	return
 }
 
-func convertAssignValue(d reflect.Value, s interface{}) (err error) {
-	switch s := s.(type) {
-	case []byte:
-		err = convertAssignBytes(d, s)
-	case int64:
-		err = convertAssignInt(d, s)
-	default:
-		err = cannotConvert(d, s)
-	}
-	return err
-}
-
-func convertAssignValues(d reflect.Value, s []interface{}) error {
+func convertAssignValues(d reflect.Value, s []interface{}) (err error) {
 	if d.Type().Kind() != reflect.Slice {
 		return cannotConvert(d, s)
 	}
 	ensureLen(d, len(s))
 	for i := 0; i < len(s); i++ {
-		if err := convertAssignValue(d.Index(i), s[i]); err != nil {
-			return err
+		switch s := s[i].(type) {
+		case []byte:
+			err = convertAssignBytes(d.Index(i), s)
+		case int64:
+			err = convertAssignInt(d.Index(i), s)
+		default:
+			err = cannotConvert(d, s)
+		}
+		if err != nil {
+			break
 		}
 	}
-	return nil
+	return
 }
 
 func convertAssign(d interface{}, s interface{}) (err error) {
@@ -192,21 +188,22 @@ func convertAssign(d interface{}, s interface{}) (err error) {
 	return
 }
 
-// Scan copies from src to the values pointed at by dest.
+// Scan copies from the multi-bulk src to the values pointed at by dest.
 //
-// The values pointed at by dest must be an integer, float, boolean, string,
-// []byte, interface{} or slices of these types. Scan uses the standard strconv
-// package to convert bulk strings to numeric and boolean types.
+// The values pointed at by dest must be an integer, float, boolean, string, or
+// []byte. Scan uses the standard strconv package to convert bulk values to
+// numeric and boolean types.
 //
 // If a dest value is nil, then the corresponding src value is skipped.
 //
-// If a src element is nil, then the corresponding dest value is not modified.
+// If the multi-bulk value is nil, then the corresponding dest value is not
+// modified.
 //
 // To enable easy use of Scan in a loop, Scan returns the slice of src
 // following the copied values.
 func Scan(src []interface{}, dest ...interface{}) ([]interface{}, error) {
 	if len(src) < len(dest) {
-		return nil, errors.New("redigo: Scan array short")
+		return nil, errors.New("redigo: Scan multibulk short")
 	}
 	var err error
 	for i, d := range dest {
@@ -323,21 +320,22 @@ func structSpecForType(t reflect.Type) *structSpec {
 
 var errScanStructValue = errors.New("redigo: ScanStruct value must be non-nil pointer to a struct")
 
-// ScanStruct scans alternating names and values from src to a struct. The
-// HGETALL and CONFIG GET commands return replies in this format.
+// ScanStruct scans a multi-bulk src containing alternating names and values to
+// a struct. The HGETALL and CONFIG GET commands return replies in this format.
 //
-// ScanStruct uses exported field names to match values in the response. Use
+// ScanStruct uses the struct field name to match values in the response. Use
 // 'redis' field tag to override the name:
 //
 //      Field int `redis:"myName"`
 //
 // Fields with the tag redis:"-" are ignored.
 //
-// Integer, float, boolean, string and []byte fields are supported. Scan uses the
-// standard strconv package to convert bulk string values to numeric and
-// boolean types.
+// Integer, float boolean string and []byte fields are supported. Scan uses
+// the standard strconv package to convert bulk values to numeric and boolean
+// types.
 //
-// If a src element is nil, then the corresponding field is not modified.
+// If the multi-bulk value is nil, then the corresponding field is not
+// modified.
 func ScanStruct(src []interface{}, dest interface{}) error {
 	d := reflect.ValueOf(dest)
 	if d.Kind() != reflect.Ptr || d.IsNil() {
@@ -354,19 +352,27 @@ func ScanStruct(src []interface{}, dest interface{}) error {
 	}
 
 	for i := 0; i < len(src); i += 2 {
-		s := src[i+1]
-		if s == nil {
-			continue
-		}
 		name, ok := src[i].([]byte)
 		if !ok {
-			return errors.New("redigo: ScanStruct key not a bulk string value")
+			return errors.New("redigo: ScanStruct key not a bulk value")
 		}
 		fs := ss.fieldSpec(name)
 		if fs == nil {
 			continue
 		}
-		if err := convertAssignValue(d.FieldByIndex(fs.index), s); err != nil {
+		f := d.FieldByIndex(fs.index)
+		var err error
+		switch s := src[i+1].(type) {
+		case nil:
+			// ignore
+		case []byte:
+			err = convertAssignBytes(f, s)
+		case int64:
+			err = convertAssignInt(f, s)
+		default:
+			err = cannotConvert(f, s)
+		}
+		if err != nil {
 			return err
 		}
 	}
@@ -375,11 +381,12 @@ func ScanStruct(src []interface{}, dest interface{}) error {
 
 var (
 	errScanSliceValue = errors.New("redigo: ScanSlice dest must be non-nil pointer to a struct")
+	errScanSliceSrc   = errors.New("redigo: ScanSlice src element must be bulk or nil")
 )
 
-// ScanSlice scans src to the slice pointed to by dest. The elements the dest
-// slice must be integer, float, boolean, string, struct or pointer to struct
-// values.
+// ScanSlice scans multi-bulk src to the slice pointed to by dest. The elements
+// the dest slice must be integer, float, boolean, string, struct or pointer to
+// struct values.
 //
 // Struct fields must be integer, float, boolean or string values. All struct
 // fields are used unless a subset is specified using fieldNames.
@@ -406,7 +413,11 @@ func ScanSlice(src []interface{}, dest interface{}, fieldNames ...string) error 
 			if s == nil {
 				continue
 			}
-			if err := convertAssignValue(d.Index(i), s); err != nil {
+			s, ok := s.([]byte)
+			if !ok {
+				return errScanSliceSrc
+			}
+			if err := convertAssignBytes(d.Index(i), s); err != nil {
 				return err
 			}
 		}
@@ -448,7 +459,12 @@ func ScanSlice(src []interface{}, dest interface{}, fieldNames ...string) error 
 			if s == nil {
 				continue
 			}
-			if err := convertAssignValue(d.FieldByIndex(fs.index), s); err != nil {
+			sb, ok := s.([]byte)
+			if !ok {
+				return errScanSliceSrc
+			}
+			d := d.FieldByIndex(fs.index)
+			if err := convertAssignBytes(d, sb); err != nil {
 				return err
 			}
 		}
@@ -460,8 +476,8 @@ func ScanSlice(src []interface{}, dest interface{}, fieldNames ...string) error 
 type Args []interface{}
 
 // Add returns the result of appending value to args.
-func (args Args) Add(value ...interface{}) Args {
-	return append(args, value...)
+func (args Args) Add(value interface{}) Args {
+	return append(args, value)
 }
 
 // AddFlat returns the result of appending the flattened value of v to args.
@@ -470,10 +486,10 @@ func (args Args) Add(value ...interface{}) Args {
 //
 // Slices are flattened by appending the slice elements to args.
 //
-// Structs are flattened by appending the alternating names and values of
-// exported fields to args. If v is a nil struct pointer, then nothing is
-// appended. The 'redis' field tag overrides struct field names. See ScanStruct
-// for more information on the use of the 'redis' field tag.
+// Structs are flattened by appending the alternating field names and field
+// values to args. If v is a nil struct pointer, then nothing is appended. The
+// 'redis' field tag overrides struct field names. See ScanStruct for more
+// information on the use of the 'redis' field tag.
 //
 // Other types are appended to args as is.
 func (args Args) AddFlat(v interface{}) Args {

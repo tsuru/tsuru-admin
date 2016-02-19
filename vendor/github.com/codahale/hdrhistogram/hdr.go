@@ -134,7 +134,7 @@ func (h *Histogram) Max() int64 {
 			max = i.highestEquivalentValue
 		}
 	}
-	return h.highestEquivalentValue(max)
+	return h.lowestEquivalentValue(max)
 }
 
 // Min returns the approximate minimum recorded value.
@@ -152,9 +152,6 @@ func (h *Histogram) Min() int64 {
 
 // Mean returns the approximate arithmetic mean of the recorded values.
 func (h *Histogram) Mean() float64 {
-	if h.totalCount == 0 {
-		return 0
-	}
 	var total int64
 	i := h.iterator()
 	for i.next() {
@@ -167,10 +164,6 @@ func (h *Histogram) Mean() float64 {
 
 // StdDev returns the approximate standard deviation of the recorded values.
 func (h *Histogram) StdDev() float64 {
-	if h.totalCount == 0 {
-		return 0
-	}
-
 	mean := h.Mean()
 	geometricDevTotal := 0.0
 
@@ -269,31 +262,6 @@ func (h *Histogram) CumulativeDistribution() []Bracket {
 			Quantile: i.percentile,
 			Count:    i.countToIdx,
 			ValueAt:  i.highestEquivalentValue,
-		})
-	}
-
-	return result
-}
-
-// Histogram bar for plotting
-type Bar struct {
-	From, To, Count int64
-}
-
-// Pretty print as csv for easy plotting
-func (b Bar) String() string {
-	return fmt.Sprintf("%v, %v, %v\n", b.From, b.To, b.Count)
-}
-
-// Distribution returns an ordered list of bars of the
-// distribution of recorded values, counts can be normalized to a probability
-func (h *Histogram) Distribution() (result []Bar) {
-	i := h.iterator()
-	for i.next() {
-		result = append(result, Bar{
-			Count: i.countAtIdx,
-			From:  h.lowestEquivalentValue(i.valueFromIdx),
-			To:    i.highestEquivalentValue,
 		})
 	}
 
