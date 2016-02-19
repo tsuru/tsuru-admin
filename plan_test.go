@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-    "strings"
+	"strings"
 
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
