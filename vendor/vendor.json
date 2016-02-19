@@ -661,6 +661,11 @@
 			"revisionTime": "2016-02-18T19:45:27-02:00"
 		},
 		{
+			"path": "github.com/tsuru/tsuru/provision/docker/fix",
+			"revision": "9892a4f74416914da189eef953c8cdb1a837b322",
+			"revisionTime": "2016-02-18T19:45:27-02:00"
+		},
+		{
 			"path": "github.com/tsuru/tsuru/provision/docker/healer",
 			"revision": "9892a4f74416914da189eef953c8cdb1a837b322",
 			"revisionTime": "2016-02-18T19:45:27-02:00"
