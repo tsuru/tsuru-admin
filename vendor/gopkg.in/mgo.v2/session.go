@@ -44,53 +44,33 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-type Mode int
+type mode int
 
 const (
-	// Relevant documentation on read preference modes:
-	//
-	//     http://docs.mongodb.org/manual/reference/read-preference/
-	//
-	Primary            Mode = 2 // Default mode. All operations read from the current replica set primary.
-	PrimaryPreferred   Mode = 3 // Read from the primary if available. Read from the secondary otherwise.
-	Secondary          Mode = 4 // Read from one of the nearest secondary members of the replica set.
-	SecondaryPreferred Mode = 5 // Read from one of the nearest secondaries if available. Read from primary otherwise.
-	Nearest            Mode = 6 // Read from one of the nearest members, irrespective of it being primary or secondary.
-
-	// Read preference modes are specific to mgo:
-	Eventual  Mode = 0 // Same as Nearest, but may change servers between reads.
-	Monotonic Mode = 1 // Same as SecondaryPreferred before first write. Same as Primary after first write.
-	Strong    Mode = 2 // Same as Primary.
+	Eventual  mode = 0
+	Monotonic mode = 1
+	Strong    mode = 2
 )
-
-// mgo.v3: Drop Strong mode, suffix all modes with "Mode".
 
 // When changing the Session type, check if newSession and copySession
 // need to be updated too.
 
-// Session represents a communication session with the database.
-//
-// All Session methods are concurrency-safe and may be called from multiple
-// goroutines. In all session modes but Eventual, using the session from
-// multiple goroutines will cause them to share the same underlying socket.
-// See the documentation on Session.SetMode for more details.
 type Session struct {
-	m                sync.RWMutex
-	cluster_         *mongoCluster
-	slaveSocket      *mongoSocket
-	masterSocket     *mongoSocket
-	slaveOk          bool
-	consistency      Mode
-	queryConfig      query
-	safeOp           *queryOp
-	syncTimeout      time.Duration
-	sockTimeout      time.Duration
-	defaultdb        string
-	sourcedb         string
-	dialCred         *Credential
-	creds            []Credential
-	poolLimit        int
-	bypassValidation bool
+	m            sync.RWMutex
+	cluster_     *mongoCluster
+	slaveSocket  *mongoSocket
+	masterSocket *mongoSocket
+	slaveOk      bool
+	consistency  mode
+	queryConfig  query
+	safeOp       *queryOp
+	syncTimeout  time.Duration
+	sockTimeout  time.Duration
+	defaultdb    string
+	sourcedb     string
+	dialCred     *Credential
+	creds        []Credential
+	poolLimit    int
 }
 
 type Database struct {
@@ -318,7 +298,7 @@ type DialInfo struct {
 	// Timeout is the amount of time to wait for a server to respond when
 	// first connecting and on follow up operations in the session. If
 	// timeout is zero, the call may block forever waiting for a connection
-	// to be established. Timeout does not affect logic in DialServer.
+	// to be established.
 	Timeout time.Duration
 
 	// FailFast will cause connection and query attempts to fail faster when
@@ -373,8 +353,6 @@ type DialInfo struct {
 	// WARNING: This field is obsolete. See DialServer above.
 	Dial func(addr net.Addr) (net.Conn, error)
 }
-
-// mgo.v3: Drop DialInfo.Dial.
 
 // ServerAddr represents the address for establishing a connection to an
 // individual MongoDB server.
@@ -503,7 +481,7 @@ func extractURL(s string) (*urlInfo, error) {
 	return info, nil
 }
 
-func newSession(consistency Mode, cluster *mongoCluster, timeout time.Duration) (session *Session) {
+func newSession(consistency mode, cluster *mongoCluster, timeout time.Duration) (session *Session) {
 	cluster.Acquire()
 	session = &Session{
 		cluster_:    cluster,
@@ -985,14 +963,12 @@ type indexSpec struct {
 	DropDups         bool    "dropDups,omitempty"
 	Background       bool    ",omitempty"
 	Sparse           bool    ",omitempty"
-	Bits             int     ",omitempty"
-	Min, Max         float64 ",omitempty"
+	Bits, Min, Max   int     ",omitempty"
 	BucketSize       float64 "bucketSize,omitempty"
 	ExpireAfter      int     "expireAfterSeconds,omitempty"
 	Weights          bson.D  ",omitempty"
 	DefaultLanguage  string  "default_language,omitempty"
 	LanguageOverride string  "language_override,omitempty"
-	TextIndexVersion int     "textIndexVersion,omitempty"
 }
 
 type Index struct {
@@ -1006,21 +982,13 @@ type Index struct {
 	// documents with indexed time.Time older than the provided delta.
 	ExpireAfter time.Duration
 
-	// Name holds the stored index name. On creation if this field is unset it is
-	// computed by EnsureIndex based on the index key.
+	// Name holds the stored index name. On creation this field is ignored and the index name
+	// is automatically computed by EnsureIndex based on the index key
 	Name string
 
 	// Properties for spatial indexes.
-	//
-	// Min and Max were improperly typed as int when they should have been
-	// floats.  To preserve backwards compatibility they are still typed as
-	// int and the following two fields enable reading and writing the same
-	// fields as float numbers. In mgo.v3, these fields will be dropped and
-	// Min/Max will become floats.
-	Min, Max   int
-	Minf, Maxf float64
-	BucketSize float64
-	Bits       int
+	Bits, Min, Max int
+	BucketSize     float64
 
 	// Properties for text indexes.
 	DefaultLanguage  string
@@ -1032,9 +1000,6 @@ type Index struct {
 	// that document. The default field weight is 1.
 	Weights map[string]int
 }
-
-// mgo.v3: Drop Minf and Maxf and transform Min and Max to floats.
-// mgo.v3: Drop DropDups as it's unsupported past 2.8.
 
 type indexKeyInfo struct {
 	name    string
@@ -1217,22 +1182,13 @@ func (c *Collection) EnsureIndex(index Index) error {
 		Background:       index.Background,
 		Sparse:           index.Sparse,
 		Bits:             index.Bits,
-		Min:              index.Minf,
-		Max:              index.Maxf,
+		Min:              index.Min,
+		Max:              index.Max,
 		BucketSize:       index.BucketSize,
 		ExpireAfter:      int(index.ExpireAfter / time.Second),
 		Weights:          keyInfo.weights,
 		DefaultLanguage:  index.DefaultLanguage,
 		LanguageOverride: index.LanguageOverride,
-	}
-
-	if spec.Min == 0 && spec.Max == 0 {
-		spec.Min = float64(index.Min)
-		spec.Max = float64(index.Max)
-	}
-
-	if index.Name != "" {
-		spec.Name = index.Name
 	}
 
 NextField:
@@ -1264,15 +1220,17 @@ NextField:
 	return err
 }
 
-// DropIndex drops the index with the provided key from the c collection.
+// DropIndex removes the index with key from the collection.
 //
-// See EnsureIndex for details on the accepted key variants.
+// The key value determines which fields compose the index. The index ordering
+// will be ascending by default.  To obtain an index with a descending order,
+// the field name should be prefixed by a dash (e.g. []string{"-time"}).
 //
 // For example:
 //
-//     err1 := collection.DropIndex("firstField", "-secondField")
-//     err2 := collection.DropIndex("customIndexName")
+//     err := collection.DropIndex("lastname", "firstname")
 //
+// See the EnsureIndex method for more details on indexes.
 func (c *Collection) DropIndex(key ...string) error {
 	keyInfo, err := parseIndexKey(key)
 	if err != nil {
@@ -1293,58 +1251,6 @@ func (c *Collection) DropIndex(key ...string) error {
 		Ok     bool
 	}{}
 	err = db.Run(bson.D{{"dropIndexes", c.Name}, {"index", keyInfo.name}}, &result)
-	if err != nil {
-		return err
-	}
-	if !result.Ok {
-		return errors.New(result.ErrMsg)
-	}
-	return nil
-}
-
-// DropIndexName removes the index with the provided index name.
-//
-// For example:
-//
-//     err := collection.DropIndex("customIndexName")
-//
-func (c *Collection) DropIndexName(name string) error {
-	session := c.Database.Session
-
-	session = session.Clone()
-	defer session.Close()
-	session.SetMode(Strong, false)
-
-	c = c.With(session)
-
-	indexes, err := c.Indexes()
-	if err != nil {
-		return err
-	}
-
-	var index Index
-	for _, idx := range indexes {
-		if idx.Name == name {
-			index = idx
-			break
-		}
-	}
-
-	if index.Name != "" {
-		keyInfo, err := parseIndexKey(index.Key)
-		if err != nil {
-			return err
-		}
-
-		cacheKey := c.FullName + "\x00" + keyInfo.name
-		session.cluster().CacheIndex(cacheKey, false)
-	}
-
-	result := struct {
-		ErrMsg string
-		Ok     bool
-	}{}
-	err = c.Database.Run(bson.D{{"dropIndexes", c.Name}, {"index", name}}, &result)
 	if err != nil {
 		return err
 	}
@@ -1423,36 +1329,15 @@ func (c *Collection) Indexes() (indexes []Index, err error) {
 }
 
 func indexFromSpec(spec indexSpec) Index {
-	index := Index{
-		Name:             spec.Name,
-		Key:              simpleIndexKey(spec.Key),
-		Unique:           spec.Unique,
-		DropDups:         spec.DropDups,
-		Background:       spec.Background,
-		Sparse:           spec.Sparse,
-		Minf:             spec.Min,
-		Maxf:             spec.Max,
-		Bits:             spec.Bits,
-		BucketSize:       spec.BucketSize,
-		DefaultLanguage:  spec.DefaultLanguage,
-		LanguageOverride: spec.LanguageOverride,
-		ExpireAfter:      time.Duration(spec.ExpireAfter) * time.Second,
+	return Index{
+		Name:        spec.Name,
+		Key:         simpleIndexKey(spec.Key),
+		Unique:      spec.Unique,
+		DropDups:    spec.DropDups,
+		Background:  spec.Background,
+		Sparse:      spec.Sparse,
+		ExpireAfter: time.Duration(spec.ExpireAfter) * time.Second,
 	}
-	if float64(int(spec.Min)) == spec.Min && float64(int(spec.Max)) == spec.Max {
-		index.Min = int(spec.Min)
-		index.Max = int(spec.Max)
-	}
-	if spec.TextIndexVersion > 0 {
-		index.Key = make([]string, len(spec.Weights))
-		index.Weights = make(map[string]int)
-		for i, elem := range spec.Weights {
-			index.Key[i] = "$text:" + elem.Name
-			if w, ok := elem.Value.(int); ok {
-				index.Weights[elem.Name] = w
-			}
-		}
-	}
-	return index
 }
 
 type indexSlice []Index
@@ -1604,7 +1489,7 @@ func (s *Session) Refresh() {
 // Shifting between Monotonic and Strong modes will keep a previously
 // reserved connection for the session unless refresh is true or the
 // connection is unsuitable (to a secondary server in a Strong session).
-func (s *Session) SetMode(consistency Mode, refresh bool) {
+func (s *Session) SetMode(consistency mode, refresh bool) {
 	s.m.Lock()
 	debugf("Session %p: setting mode %d with refresh=%v (master=%p, slave=%p)", s, consistency, refresh, s.masterSocket, s.slaveSocket)
 	s.consistency = consistency
@@ -1620,7 +1505,7 @@ func (s *Session) SetMode(consistency Mode, refresh bool) {
 }
 
 // Mode returns the current consistency mode for the session.
-func (s *Session) Mode() Mode {
+func (s *Session) Mode() mode {
 	s.m.RLock()
 	mode := s.consistency
 	s.m.RUnlock()
@@ -1679,24 +1564,6 @@ func (s *Session) SetPoolLimit(limit int) {
 	s.m.Unlock()
 }
 
-// SetBypassValidation sets whether the server should bypass the registered
-// validation expressions executed when documents are inserted or modified,
-// in the interest of preserving properties for documents in the collection
-// being modfified. The default is to not bypass, and thus to perform the
-// validation expressions registered for modified collections. 
-//
-// Document validation was introuced in MongoDB 3.2.
-//
-// Relevant documentation:
-//
-//   https://docs.mongodb.org/manual/release-notes/3.2/#bypass-validation
-//
-func (s *Session) SetBypassValidation(bypass bool) {
-	s.m.Lock()
-	s.bypassValidation = bypass
-	s.m.Unlock()
-}
-
 // SetBatch sets the default batch size used when fetching documents from the
 // database. It's possible to change this setting on a per-query basis as
 // well, using the Query.Batch method.
@@ -1738,8 +1605,8 @@ type Safe struct {
 	W        int    // Min # of servers to ack before success
 	WMode    string // Write mode for MongoDB 2.0+ (e.g. "majority")
 	WTimeout int    // Milliseconds to wait for W before timing out
-	FSync    bool   // Sync via the journal if present, or via data files sync otherwise
-	J        bool   // Sync via the journal if present
+	FSync    bool   // Should servers sync to disk before returning success
+	J        bool   // Wait for next group commit if journaling; no effect otherwise
 }
 
 // Safe returns the current safety mode for the session.
@@ -1783,18 +1650,10 @@ func (s *Session) Safe() (safe *Safe) {
 // the links below for more details (note that MongoDB internally reuses the
 // "w" field name for WMode).
 //
-// If safe.J is true, servers will block until write operations have been
-// committed to the journal. Cannot be used in combination with FSync. Prior
-// to MongoDB 2.6 this option was ignored if the server was running without
-// journaling. Starting with MongoDB 2.6 write operations will fail with an
-// exception if this option is used when the server is running without
-// journaling.
-//
-// If safe.FSync is true and the server is running without journaling, blocks
-// until the server has synced all data files to disk. If the server is running
-// with journaling, this acts the same as the J option, blocking until write
-// operations have been committed to the journal. Cannot be used in
-// combination with J.
+// If safe.FSync is true and journaling is disabled, the servers will be
+// forced to sync all files to disk immediately before returning. If the
+// same option is true but journaling is enabled, the server will instead
+// await for the next group commit before returning.
 //
 // Since MongoDB 2.0.0, the safe.J option can also be used instead of FSync
 // to force the server to wait for a group commit in case journaling is
@@ -1941,7 +1800,7 @@ func (s *Session) Run(cmd interface{}, result interface{}) error {
 // used for reading operations to those with both tag "disk" set to
 // "ssd" and tag "rack" set to 1:
 //
-//     session.SelectServers(bson.D{{"disk", "ssd"}, {"rack", 1}})
+//     session.SelectSlaves(bson.D{{"disk", "ssd"}, {"rack", 1}})
 //
 // Multiple sets of tags may be provided, in which case the used server
 // must match all tags within any one set.
@@ -2302,8 +2161,6 @@ func (p *Pipe) Batch(n int) *Pipe {
 	return p
 }
 
-// mgo.v3: Use a single user-visible error type.
-
 type LastError struct {
 	Err             string
 	Code, N, Waited int
@@ -2311,9 +2168,6 @@ type LastError struct {
 	WTimeout        bool
 	UpdatedExisting bool        `bson:"updatedExisting"`
 	UpsertedId      interface{} `bson:"upserted"`
-
-	modified int
-	errors   []error
 }
 
 func (err *LastError) Error() string {
@@ -2350,13 +2204,6 @@ func IsDup(err error) bool {
 		return e.Code == 11000 || e.Code == 11001 || e.Code == 12582 || e.Code == 16460 && strings.Contains(e.Err, " E11000 ")
 	case *QueryError:
 		return e.Code == 11000 || e.Code == 11001 || e.Code == 12582
-	case *bulkError:
-		for _, ee := range e.errs {
-			if !IsDup(ee) {
-				return false
-			}
-		}
-		return true
 	}
 	return false
 }
@@ -2366,7 +2213,7 @@ func IsDup(err error) bool {
 // happens while inserting the provided documents, the returned error will
 // be of type *LastError.
 func (c *Collection) Insert(docs ...interface{}) error {
-	_, err := c.writeOp(&insertOp{c.FullName, docs, 0}, true)
+	_, err := c.writeQuery(&insertOp{c.FullName, docs, 0})
 	return err
 }
 
@@ -2382,15 +2229,7 @@ func (c *Collection) Insert(docs ...interface{}) error {
 //     http://www.mongodb.org/display/DOCS/Atomic+Operations
 //
 func (c *Collection) Update(selector interface{}, update interface{}) error {
-	if selector == nil {
-		selector = bson.D{}
-	}
-	op := updateOp{
-		Collection: c.FullName,
-		Selector:   selector,
-		Update:     update,
-	}
-	lerr, err := c.writeOp(&op, true)
+	lerr, err := c.writeQuery(&updateOp{c.FullName, selector, update, 0})
 	if err == nil && lerr != nil && !lerr.UpdatedExisting {
 		return ErrNotFound
 	}
@@ -2426,17 +2265,7 @@ type ChangeInfo struct {
 //     http://www.mongodb.org/display/DOCS/Atomic+Operations
 //
 func (c *Collection) UpdateAll(selector interface{}, update interface{}) (info *ChangeInfo, err error) {
-	if selector == nil {
-		selector = bson.D{}
-	}
-	op := updateOp{
-		Collection: c.FullName,
-		Selector:   selector,
-		Update:     update,
-		Flags:      2,
-		Multi:      true,
-	}
-	lerr, err := c.writeOp(&op, true)
+	lerr, err := c.writeQuery(&updateOp{c.FullName, selector, update, 2})
 	if err == nil && lerr != nil {
 		info = &ChangeInfo{Updated: lerr.N}
 	}
@@ -2457,17 +2286,7 @@ func (c *Collection) UpdateAll(selector interface{}, update interface{}) (info *
 //     http://www.mongodb.org/display/DOCS/Atomic+Operations
 //
 func (c *Collection) Upsert(selector interface{}, update interface{}) (info *ChangeInfo, err error) {
-	if selector == nil {
-		selector = bson.D{}
-	}
-	op := updateOp{
-		Collection: c.FullName,
-		Selector:   selector,
-		Update:     update,
-		Flags:      1,
-		Upsert:     true,
-	}
-	lerr, err := c.writeOp(&op, true)
+	lerr, err := c.writeQuery(&updateOp{c.FullName, selector, update, 1})
 	if err == nil && lerr != nil {
 		info = &ChangeInfo{}
 		if lerr.UpdatedExisting {
@@ -2499,10 +2318,7 @@ func (c *Collection) UpsertId(id interface{}, update interface{}) (info *ChangeI
 //     http://www.mongodb.org/display/DOCS/Removing
 //
 func (c *Collection) Remove(selector interface{}) error {
-	if selector == nil {
-		selector = bson.D{}
-	}
-	lerr, err := c.writeOp(&deleteOp{c.FullName, selector, 1, 1}, true)
+	lerr, err := c.writeQuery(&deleteOp{c.FullName, selector, 1})
 	if err == nil && lerr != nil && lerr.N == 0 {
 		return ErrNotFound
 	}
@@ -2528,10 +2344,7 @@ func (c *Collection) RemoveId(id interface{}) error {
 //     http://www.mongodb.org/display/DOCS/Removing
 //
 func (c *Collection) RemoveAll(selector interface{}) (info *ChangeInfo, err error) {
-	if selector == nil {
-		selector = bson.D{}
-	}
-	lerr, err := c.writeOp(&deleteOp{c.FullName, selector, 0, 0}, true)
+	lerr, err := c.writeQuery(&deleteOp{c.FullName, selector, 0})
 	if err == nil && lerr != nil {
 		info = &ChangeInfo{Removed: lerr.N}
 	}
@@ -2976,7 +2789,7 @@ func (q *Query) One(result interface{}) (err error) {
 	}
 	defer socket.Release()
 
-	session.prepareQuery(&op)
+	op.flags |= session.slaveOkFlag()
 	op.limit = -1
 
 	data, err := socket.SimpleQuery(&op)
@@ -3016,7 +2829,7 @@ func (db *Database) run(socket *mongoSocket, cmd, result interface{}) (err error
 	op.collection = db.Name + ".$cmd"
 
 	// Query.One:
-	session.prepareQuery(&op)
+	op.flags |= session.slaveOkFlag()
 	op.limit = -1
 
 	data, err := socket.SimpleQuery(&op)
@@ -3209,9 +3022,8 @@ func (q *Query) Iter() *Iter {
 	iter.op.limit = op.limit
 	iter.op.replyFunc = iter.replyFunc()
 	iter.docsToReceive++
-
-	session.prepareQuery(&op)
 	op.replyFunc = iter.op.replyFunc
+	op.flags |= session.slaveOkFlag()
 
 	socket, err := session.acquireSocket(true)
 	if err != nil {
@@ -3291,9 +3103,8 @@ func (q *Query) Tail(timeout time.Duration) *Iter {
 	iter.op.limit = op.limit
 	iter.op.replyFunc = iter.replyFunc()
 	iter.docsToReceive++
-	session.prepareQuery(&op)
 	op.replyFunc = iter.op.replyFunc
-	op.flags |= flagTailable | flagAwaitData
+	op.flags |= flagTailable | flagAwaitData | session.slaveOkFlag()
 
 	socket, err := session.acquireSocket(true)
 	if err != nil {
@@ -3312,11 +3123,10 @@ func (q *Query) Tail(timeout time.Duration) *Iter {
 	return iter
 }
 
-func (s *Session) prepareQuery(op *queryOp) {
+func (s *Session) slaveOkFlag() (flag queryOpFlags) {
 	s.m.RLock()
-	op.mode = s.consistency
 	if s.slaveOk {
-		op.flags |= flagSlaveOk
+		flag = flagSlaveOk
 	}
 	s.m.RUnlock()
 	return
@@ -4047,7 +3857,7 @@ type BuildInfo struct {
 	VersionArray   []int  `bson:"versionArray"` // On MongoDB 2.0+; assembled from Version otherwise
 	GitVersion     string `bson:"gitVersion"`
 	OpenSSLVersion string `bson:"OpenSSLVersion"`
-	SysInfo        string `bson:"sysInfo"` // Deprecated and empty on MongoDB 3.2+.
+	SysInfo        string `bson:"sysInfo"`
 	Bits           int
 	Debug          bool
 	MaxObjectSize  int `bson:"maxBsonObjectSize"`
@@ -4089,9 +3899,6 @@ func (s *Session) BuildInfo() (info BuildInfo, err error) {
 		// That information may be moved to another field if people need it.
 		info.GitVersion = info.GitVersion[:i]
 	}
-	if info.SysInfo == "deprecated" {
-		info.SysInfo = ""
-	}
 	return
 }
 
@@ -4102,16 +3909,14 @@ func (s *Session) acquireSocket(slaveOk bool) (*mongoSocket, error) {
 
 	// Read-only lock to check for previously reserved socket.
 	s.m.RLock()
-	// If there is a slave socket reserved and its use is acceptable, take it as long
-	// as there isn't a master socket which would be preferred by the read preference mode.
-	if s.slaveSocket != nil && s.slaveOk && slaveOk && (s.masterSocket == nil || s.consistency != PrimaryPreferred && s.consistency != Monotonic) {
-		socket := s.slaveSocket
+	if s.masterSocket != nil {
+		socket := s.masterSocket
 		socket.Acquire()
 		s.m.RUnlock()
 		return socket, nil
 	}
-	if s.masterSocket != nil {
-		socket := s.masterSocket
+	if s.slaveSocket != nil && s.slaveOk && slaveOk {
+		socket := s.slaveSocket
 		socket.Acquire()
 		s.m.RUnlock()
 		return socket, nil
@@ -4123,17 +3928,17 @@ func (s *Session) acquireSocket(slaveOk bool) (*mongoSocket, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	if s.slaveSocket != nil && s.slaveOk && slaveOk && (s.masterSocket == nil || s.consistency != PrimaryPreferred && s.consistency != Monotonic) {
-		s.slaveSocket.Acquire()
-		return s.slaveSocket, nil
-	}
 	if s.masterSocket != nil {
 		s.masterSocket.Acquire()
 		return s.masterSocket, nil
 	}
+	if s.slaveSocket != nil && s.slaveOk && slaveOk {
+		s.slaveSocket.Acquire()
+		return s.slaveSocket, nil
+	}
 
 	// Still not good.  We need a new socket.
-	sock, err := s.cluster().AcquireSocket(s.consistency, slaveOk && s.slaveOk, s.syncTimeout, s.sockTimeout, s.queryConfig.op.serverTags, s.poolLimit)
+	sock, err := s.cluster().AcquireSocket(slaveOk && s.slaveOk, s.syncTimeout, s.sockTimeout, s.queryConfig.op.serverTags, s.poolLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -4236,36 +4041,27 @@ type writeCmdResult struct {
 		Index int
 		Id    interface{} `_id`
 	}
-	ConcernError writeConcernError `bson:"writeConcernError"`
-	Errors       []writeCmdError   `bson:"writeErrors"`
+	Errors []struct {
+		Ok     bool
+		Index  int
+		Code   int
+		N      int
+		ErrMsg string
+	} `bson:"writeErrors"`
+	ConcernError struct {
+		Code   int
+		ErrMsg string
+	} `bson:"writeConcernError"`
 }
 
-type writeConcernError struct {
-	Code   int
-	ErrMsg string
-}
-
-type writeCmdError struct {
-	Index  int
-	Code   int
-	ErrMsg string
-}
-
-func (r *writeCmdResult) QueryErrors() []error {
-	var errs []error
-	for _, err := range r.Errors {
-		errs = append(errs, &QueryError{Code: err.Code, Message: err.ErrMsg})
-	}
-	return errs
-}
-
-// writeOp runs the given modifying operation, potentially followed up
+// writeQuery runs the given modifying operation, potentially followed up
 // by a getLastError command in case the session is in safe mode.  The
 // LastError result is made available in lerr, and if lerr.Err is set it
 // will also be returned as err.
-func (c *Collection) writeOp(op interface{}, ordered bool) (lerr *LastError, err error) {
+func (c *Collection) writeQuery(op interface{}) (lerr *LastError, err error) {
 	s := c.Database.Session
-	socket, err := s.acquireSocket(c.Database.Name == "local")
+	dbname := c.Database.Name
+	socket, err := s.acquireSocket(dbname == "local")
 	if err != nil {
 		return nil, err
 	}
@@ -4273,13 +4069,13 @@ func (c *Collection) writeOp(op interface{}, ordered bool) (lerr *LastError, err
 
 	s.m.RLock()
 	safeOp := s.safeOp
-	bypassValidation := s.bypassValidation
 	s.m.RUnlock()
 
-	if socket.ServerInfo().MaxWireVersion >= 2 {
+	// TODO Enable this path for wire version 2 as well.
+	if socket.ServerInfo().MaxWireVersion >= 3 {
 		// Servers with a more recent write protocol benefit from write commands.
 		if op, ok := op.(*insertOp); ok && len(op.documents) > 1000 {
-			var errors []error
+			var firstErr error
 			// Maximum batch size is 1000. Must split out in separate operations for compatibility.
 			all := op.documents
 			for i := 0; i < len(all); i += 1000 {
@@ -4288,59 +4084,22 @@ func (c *Collection) writeOp(op interface{}, ordered bool) (lerr *LastError, err
 					l = len(all)
 				}
 				op.documents = all[i:l]
-				lerr, err := c.writeOpCommand(socket, safeOp, op, ordered, bypassValidation)
+				_, err := c.writeCommand(socket, safeOp, op)
 				if err != nil {
-					errors = append(errors, lerr.errors...)
-					if op.flags&1 == 0 {
-						return &LastError{errors: errors}, err
+					if op.flags&1 != 0 {
+						if firstErr == nil {
+							firstErr = err
+						}
+					} else {
+						return nil, err
 					}
 				}
 			}
-			if len(errors) == 0 {
-				return nil, nil
-			}
-			return &LastError{errors: errors}, errors[0]
+			return nil, firstErr
 		}
-		return c.writeOpCommand(socket, safeOp, op, ordered, bypassValidation)
-	} else if updateOps, ok := op.(bulkUpdateOp); ok {
-		var lerr LastError
-		for _, updateOp := range updateOps {
-			oplerr, err := c.writeOpQuery(socket, safeOp, updateOp, ordered)
-			if err != nil {
-				lerr.N += oplerr.N
-				lerr.modified += oplerr.modified
-				lerr.errors = append(lerr.errors, oplerr.errors...)
-				if ordered {
-					break
-				}
-			}
-		}
-		if len(lerr.errors) == 0 {
-			return nil, nil
-		}
-		return &lerr, lerr.errors[0]
-	} else if deleteOps, ok := op.(bulkDeleteOp); ok {
-		var lerr LastError
-		for _, deleteOp := range deleteOps {
-			oplerr, err := c.writeOpQuery(socket, safeOp, deleteOp, ordered)
-			if err != nil {
-				lerr.N += oplerr.N
-				lerr.modified += oplerr.modified
-				lerr.errors = append(lerr.errors, oplerr.errors...)
-				if ordered {
-					break
-				}
-			}
-		}
-		if len(lerr.errors) == 0 {
-			return nil, nil
-		}
-		return &lerr, lerr.errors[0]
+		return c.writeCommand(socket, safeOp, op)
 	}
-	return c.writeOpQuery(socket, safeOp, op, ordered)
-}
 
-func (c *Collection) writeOpQuery(socket *mongoSocket, safeOp *queryOp, op interface{}, ordered bool) (lerr *LastError, err error) {
 	if safeOp == nil {
 		return nil, socket.Query(op)
 	}
@@ -4350,7 +4109,7 @@ func (c *Collection) writeOpQuery(socket *mongoSocket, safeOp *queryOp, op inter
 	var replyErr error
 	mutex.Lock()
 	query := *safeOp // Copy the data.
-	query.collection = c.Database.Name + ".$cmd"
+	query.collection = dbname + ".$cmd"
 	query.replyFunc = func(err error, reply *replyOp, docNum int, docData []byte) {
 		replyData = docData
 		replyErr = err
@@ -4380,7 +4139,7 @@ func (c *Collection) writeOpQuery(socket *mongoSocket, safeOp *queryOp, op inter
 	return result, nil
 }
 
-func (c *Collection) writeOpCommand(socket *mongoSocket, safeOp *queryOp, op interface{}, ordered, bypassValidation bool) (lerr *LastError, err error) {
+func (c *Collection) writeCommand(socket *mongoSocket, safeOp *queryOp, op interface{}) (lerr *LastError, err error) {
 	var writeConcern interface{}
 	if safeOp == nil {
 		writeConcern = bson.D{{"w", 0}}
@@ -4400,39 +4159,28 @@ func (c *Collection) writeOpCommand(socket *mongoSocket, safeOp *queryOp, op int
 		}
 	case *updateOp:
 		// http://docs.mongodb.org/manual/reference/command/update
-		cmd = bson.D{
-			{"update", c.Name},
-			{"updates", []interface{}{op}},
-			{"writeConcern", writeConcern},
-			{"ordered", ordered},
+		selector := op.selector
+		if selector == nil {
+			selector = bson.D{}
 		}
-	case bulkUpdateOp:
-		// http://docs.mongodb.org/manual/reference/command/update
 		cmd = bson.D{
 			{"update", c.Name},
-			{"updates", op},
+			{"updates", []bson.D{{{"q", selector}, {"u", op.update}, {"upsert", op.flags&1 != 0}, {"multi", op.flags&2 != 0}}}},
 			{"writeConcern", writeConcern},
-			{"ordered", ordered},
+			//{"ordered", <bool>},
 		}
 	case *deleteOp:
 		// http://docs.mongodb.org/manual/reference/command/delete
+		selector := op.selector
+		if selector == nil {
+			selector = bson.D{}
+		}
 		cmd = bson.D{
 			{"delete", c.Name},
-			{"deletes", []interface{}{op}},
+			{"deletes", []bson.D{{{"q", selector}, {"limit", op.flags & 1}}}},
 			{"writeConcern", writeConcern},
-			{"ordered", ordered},
+			//{"ordered", <bool>},
 		}
-	case bulkDeleteOp:
-		// http://docs.mongodb.org/manual/reference/command/delete
-		cmd = bson.D{
-			{"delete", c.Name},
-			{"deletes", op},
-			{"writeConcern", writeConcern},
-			{"ordered", ordered},
-		}
-	}
-	if bypassValidation {
-		cmd = append(cmd, bson.DocElem{"bypassDocumentValidation", true})
 	}
 
 	var result writeCmdResult
@@ -4441,18 +4189,17 @@ func (c *Collection) writeOpCommand(socket *mongoSocket, safeOp *queryOp, op int
 	lerr = &LastError{
 		UpdatedExisting: result.N > 0 && len(result.Upserted) == 0,
 		N:               result.N,
-
-		modified: result.NModified,
-		errors:   result.QueryErrors(),
 	}
 	if len(result.Upserted) > 0 {
 		lerr.UpsertedId = result.Upserted[0].Id
 	}
 	if len(result.Errors) > 0 {
 		e := result.Errors[0]
-		lerr.Code = e.Code
-		lerr.Err = e.ErrMsg
-		err = lerr
+		if !e.Ok {
+			lerr.Code = e.Code
+			lerr.Err = e.ErrMsg
+			err = lerr
+		}
 	} else if result.ConcernError.Code != 0 {
 		e := result.ConcernError
 		lerr.Code = e.Code

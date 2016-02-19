@@ -56,12 +56,11 @@ func (e ConflictError) Error() string {
 }
 
 type UnsafeFieldError struct {
-	Field       string
-	Description string
+	Field string
 }
 
 func (e UnsafeFieldError) Error() string {
-	return fmt.Sprintf("field %q is unsafe: %v", e.Field, e.Description)
+	return fmt.Sprintf("field contains unsafe characters: %v", e.Field)
 }
 
 func responseAndStatusFor(err error) (Response, int) {

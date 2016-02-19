@@ -14,7 +14,7 @@ import (
 	"github.com/vulcand/vulcand/engine"
 	"github.com/vulcand/vulcand/plugin"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/log"
 )
 
 const CurrentVersion = "v2"
@@ -41,24 +41,20 @@ func (c *Client) GetHosts() ([]engine.Host, error) {
 	return engine.HostsFromJSON(data)
 }
 
-func (c *Client) UpdateLogSeverity(s log.Level) error {
+func (c *Client) UpdateLogSeverity(s log.Severity) error {
 	return c.PutForm(c.endpoint("log", "severity"), url.Values{"severity": {s.String()}})
 }
 
-func (c *Client) GetLogSeverity() (log.Level, error) {
+func (c *Client) GetLogSeverity() (log.Severity, error) {
 	data, err := c.Get(c.endpoint("log", "severity"), url.Values{})
 	if err != nil {
-		return 255, err
+		return -1, err
 	}
 	var sev *SeverityResponse
 	if err := json.Unmarshal(data, &sev); err != nil {
-		return 255, err
+		return -1, err
 	}
-	lvl, err := log.ParseLevel(strings.ToLower(sev.Severity))
-	if err != nil {
-		return 255, err
-	}
-	return lvl, nil
+	return log.SeverityFromString(sev.Severity)
 }
 
 func (c *Client) GetHost(hk engine.HostKey) (*engine.Host, error) {

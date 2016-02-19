@@ -228,7 +228,7 @@ func GetFloat(key string) (float64, error) {
 			return floatVal, nil
 		}
 	}
-	return 0, &invalidValue{key, "float"}
+	return 0.0, &invalidValue{key, "float"}
 }
 
 // GetUint parses and returns an unsigned integer from the config file.
@@ -261,11 +261,11 @@ func GetDuration(key string) (time.Duration, error) {
 	if err != nil {
 		return 0, err
 	}
-	switch v := value.(type) {
+	switch value.(type) {
 	case int:
-		return time.Duration(v), nil
+		return time.Duration(value.(int)), nil
 	case float64:
-		return time.Duration(v), nil
+		return time.Duration(value.(float64)), nil
 	case string:
 		if value, err := time.ParseDuration(value.(string)); err == nil {
 			return value, nil
@@ -309,15 +309,15 @@ func GetList(key string) ([]string, error) {
 		v := value.([]interface{})
 		result := make([]string, len(v))
 		for i, item := range v {
-			switch v := item.(type) {
+			switch item.(type) {
 			case int:
-				result[i] = strconv.Itoa(v)
+				result[i] = strconv.Itoa(item.(int))
 			case bool:
-				result[i] = strconv.FormatBool(v)
+				result[i] = strconv.FormatBool(item.(bool))
 			case float64:
-				result[i] = strconv.FormatFloat(v, 'f', -1, 64)
+				result[i] = strconv.FormatFloat(item.(float64), 'f', -1, 64)
 			case string:
-				result[i] = v
+				result[i] = item.(string)
 			default:
 				result[i] = fmt.Sprintf("%v", item)
 			}
