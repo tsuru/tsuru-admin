@@ -22,7 +22,7 @@ func (s *S) TestAddPoolToTheSchedulerCmd(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return strings.HasSuffix(req.URL.Path, "/pool")
+			return req.URL.Path == "/pool"
 		},
 	}
 	manager := cmd.Manager{}
@@ -49,7 +49,7 @@ func (s *S) TestAddPublicPool(c *check.C) {
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(expected, check.DeepEquals, result)
-			return strings.HasSuffix(req.URL.Path, "/pool")
+			return req.URL.Path == "/pool"
 		},
 	}
 	manager := cmd.Manager{}
@@ -77,7 +77,7 @@ func (s *S) TestAddDefaultPool(c *check.C) {
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(expected, check.DeepEquals, result)
-			return strings.HasSuffix(req.URL.Path, "/pool")
+			return req.URL.Path == "/pool"
 		},
 	}
 	manager := cmd.Manager{}
@@ -105,7 +105,7 @@ func (s *S) TestFailToAddMoreThanOneDefaultPool(c *check.C) {
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(expected, check.DeepEquals, result)
-			return strings.HasSuffix(req.URL.Path, "/pool")
+			return req.URL.Path == "/pool"
 		},
 	}
 	manager := cmd.Manager{}
@@ -213,7 +213,7 @@ func (s *S) TestUpdatePoolToTheSchedulerCmd(c *check.C) {
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(expected, check.DeepEquals, result)
-			return strings.HasSuffix(req.URL.Path, "/pool/poolTest") && req.URL.Query().Get("force") == "false"
+			return req.URL.Path == "/pool/poolTest" && req.URL.Query().Get("force") == "false"
 		},
 	}
 	manager := cmd.Manager{}
@@ -240,7 +240,7 @@ func (s *S) TestFailToUpdateMoreThanOneDefaultPool(c *check.C) {
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(expected, check.DeepEquals, result)
-			return strings.HasSuffix(req.URL.Path, "/pool/test") && req.URL.Query().Get("force") == "false"
+			return req.URL.Path == "/pool/test" && req.URL.Query().Get("force") == "false"
 		},
 	}
 	manager := cmd.Manager{}
@@ -270,7 +270,7 @@ func (s *S) TestForceToOverwriteDefaultPoolInUpdate(c *check.C) {
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(result, check.DeepEquals, expected)
-			return strings.HasSuffix(req.URL.Path, "/pool/test") && req.URL.Query().Get("force") == "true"
+			return req.URL.Path == "/pool/test" && req.URL.Query().Get("force") == "true"
 		},
 	}
 	manager := cmd.Manager{}
@@ -303,14 +303,14 @@ func (s *S) TestAskOverwriteDefaultPoolInUpdate(c *check.C) {
 			result := map[string]interface{}{}
 			err = json.Unmarshal(body, &result)
 			c.Assert(expected, check.DeepEquals, result)
-			return strings.HasSuffix(req.URL.Path, "/pool/test") && req.URL.Query().Get("force") == "false"
+			return req.URL.Path == "/pool/test" && req.URL.Query().Get("force") == "false"
 		},
 	}
 	transportOk := cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Status: http.StatusOK, Message: ""},
 		CondFunc: func(req *http.Request) bool {
 			called += 1
-			return strings.HasSuffix(req.URL.Path, "/pool/test") && req.URL.Query().Get("force") == "true"
+			return req.URL.Path == "/pool/test" && req.URL.Query().Get("force") == "true"
 		},
 	}
 	multiTransport := cmdtest.MultiConditionalTransport{
@@ -338,7 +338,7 @@ func (s *S) TestRemovePoolFromTheSchedulerCmd(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return strings.HasSuffix(req.URL.Path, "/pool")
+			return req.URL.Path == "/pool"
 		},
 	}
 	manager := cmd.Manager{}
@@ -368,7 +368,7 @@ func (s *S) TestAddTeamsToPoolCmdRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return strings.HasSuffix(req.URL.Path, "/pool/pool1/team")
+			return req.URL.Path == "/pool/pool1/team"
 		},
 	}
 	manager := cmd.Manager{}
@@ -383,7 +383,7 @@ func (s *S) TestRemoveTeamsFromPoolCmdRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return strings.HasSuffix(req.URL.Path, "/pool/pool1/team")
+			return req.URL.Path == "/pool/pool1/team"
 		},
 	}
 	manager := cmd.Manager{}

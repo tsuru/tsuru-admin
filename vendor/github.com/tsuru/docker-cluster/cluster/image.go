@@ -1,4 +1,4 @@
-// Copyright 2016 docker-cluster authors. All rights reserved.
+// Copyright 2015 docker-cluster authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,15 +7,12 @@ package cluster
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 
 	"github.com/fsouza/go-dockerclient"
-	"github.com/tsuru/tsuru/provision/docker/fix"
-	"github.com/tsuru/tsuru/safe"
 )
 
 type ImageHistory struct {
@@ -27,7 +24,6 @@ type Image struct {
 	Repository string `bson:"_id"`
 	LastNode   string
 	LastId     string
-	LastDigest string
 	History    []ImageHistory
 }
 
@@ -96,36 +92,16 @@ func (c *Cluster) RemoveFromRegistry(imageId string) error {
 		return nil
 	}
 	url := fmt.Sprintf("http://%s/v1/repositories/%s/", registryServer, imageTag)
-	resp, err := deleteImage(url)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode == 404 {
-		var imageTagName string
-		imageData := strings.SplitN(imageTag, ":", 2)
-		imageTagName = imageData[0]
-		img, err := c.storage().RetrieveImage(imageId)
-		if err != nil && img.LastDigest == "" {
-			return err
-		}
-		url := fmt.Sprintf("http://%s/v2/%s/manifests/%s", registryServer, imageTagName, img.LastDigest)
-		_, err = deleteImage(url)
-		return err
-	}
-	return nil
-}
-
-func deleteImage(url string) (*http.Response, error) {
 	request, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	request.Close = true
 	rsp, err := timeout10Client.Do(request)
 	if err == nil {
 		rsp.Body.Close()
 	}
-	return rsp, err
+	return err
 }
 
 // PullImage pulls an image from a remote registry server, returning an error
@@ -134,15 +110,8 @@ func deleteImage(url string) (*http.Response, error) {
 // It will pull all images in parallel, so users need to make sure that the
 // given buffer is safe.
 func (c *Cluster) PullImage(opts docker.PullImageOptions, auth docker.AuthConfiguration, nodes ...string) error {
-	var w safe.Buffer
-	if opts.OutputStream != nil {
-		mw := io.MultiWriter(&w, opts.OutputStream)
-		opts.OutputStream = mw
-	} else {
-		opts.OutputStream = &w
-	}
-	key := imageKey(opts.Repository, opts.Tag)
 	_, err := c.runOnNodes(func(n node) (interface{}, error) {
+		key := imageKey(opts.Repository, opts.Tag)
 		n.setPersistentClient()
 		err := n.PullImage(opts, auth)
 		if err != nil {
@@ -154,11 +123,7 @@ func (c *Cluster) PullImage(opts docker.PullImageOptions, auth docker.AuthConfig
 		}
 		return nil, c.storage().StoreImage(key, img.ID, n.addr)
 	}, docker.ErrNoSuchImage, true, nodes...)
-	if err != nil {
-		return err
-	}
-	digest, _ := fix.GetImageDigest(w.String())
-	return c.storage().SetImageDigest(key, digest)
+	return err
 }
 
 // TagImage adds a tag to the given image, returning an error in case of

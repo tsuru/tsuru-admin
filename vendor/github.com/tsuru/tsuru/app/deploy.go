@@ -47,7 +47,7 @@ func ListDeploys(filter *Filter, skip, limit int) ([]DeployData, error) {
 	}
 	apps := make([]string, len(appsList))
 	for i, a := range appsList {
-		apps[i] = a.GetName()
+		apps[i] = a.Name
 	}
 	var list []DeployData
 	f := bson.M{"app": bson.M{"$in": apps}, "removedate": bson.M{"$exists": false}}

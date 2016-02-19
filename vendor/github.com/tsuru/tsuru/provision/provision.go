@@ -7,12 +7,10 @@
 package provision
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/url"
-	"time"
 
 	"github.com/tsuru/tsuru/app/bind"
 	"github.com/tsuru/tsuru/quota"
@@ -198,24 +196,6 @@ type App interface {
 
 	GetQuota() quota.Quota
 	SetQuotaInUse(int) error
-
-	GetCname() []string
-
-	GetIp() string
-
-	GetLock() AppLock
-}
-
-type AppLock interface {
-	json.Marshaler
-
-	GetLocked() bool
-
-	GetReason() string
-
-	GetOwner() string
-
-	GetAcquireDate() time.Time
 }
 
 // CNameManager represents a provisioner that supports cname on applications.
@@ -334,8 +314,6 @@ type Provisioner interface {
 
 	// Rollback a deploy
 	Rollback(App, string, io.Writer) (string, error)
-
-	FilterAppsByUnitStatus([]App, []string) ([]App, error)
 }
 
 type MessageProvisioner interface {

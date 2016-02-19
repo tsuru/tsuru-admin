@@ -116,7 +116,7 @@ func deployableApps(u *auth.User, rolesCache map[string]*permission.Role) ([]str
 	}
 	appNames := make([]string, len(apps))
 	for i := range apps {
-		appNames[i] = apps[i].GetName()
+		appNames[i] = apps[i].Name
 	}
 	return appNames, nil
 }

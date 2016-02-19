@@ -108,11 +108,11 @@ func appDelete(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 // miniApp is a minimal representation of the app, created to make appList
 // faster and transmit less data.
 type miniApp struct {
-	Name  string            `json:"name"`
-	Units []provision.Unit  `json:"units"`
-	CName []string          `json:"cname"`
-	Ip    string            `json:"ip"`
-	Lock  provision.AppLock `json:"lock"`
+	Name  string           `json:"name"`
+	Units []provision.Unit `json:"units"`
+	CName []string         `json:"cname"`
+	Ip    string           `json:"ip"`
+	Lock  app.AppLock      `json:"lock"`
 }
 
 func minifyApp(app app.App) (miniApp, error) {
@@ -121,11 +121,11 @@ func minifyApp(app app.App) (miniApp, error) {
 		return miniApp{}, err
 	}
 	return miniApp{
-		Name:  app.GetName(),
+		Name:  app.Name,
 		Units: units,
-		CName: app.GetCname(),
-		Ip:    app.GetIp(),
-		Lock:  app.GetLock(),
+		CName: app.CName,
+		Ip:    app.Ip,
+		Lock:  app.Lock,
 	}, nil
 }
 
@@ -162,7 +162,6 @@ func appList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	pool := r.URL.Query().Get("pool")
 	description := r.URL.Query().Get("description")
 	locked, _ := strconv.ParseBool(r.URL.Query().Get("locked"))
-	status := r.URL.Query().Get("status")
 	extra := make([]interface{}, 0, 1)
 	filter := &app.Filter{}
 	if name != "" {
@@ -191,10 +190,6 @@ func appList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if locked {
 		extra = append(extra, fmt.Sprintf("locked=%v", locked))
 		filter.Locked = true
-	}
-	if status != "" {
-		extra = append(extra, fmt.Sprintf("status=%s", status))
-		filter.Statuses = strings.Split(status, ",")
 	}
 	rec.Log(u.Email, "app-list", extra...)
 	contexts := permission.ContextsForPermission(t, permission.PermAppRead)
