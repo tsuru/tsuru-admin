@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	version = "0.12.1"
+	version = "1.0.0"
 	header  = "Supported-Tsuru-Admin"
 )
 
