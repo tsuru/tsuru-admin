@@ -17,7 +17,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/howeyc/fsnotify"
@@ -27,15 +27,24 @@ import (
 var ErrMismatchConf = errors.New("Your conf is wrong:")
 
 type configuration struct {
-	atomic.Value
+	data map[interface{}]interface{}
+	sync.RWMutex
+}
+
+func (c *configuration) Store(data map[interface{}]interface{}) {
+	c.Lock()
+	defer c.Unlock()
+	c.store(data)
+}
+
+func (c *configuration) store(data map[interface{}]interface{}) {
+	c.data = data
 }
 
 func (c *configuration) Data() map[interface{}]interface{} {
-	result := c.Load()
-	if result == nil {
-		return nil
-	}
-	return result.(map[interface{}]interface{})
+	c.RLock()
+	defer c.RUnlock()
+	return c.data
 }
 
 var configs configuration
@@ -104,8 +113,7 @@ func ReadAndWatchConfigFile(filePath string) error {
 
 // Bytes serialize the configuration in YAML format.
 func Bytes() ([]byte, error) {
-	b, err := yaml.Marshal(configs.Data())
-	return b, err
+	return yaml.Marshal(configs.Data())
 }
 
 // WriteConfigFile writes the configuration to the disc, using the given path.
@@ -154,7 +162,9 @@ func WriteConfigFile(filePath string, perm os.FileMode) error {
 // would return "localhost/test"
 func Get(key string) (interface{}, error) {
 	keys := strings.Split(key, ":")
-	conf, ok := configs.Data()[keys[0]]
+	configs.RLock()
+	defer configs.RUnlock()
+	conf, ok := configs.data[keys[0]]
 	if !ok {
 		return nil, fmt.Errorf("key %q not found", key)
 	}
@@ -182,10 +192,17 @@ func GetString(key string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if v, ok := value.(string); ok {
-		return v, nil
-	}
-	return "", &invalidValue{key, "string"}
+	switch v := value.(type) {
+                case int:
+                        return strconv.Itoa(v), nil
+                case int64:
+                        return strconv.FormatInt(v, 10), nil
+                default:
+                        if v, ok := value.(string); ok {
+                                return v, nil
+                        }
+        }
+	return "", &invalidValue{key, "string|int|int64"}
 }
 
 // GetInt works like Get, but does an int type assertion and attempts string
@@ -228,7 +245,7 @@ func GetFloat(key string) (float64, error) {
 			return floatVal, nil
 		}
 	}
-	return 0.0, &invalidValue{key, "float"}
+	return 0, &invalidValue{key, "float"}
 }
 
 // GetUint parses and returns an unsigned integer from the config file.
@@ -261,11 +278,11 @@ func GetDuration(key string) (time.Duration, error) {
 	if err != nil {
 		return 0, err
 	}
-	switch value.(type) {
+	switch v := value.(type) {
 	case int:
-		return time.Duration(value.(int)), nil
+		return time.Duration(v), nil
 	case float64:
-		return time.Duration(value.(float64)), nil
+		return time.Duration(v), nil
 	case string:
 		if value, err := time.ParseDuration(value.(string)); err == nil {
 			return value, nil
@@ -309,15 +326,15 @@ func GetList(key string) ([]string, error) {
 		v := value.([]interface{})
 		result := make([]string, len(v))
 		for i, item := range v {
-			switch item.(type) {
+			switch v := item.(type) {
 			case int:
-				result[i] = strconv.Itoa(item.(int))
+				result[i] = strconv.Itoa(v)
 			case bool:
-				result[i] = strconv.FormatBool(item.(bool))
+				result[i] = strconv.FormatBool(v)
 			case float64:
-				result[i] = strconv.FormatFloat(item.(float64), 'f', -1, 64)
+				result[i] = strconv.FormatFloat(v, 'f', -1, 64)
 			case string:
-				result[i] = item.(string)
+				result[i] = v
 			default:
 				result[i] = fmt.Sprintf("%v", item)
 			}
@@ -376,7 +393,9 @@ func Set(key string, value interface{}) {
 			parts[i]: last,
 		}
 	}
-	configs.Store(mergeMaps(configs.Data(), last))
+	configs.Lock()
+	defer configs.Unlock()
+	configs.store(mergeMaps(configs.data, last))
 }
 
 // Unset removes a key from the configuration map. It returns an error if the
@@ -387,7 +406,9 @@ func Set(key string, value interface{}) {
 func Unset(key string) error {
 	var i int
 	var part string
-	data := configs.Data()
+	configs.Lock()
+	defer configs.Unlock()
+	data := configs.data
 	m := make(map[interface{}]interface{}, len(data))
 	for k, v := range data {
 		m[k] = v
@@ -406,7 +427,7 @@ func Unset(key string) error {
 		}
 	}
 	delete(m, part)
-	configs.Store(root)
+	configs.store(root)
 	return nil
 }
 
