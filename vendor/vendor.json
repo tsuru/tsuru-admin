@@ -983,6 +983,11 @@
 			"revisionTime": "2015-06-04T11:26:27-04:00"
 		},
 		{
+			"path": "gopkg.in/redis.v3/internal/hashtag",
+			"revision": "0382d1e980729491f4b0909b5a3309a98d49f718",
+			"revisionTime": "2016-02-18T12:55:49+02:00"
+		},
+		{
 			"origin": "github.com/tsuru/tsuru/vendor/gopkg.in/tylerb/graceful.v1",
 			"path": "gopkg.in/tylerb/graceful.v1",
 			"revision": "d506b859c378b0e4a1b16d44021f3937f9ba4578",
