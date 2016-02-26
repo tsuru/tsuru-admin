@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -135,6 +135,98 @@ func (s *RouterSuite) TestRouteAddRouteInvalidBackend(c *check.C) {
 	c.Assert(err, check.IsNil)
 	err = s.Router.AddRoute("backend1", addr1)
 	c.Assert(err, check.Equals, router.ErrBackendNotFound)
+}
+
+type URLList []*url.URL
+
+func (l URLList) Len() int           { return len(l) }
+func (l URLList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+func (l URLList) Less(i, j int) bool { return l[i].String() < l[j].String() }
+
+func (s *RouterSuite) TestRouteAddRoutes(c *check.C) {
+	name := "backend1"
+	err := s.Router.AddBackend(name)
+	c.Assert(err, check.IsNil)
+	addr1, err := url.Parse("http://10.10.10.10:8080")
+	c.Assert(err, check.IsNil)
+	addr2, err := url.Parse("http://10.10.10.11:8080")
+	c.Assert(err, check.IsNil)
+	err = s.Router.AddRoutes(name, []*url.URL{addr1, addr2})
+	c.Assert(err, check.IsNil)
+	routes, err := s.Router.Routes(name)
+	c.Assert(err, check.IsNil)
+	sort.Sort(URLList(routes))
+	c.Assert(routes, check.DeepEquals, []*url.URL{addr1, addr2})
+	err = s.Router.RemoveBackend(name)
+	c.Assert(err, check.IsNil)
+}
+
+func (s *RouterSuite) TestRouteAddRoutesIgnoreRepeated(c *check.C) {
+	name := "backend1"
+	err := s.Router.AddBackend(name)
+	c.Assert(err, check.IsNil)
+	addr1, err := url.Parse("http://10.10.10.10:8080")
+	c.Assert(err, check.IsNil)
+	err = s.Router.AddRoute(name, addr1)
+	c.Assert(err, check.IsNil)
+	addr2, err := url.Parse("http://10.10.10.11:8080")
+	c.Assert(err, check.IsNil)
+	err = s.Router.AddRoutes(name, []*url.URL{addr1, addr2})
+	c.Assert(err, check.IsNil)
+	routes, err := s.Router.Routes(name)
+	c.Assert(err, check.IsNil)
+	sort.Sort(URLList(routes))
+	c.Assert(routes, check.DeepEquals, []*url.URL{addr1, addr2})
+	err = s.Router.RemoveBackend(name)
+	c.Assert(err, check.IsNil)
+}
+
+func (s *RouterSuite) TestRouteRemoveRoutes(c *check.C) {
+	name := "backend1"
+	err := s.Router.AddBackend(name)
+	c.Assert(err, check.IsNil)
+	addr1, err := url.Parse("http://10.10.10.10:8080")
+	c.Assert(err, check.IsNil)
+	addr2, err := url.Parse("http://10.10.10.11:8080")
+	c.Assert(err, check.IsNil)
+	err = s.Router.AddRoutes(name, []*url.URL{addr1, addr2})
+	c.Assert(err, check.IsNil)
+	routes, err := s.Router.Routes(name)
+	c.Assert(err, check.IsNil)
+	sort.Sort(URLList(routes))
+	c.Assert(routes, check.DeepEquals, []*url.URL{addr1, addr2})
+	err = s.Router.RemoveRoutes(name, []*url.URL{addr1, addr2})
+	c.Assert(err, check.IsNil)
+	routes, err = s.Router.Routes(name)
+	c.Assert(err, check.IsNil)
+	c.Assert(routes, check.DeepEquals, []*url.URL{})
+	err = s.Router.RemoveBackend(name)
+	c.Assert(err, check.IsNil)
+}
+
+func (s *RouterSuite) TestRouteRemoveRoutesIgnoreNonExisting(c *check.C) {
+	name := "backend1"
+	err := s.Router.AddBackend(name)
+	c.Assert(err, check.IsNil)
+	addr1, err := url.Parse("http://10.10.10.10:8080")
+	c.Assert(err, check.IsNil)
+	addr2, err := url.Parse("http://10.10.10.11:8080")
+	c.Assert(err, check.IsNil)
+	err = s.Router.AddRoutes(name, []*url.URL{addr1, addr2})
+	c.Assert(err, check.IsNil)
+	routes, err := s.Router.Routes(name)
+	c.Assert(err, check.IsNil)
+	sort.Sort(URLList(routes))
+	c.Assert(routes, check.DeepEquals, []*url.URL{addr1, addr2})
+	addr3, err := url.Parse("http://10.10.10.12:8080")
+	c.Assert(err, check.IsNil)
+	err = s.Router.RemoveRoutes(name, []*url.URL{addr1, addr3, addr2})
+	c.Assert(err, check.IsNil)
+	routes, err = s.Router.Routes(name)
+	c.Assert(err, check.IsNil)
+	c.Assert(routes, check.DeepEquals, []*url.URL{})
+	err = s.Router.RemoveBackend(name)
+	c.Assert(err, check.IsNil)
 }
 
 func (s *RouterSuite) TestSwap(c *check.C) {

@@ -118,7 +118,7 @@ func dockerClient(endpoint string) (*docker.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client.HTTPClient = net.Dial5Full300Client
+	client.HTTPClient = net.Dial5Full300ClientNoKeepAlive
 	client.Dialer = net.Dial5Dialer
 	return client, nil
 }
@@ -263,7 +263,14 @@ func RecreateContainers(p DockerProvisioner, w io.Writer) error {
 	}
 	wg.Wait()
 	close(errChan)
-	return <-errChan
+	var allErrors []string
+	for err = range errChan {
+		allErrors = append(allErrors, err.Error())
+	}
+	if len(allErrors) == 0 {
+		return nil
+	}
+	return fmt.Errorf("multiple errors: %s", strings.Join(allErrors, ", "))
 }
 
 type ClusterHook struct {

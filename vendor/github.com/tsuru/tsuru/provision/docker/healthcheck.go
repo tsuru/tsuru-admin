@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -61,7 +61,7 @@ func runHealthcheck(cont *container.Container, w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		rsp, err := net.Dial5Full60Client.Do(req)
+		rsp, err := net.Dial5Full60ClientNoKeepAlive.Do(req)
 		if err != nil {
 			lastError = fmt.Errorf("healthcheck fail(%s): %s", cont.ShortID(), err.Error())
 		} else {

@@ -634,8 +634,8 @@
 		},
 		{
 			"path": "github.com/tsuru/tsuru/net",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/permission",
@@ -649,28 +649,28 @@
 		},
 		{
 			"path": "github.com/tsuru/tsuru/provision/docker",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/provision/docker/bs",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/provision/docker/container",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/provision/docker/fix",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/provision/docker/healer",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/provision/provisiontest",
@@ -693,39 +693,45 @@
 			"revisionTime": "2016-02-22T10:58:05-03:00"
 		},
 		{
+			"origin": "github.com/tsuru/tsuru-admin/vendor/github.com/tsuru/tsuru/redis",
+			"path": "github.com/tsuru/tsuru/redis",
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
+		},
+		{
 			"path": "github.com/tsuru/tsuru/repository",
 			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
 			"revisionTime": "2016-02-22T10:58:05-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/router",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/router/galeb",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/router/galeb/client",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/router/hipache",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/router/routertest",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/router/vulcand",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "1a235cf81e1a6c96813962d2123264fd8d582d0e",
+			"revisionTime": "2016-02-25T22:23:32-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/safe",

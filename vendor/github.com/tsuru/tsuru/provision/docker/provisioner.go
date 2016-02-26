@@ -353,7 +353,12 @@ func (p *dockerProvisioner) Swap(app1, app2 provision.App) error {
 	if err != nil {
 		return err
 	}
-	return r.Swap(app1.GetName(), app2.GetName())
+	err = r.Swap(app1.GetName(), app2.GetName())
+	if err != nil {
+		routesRebuildOrEnqueue(app1.GetName())
+		routesRebuildOrEnqueue(app2.GetName())
+	}
+	return err
 }
 
 func (p *dockerProvisioner) Rollback(app provision.App, imageId string, w io.Writer) (string, error) {
@@ -362,6 +367,9 @@ func (p *dockerProvisioner) Rollback(app provision.App, imageId string, w io.Wri
 
 func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.Writer) (string, error) {
 	cluster := p.Cluster()
+	if !strings.Contains(imageId, ":") {
+		imageId = fmt.Sprintf("%s:latest", imageId)
+	}
 	pullOpts := docker.PullImageOptions{
 		Repository: imageId,
 	}
@@ -370,10 +378,7 @@ func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.
 		return "", err
 	}
 	cmd := "cat /home/application/current/Procfile || cat /app/user/Procfile || cat /Procfile"
-	output, err := p.runCommandInContainer(imageId, cmd, app)
-	if err != nil {
-		return "", err
-	}
+	output, _ := p.runCommandInContainer(imageId, cmd, app)
 	procfile := getProcessesFromProcfile(output.String())
 	if len(procfile) == 0 {
 		imageInspect, inspectErr := cluster.InspectImage(imageId)
@@ -383,7 +388,11 @@ func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.
 		if len(imageInspect.Config.Entrypoint) == 0 {
 			return "", ErrEntrypointOrProcfileNotFound
 		}
-		procfile["web"] = strings.Join(imageInspect.Config.Entrypoint, " ")
+		webProcess := imageInspect.Config.Entrypoint[0]
+		for _, c := range imageInspect.Config.Entrypoint[1:] {
+			webProcess += fmt.Sprintf(" %q", c)
+		}
+		procfile["web"] = webProcess
 	}
 	newImage, err := appNewImageName(app.GetName())
 	if err != nil {
@@ -911,7 +920,11 @@ func (p *dockerProvisioner) SetCName(app provision.App, cname string) error {
 	if err != nil {
 		return err
 	}
-	return r.SetCName(cname, app.GetName())
+	err = r.SetCName(cname, app.GetName())
+	if err != nil {
+		routesRebuildOrEnqueue(app.GetName())
+	}
+	return err
 }
 
 func (p *dockerProvisioner) UnsetCName(app provision.App, cname string) error {
@@ -919,7 +932,11 @@ func (p *dockerProvisioner) UnsetCName(app provision.App, cname string) error {
 	if err != nil {
 		return err
 	}
-	return r.UnsetCName(cname, app.GetName())
+	err = r.UnsetCName(cname, app.GetName())
+	if err != nil {
+		routesRebuildOrEnqueue(app.GetName())
+	}
+	return err
 }
 
 func (p *dockerProvisioner) AdminCommands() []cmd.Command {
