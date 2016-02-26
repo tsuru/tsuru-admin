@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-    "strings"
+	"strings"
 
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
