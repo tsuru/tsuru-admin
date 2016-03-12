@@ -156,7 +156,7 @@ func (s *S) TestAskOverwriteDefaultPool(c *check.C) {
 	transportError := cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Status: http.StatusPreconditionFailed, Message: "Default pool already exist."},
 		CondFunc: func(req *http.Request) bool {
-			called += 1
+			called++
 			defer req.Body.Close()
 			body, err := ioutil.ReadAll(req.Body)
 			c.Assert(err, check.IsNil)
@@ -174,7 +174,7 @@ func (s *S) TestAskOverwriteDefaultPool(c *check.C) {
 	transportOk := cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Status: http.StatusOK, Message: ""},
 		CondFunc: func(req *http.Request) bool {
-			called += 1
+			called++
 			return req.URL.RawQuery == "force=true"
 		},
 	}
@@ -290,7 +290,7 @@ func (s *S) TestAskOverwriteDefaultPoolInUpdate(c *check.C) {
 	transportError := cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Status: http.StatusPreconditionFailed, Message: "Default pool already exist."},
 		CondFunc: func(req *http.Request) bool {
-			called += 1
+			called++
 			defer req.Body.Close()
 			body, err := ioutil.ReadAll(req.Body)
 			c.Assert(err, check.IsNil)
@@ -309,7 +309,7 @@ func (s *S) TestAskOverwriteDefaultPoolInUpdate(c *check.C) {
 	transportOk := cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Status: http.StatusOK, Message: ""},
 		CondFunc: func(req *http.Request) bool {
-			called += 1
+			called++
 			return strings.HasSuffix(req.URL.Path, "/pool/test") && req.URL.Query().Get("force") == "true"
 		},
 	}
