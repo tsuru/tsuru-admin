@@ -338,7 +338,9 @@ func (s *S) TestRemovePoolFromTheSchedulerCmd(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return strings.HasSuffix(req.URL.Path, "/pool")
+			url := strings.HasSuffix(req.URL.Path, "/pools/poolTest")
+			method := req.Method == "DELETE"
+			return method && url
 		},
 	}
 	manager := cmd.Manager{}

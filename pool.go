@@ -201,15 +201,11 @@ func (c *removePoolFromSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) e
 	if !c.Confirm(ctx, fmt.Sprintf("Are you sure you want to remove \"%s\" pool?", ctx.Args[0])) {
 		return nil
 	}
-	b, err := json.Marshal(map[string]string{"pool": ctx.Args[0]})
+	url, err := cmd.GetURL(fmt.Sprintf("/pools/%s", ctx.Args[0]))
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL("/pool")
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("DELETE", url, bytes.NewBuffer(b))
+	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return err
 	}
