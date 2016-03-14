@@ -1,17 +1,17 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package cmd
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -42,15 +42,18 @@ func nativeLogin(context *Context, client *Client) error {
 		return err
 	}
 	fmt.Fprintln(context.Stdout)
-	url, err := GetURL("/users/" + email + "/tokens")
+	u, err := GetURL("/users/" + email + "/tokens")
 	if err != nil {
 		return err
 	}
-	b := bytes.NewBufferString(`{"password":"` + password + `"}`)
-	request, err := http.NewRequest("POST", url, b)
+	v := url.Values{}
+	v.Set("password", password)
+	b := strings.NewReader(v.Encode())
+	request, err := http.NewRequest("POST", u, b)
 	if err != nil {
 		return err
 	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response, err := client.Do(request)
 	if err != nil {
 		return err

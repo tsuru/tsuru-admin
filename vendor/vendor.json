@@ -559,8 +559,8 @@
 		},
 		{
 			"path": "github.com/tsuru/tsuru/cmd",
-			"revision": "2fd12f4be639a041a179b6bd906c312f421f399b",
-			"revisionTime": "2016-02-22T10:58:05-03:00"
+			"revision": "447e1e8c8421442e6377d5117093c4abb017c1d0",
+			"revisionTime": "2016-03-14T10:50:17-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/cmd/cmdtest",
