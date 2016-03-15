@@ -7,7 +7,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/tsuru/config"
@@ -57,12 +56,11 @@ func createUser(w http.ResponseWriter, r *http.Request) error {
 			return createDisabledErr
 		}
 	}
-	var u auth.User
-	err := json.NewDecoder(r.Body).Decode(&u)
-	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+	u := auth.User{
+		Email:    r.FormValue("email"),
+		Password: r.FormValue("password"),
 	}
-	_, err = app.AuthScheme.Create(&u)
+	_, err := app.AuthScheme.Create(&u)
 	if err != nil {
 		return handleAuthError(err)
 	}
@@ -72,12 +70,16 @@ func createUser(w http.ResponseWriter, r *http.Request) error {
 }
 
 func login(w http.ResponseWriter, r *http.Request) error {
-	var params map[string]string
-	err := json.NewDecoder(r.Body).Decode(&params)
-	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: "Invalid JSON"}
+	params := map[string]string{
+		"email": r.URL.Query().Get(":email"),
 	}
-	params["email"] = r.URL.Query().Get(":email")
+	err := r.ParseForm()
+	if err != nil {
+		return err
+	}
+	for key := range r.Form {
+		params[key] = r.FormValue(key)
+	}
 	token, err := app.AuthScheme.Login(params)
 	if err != nil {
 		return handleAuthError(err)
@@ -99,21 +101,15 @@ func changePassword(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 	if !ok {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: nonManagedSchemeMsg}
 	}
-	var body map[string]string
-	err := json.NewDecoder(r.Body).Decode(&body)
-	if err != nil {
-		return &errors.HTTP{
-			Code:    http.StatusBadRequest,
-			Message: "Invalid JSON.",
-		}
-	}
-	if body["old"] == "" || body["new"] == "" {
+	oldPassword := r.FormValue("old")
+	newPassword := r.FormValue("new")
+	if oldPassword == "" || newPassword == "" {
 		return &errors.HTTP{
 			Code:    http.StatusBadRequest,
 			Message: "Both the old and the new passwords are required.",
 		}
 	}
-	err = managed.ChangePassword(t, body["old"], body["new"])
+	err := managed.ChangePassword(t, oldPassword, newPassword)
 	if err != nil {
 		return handleAuthError(err)
 	}
@@ -146,16 +142,11 @@ func resetPassword(w http.ResponseWriter, r *http.Request) error {
 }
 
 func createTeam(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	var params map[string]string
-	err := json.NewDecoder(r.Body).Decode(&params)
-	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
-	}
 	allowed := permission.Check(t, permission.PermTeamCreate)
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	name := params["name"]
+	name := r.FormValue("name")
 	u, err := t.User()
 	if err != nil {
 		return err
@@ -168,7 +159,10 @@ func createTeam(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	case auth.ErrTeamAlreadyExists:
 		return &errors.HTTP{Code: http.StatusConflict, Message: err.Error()}
 	}
-	return nil
+	if err == nil {
+		w.WriteHeader(http.StatusCreated)
+	}
+	return err
 }
 
 func removeTeam(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -245,33 +239,19 @@ func teamList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	return nil
 }
 
-type keyBody struct {
-	Name  string
-	Key   string
-	Force bool
-}
-
-func getKeyFromBody(b io.Reader) (repository.Key, bool, error) {
-	var key repository.Key
-	var body keyBody
-	err := json.NewDecoder(b).Decode(&body)
-	if err != nil {
-		return key, false, &errors.HTTP{Code: http.StatusBadRequest, Message: "Invalid JSON"}
-	}
-	key.Body = body.Key
-	key.Name = body.Name
-	return key, body.Force, nil
-}
-
 // AddKeyToUser adds a key to a user.
 //
 // This function is just an http wrapper around addKeyToUser. The latter function
 // exists to be used in other places in the package without the http stuff (request and
 // response).
 func addKeyToUser(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	key, force, err := getKeyFromBody(r.Body)
-	if err != nil {
-		return err
+	key := repository.Key{
+		Body: r.FormValue("key"),
+		Name: r.FormValue("name"),
+	}
+	var force bool
+	if r.FormValue("force") == "true" {
+		force = true
 	}
 	if key.Body == "" {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: "Missing key content"}
@@ -282,7 +262,7 @@ func addKeyToUser(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	}
 	rec.Log(u.Email, "add-key", key.Name, key.Body)
 	err = u.AddKey(key, force)
-	if err == auth.ErrKeyDisabled {
+	if err == auth.ErrKeyDisabled || err == repository.ErrUserNotFound {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	if err == repository.ErrKeyAlreadyExists {
@@ -297,18 +277,17 @@ func addKeyToUser(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 // exists to be used in other places in the package without the http stuff (request and
 // response).
 func removeKeyFromUser(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	key, _, err := getKeyFromBody(r.Body)
-	if err != nil {
-		return err
+	key := repository.Key{
+		Name: r.URL.Query().Get(":key"),
 	}
-	if key.Body == "" && key.Name == "" {
+	if key.Name == "" {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: "Either the content or the name of the key must be provided"}
 	}
 	u, err := t.User()
 	if err != nil {
 		return err
 	}
-	rec.Log(u.Email, "remove-key", key.Name, key.Body)
+	rec.Log(u.Email, "remove-key", key.Name)
 	err = u.RemoveKey(key)
 	if err == auth.ErrKeyDisabled {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}

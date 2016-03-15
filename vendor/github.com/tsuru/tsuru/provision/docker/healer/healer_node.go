@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,25 +7,35 @@ package healer
 import (
 	"bytes"
 	"fmt"
+	"gopkg.in/mgo.v2"
 	"sync"
 	"time"
 
 	"github.com/tsuru/docker-cluster/cluster"
+	clusterStorage "github.com/tsuru/docker-cluster/storage"
 	"github.com/tsuru/monsterqueue"
+	"github.com/tsuru/tsuru/db"
+	"github.com/tsuru/tsuru/db/storage"
 	"github.com/tsuru/tsuru/iaas"
 	"github.com/tsuru/tsuru/log"
 	"github.com/tsuru/tsuru/net"
+	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/provision/docker/bs"
 	"github.com/tsuru/tsuru/queue"
+	"gopkg.in/mgo.v2/bson"
+)
+
+const (
+	nodeHealerConfigEntry = "node-healer"
 )
 
 type NodeHealer struct {
-	sync.Mutex
-	locks                 map[string]*sync.Mutex
+	wg                    sync.WaitGroup
 	provisioner           DockerProvisioner
 	disabledTime          time.Duration
 	waitTimeNewMachine    time.Duration
 	failuresBeforeHealing int
+	quit                  chan bool
 }
 
 type NodeHealerArgs struct {
@@ -35,14 +45,46 @@ type NodeHealerArgs struct {
 	FailuresBeforeHealing int
 }
 
+type NodeHealerConfig struct {
+	Enabled                      *bool `json:",omitempty"`
+	MaxTimeSinceSuccess          *int  `json:",omitempty"`
+	MaxUnresponsiveTime          *int  `json:",omitempty"`
+	EnabledInherited             bool
+	MaxTimeSinceSuccessInherited bool
+	MaxUnresponsiveTimeInherited bool
+}
+
+type nodeStatusData struct {
+	Address     string       `bson:"_id,omitempty"`
+	Checks      []nodeChecks `bson:",omitempty"`
+	LastSuccess time.Time    `bson:",omitempty"`
+	LastUpdate  time.Time
+}
+
 func NewNodeHealer(args NodeHealerArgs) *NodeHealer {
-	return &NodeHealer{
-		locks:                 make(map[string]*sync.Mutex),
+	healer := &NodeHealer{
+		quit:                  make(chan bool),
 		provisioner:           args.Provisioner,
 		disabledTime:          args.DisabledTime,
 		waitTimeNewMachine:    args.WaitTimeNewMachine,
 		failuresBeforeHealing: args.FailuresBeforeHealing,
 	}
+	if healer.provisioner == nil {
+		return healer
+	}
+	healer.wg.Add(1)
+	go func() {
+		defer close(healer.quit)
+		for {
+			healer.runActiveHealing()
+			select {
+			case <-healer.quit:
+				return
+			case <-time.After(30 * time.Second):
+			}
+		}
+	}()
+	return healer
 }
 
 func (h *NodeHealer) healNode(node *cluster.Node) (cluster.Node, error) {
@@ -110,14 +152,58 @@ func (h *NodeHealer) healNode(node *cluster.Node) (cluster.Node, error) {
 	return createdNode, nil
 }
 
-func (h *NodeHealer) HandleError(node *cluster.Node) time.Duration {
-	h.Lock()
-	if h.locks[node.Address] == nil {
-		h.locks[node.Address] = &sync.Mutex{}
+func (h *NodeHealer) tryHealingNode(node *cluster.Node, reason string) error {
+	_, hasIaas := node.Metadata["iaas"]
+	if !hasIaas {
+		log.Debugf("node %q doesn't have IaaS information, healing (%s) won't run on it.", node.Address, reason)
+		return nil
 	}
-	h.Unlock()
-	h.locks[node.Address].Lock()
-	defer h.locks[node.Address].Unlock()
+	evt, err := NewHealingEventWithReason(*node, reason)
+	if err != nil {
+		if mgo.IsDup(err) {
+			// Healing in progress.
+			return nil
+		}
+		return fmt.Errorf("error trying to insert healing event: %s", err.Error())
+	}
+	var createdNode cluster.Node
+	var evtErr error
+	defer func() {
+		var created interface{}
+		if createdNode.Address != "" {
+			created = createdNode
+		}
+		updateErr := evt.Update(created, evtErr)
+		if updateErr != nil {
+			log.Errorf("error trying to update healing event: %s", updateErr.Error())
+		}
+	}()
+	_, err = h.provisioner.Cluster().GetNode(node.Address)
+	if err != nil {
+		if err == clusterStorage.ErrNoSuchNode {
+			return nil
+		}
+		evtErr = fmt.Errorf("unable to check if not still exists: %s", err)
+		return evtErr
+	}
+	healingCounter, err := healingCountFor("node", node.Address, consecutiveHealingsTimeframe)
+	if err != nil {
+		evtErr = fmt.Errorf("couldn't verify number of previous healings for %s: %s", node.Address, err)
+		return evtErr
+	}
+	if healingCounter > consecutiveHealingsLimitInTimeframe {
+		log.Debugf("number of healings for node %s in the last %d minutes exceeds limit of %d: %d",
+			node.Address, consecutiveHealingsTimeframe/time.Minute, consecutiveHealingsLimitInTimeframe, healingCounter)
+		return nil
+	}
+	log.Errorf("initiating healing process for node %q due to: %s", node.Address, reason)
+	createdNode, evtErr = h.healNode(node)
+	return evtErr
+}
+
+func (h *NodeHealer) HandleError(node *cluster.Node) time.Duration {
+	h.wg.Add(1)
+	defer h.wg.Done()
 	failures := node.FailureCount()
 	if failures < h.failuresBeforeHealing {
 		log.Debugf("%d failures detected in node %q, waiting for more failures before healing.", failures, node.Address)
@@ -127,48 +213,293 @@ func (h *NodeHealer) HandleError(node *cluster.Node) time.Duration {
 		log.Debugf("Node %q has never been successfully reached, healing won't run on it.", node.Address)
 		return h.disabledTime
 	}
-	_, hasIaas := node.Metadata["iaas"]
-	if !hasIaas {
-		log.Debugf("Node %q doesn't have IaaS information, healing won't run on it.", node.Address)
-		return h.disabledTime
-	}
-	healingCounter, err := healingCountFor("node", node.Address, consecutiveHealingsTimeframe)
+	err := h.tryHealingNode(node, fmt.Sprintf("%d consecutive failures", failures))
 	if err != nil {
-		log.Errorf("Node healing: couldn't verify number of previous healings for %s: %s", node.Address, err.Error())
-		return h.disabledTime
-	}
-	if healingCounter > consecutiveHealingsLimitInTimeframe {
-		log.Errorf("Node healing: number of healings for node %s in the last %d minutes exceeds limit of %d: %d",
-			node.Address, consecutiveHealingsTimeframe/time.Minute, consecutiveHealingsLimitInTimeframe, healingCounter)
-		return h.disabledTime
-	}
-	log.Errorf("Initiating healing process for node %q after %d failures.", node.Address, failures)
-	evt, err := NewHealingEvent(*node)
-	if err != nil {
-		log.Errorf("Error trying to insert healing event: %s", err.Error())
-		return h.disabledTime
-	}
-	createdNode, err := h.healNode(node)
-	if err != nil {
-		log.Errorf("Error healing: %s", err.Error())
-	}
-	err = evt.Update(createdNode, err)
-	if err != nil {
-		log.Errorf("Error trying to update healing event: %s", err.Error())
-	}
-	if createdNode.Address != "" {
-		return 0
+		log.Errorf("[node healer handle error] %s", err)
 	}
 	return h.disabledTime
 }
 
 func (h *NodeHealer) Shutdown() {
-	h.Lock()
-	for _, lock := range h.locks {
-		lock.Lock()
-	}
+	h.wg.Done()
+	h.wg.Wait()
+	h.quit <- true
+	<-h.quit
 }
 
 func (h *NodeHealer) String() string {
 	return "node healer"
+}
+
+type nodeChecks struct {
+	Time   time.Time
+	Checks []provision.NodeCheckResult
+}
+
+func (h *NodeHealer) findNodeForNodeData(nodeData provision.NodeStatusData) (*cluster.Node, error) {
+	nodes, err := h.provisioner.Cluster().UnfilteredNodes()
+	if err != nil {
+		return nil, err
+	}
+	nodeSet := map[string]*cluster.Node{}
+	for i := range nodes {
+		nodeSet[net.URLToHost(nodes[i].Address)] = &nodes[i]
+	}
+	containerIDs := make([]string, 0, len(nodeData.Units))
+	containerNames := make([]string, 0, len(nodeData.Units))
+	for _, u := range nodeData.Units {
+		if u.ID != "" {
+			containerIDs = append(containerIDs, u.ID)
+		}
+		if u.Name != "" {
+			containerNames = append(containerNames, u.Name)
+		}
+	}
+	containersForNode, err := h.provisioner.ListContainers(bson.M{
+		"$or": []bson.M{
+			{"name": bson.M{"$in": containerNames}},
+			{"id": bson.M{"$in": containerIDs}},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var node *cluster.Node
+	for _, c := range containersForNode {
+		n := nodeSet[c.HostAddr]
+		if n != nil {
+			if node != nil && node.Address != n.Address {
+				return nil, fmt.Errorf("containers match multiple nodes: %s and %s", node.Address, n.Address)
+			}
+			node = n
+		}
+	}
+	if node != nil {
+		return node, nil
+	}
+	// Node not found through containers, try finding using addrs.
+	for _, addr := range nodeData.Addrs {
+		n := nodeSet[addr]
+		if n != nil {
+			if node != nil {
+				return nil, fmt.Errorf("addrs match multiple nodes: %v", nodeData.Addrs)
+			}
+			node = n
+		}
+	}
+	if node == nil {
+		return nil, fmt.Errorf("node not found for addrs: %v", nodeData.Addrs)
+	}
+	return node, nil
+}
+
+func (h *NodeHealer) UpdateNodeData(nodeData provision.NodeStatusData) error {
+	node, err := h.findNodeForNodeData(nodeData)
+	if err != nil {
+		return fmt.Errorf("[node healer update] %s", err)
+	}
+	isSuccess := true
+	for _, c := range nodeData.Checks {
+		isSuccess = c.Successful
+		if isSuccess == false {
+			break
+		}
+	}
+	now := time.Now().UTC()
+	toInsert := nodeStatusData{
+		LastUpdate: now,
+	}
+	if isSuccess {
+		toInsert.LastSuccess = now
+	}
+	coll, err := nodeDataCollection()
+	if err != nil {
+		return err
+	}
+	defer coll.Close()
+	_, err = coll.UpsertId(node.Address, bson.M{
+		"$set": toInsert,
+		"$push": bson.M{
+			"checks": bson.D([]bson.DocElem{
+				{Name: "$each", Value: []nodeChecks{{Time: now, Checks: nodeData.Checks}}},
+				{Name: "$slice", Value: -10},
+			}),
+		},
+	})
+	return err
+}
+
+func queryPartForConfig(nodes []*cluster.Node, entries provision.EntryMap) (bson.M, error) {
+	now := time.Now().UTC()
+	var config NodeHealerConfig
+	err := entries.Unmarshal(&config)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse entry map: %s", err)
+	}
+	if config.Enabled == nil || !*config.Enabled {
+		return nil, nil
+	}
+	var orParts []bson.M
+	if config.MaxTimeSinceSuccess != nil && *config.MaxTimeSinceSuccess > 0 {
+		lastSuccess := time.Duration(*config.MaxTimeSinceSuccess) * time.Second
+		orParts = append(orParts, bson.M{
+			"lastsuccess": bson.M{"$lt": now.Add(-lastSuccess)},
+		})
+	}
+	if config.MaxUnresponsiveTime != nil && *config.MaxUnresponsiveTime > 0 {
+		lastUpdate := time.Duration(*config.MaxUnresponsiveTime) * time.Second
+		orParts = append(orParts, bson.M{
+			"lastupdate": bson.M{"$lt": now.Add(-lastUpdate)},
+		})
+	}
+	if len(orParts) == 0 {
+		return nil, nil
+	}
+	nodeAddresses := make([]string, len(nodes))
+	for i := range nodes {
+		nodeAddresses[i] = nodes[i].Address
+	}
+	return bson.M{
+		"_id": bson.M{"$in": nodeAddresses},
+		"$or": orParts,
+	}, nil
+}
+
+func (h *NodeHealer) findNodesForHealing() ([]nodeStatusData, map[string]*cluster.Node, error) {
+	nodes, err := h.provisioner.Cluster().UnfilteredNodes()
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to retrieve nodes: %s", err)
+	}
+	nodesPoolMap := map[string][]*cluster.Node{}
+	nodesAddrMap := map[string]*cluster.Node{}
+	for i, n := range nodes {
+		pool := n.Metadata["pool"]
+		nodesPoolMap[pool] = append(nodesPoolMap[pool], &nodes[i])
+		nodesAddrMap[n.Address] = &nodes[i]
+	}
+	conf, err := provision.FindScopedConfig(nodeHealerConfigEntry)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to find config: %s", err)
+	}
+	baseEntries, poolEntries := conf.AllEntries()
+	query := []bson.M{}
+	for poolName, entries := range poolEntries {
+		var q bson.M
+		q, err = queryPartForConfig(nodesPoolMap[poolName], entries)
+		if err != nil {
+			return nil, nil, err
+		}
+		if q != nil {
+			query = append(query, q)
+		}
+		delete(nodesPoolMap, poolName)
+	}
+	var remainingNodes []*cluster.Node
+	for _, poolNodes := range nodesPoolMap {
+		remainingNodes = append(remainingNodes, poolNodes...)
+	}
+	q, err := queryPartForConfig(remainingNodes, baseEntries)
+	if err != nil {
+		return nil, nil, err
+	}
+	if q != nil {
+		query = append(query, q)
+	}
+	if len(query) == 0 {
+		return nil, nodesAddrMap, nil
+	}
+	coll, err := nodeDataCollection()
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to get node data collection: %s", err)
+	}
+	defer coll.Close()
+	var nodesStatus []nodeStatusData
+	err = coll.Find(bson.M{"$or": query}).All(&nodesStatus)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to find nodes to heal: %s", err)
+	}
+	return nodesStatus, nodesAddrMap, nil
+}
+
+func (h *NodeHealer) runActiveHealing() {
+	nodesStatus, nodesAddrMap, err := h.findNodesForHealing()
+	if err != nil {
+		log.Errorf("[node healer active] %s", err)
+		return
+	}
+	for _, n := range nodesStatus {
+		sinceUpdate := time.Since(n.LastUpdate)
+		sinceSuccess := time.Since(n.LastSuccess)
+		err = h.tryHealingNode(nodesAddrMap[n.Address],
+			fmt.Sprintf("last update %v ago, last success %v ago", sinceUpdate, sinceSuccess),
+		)
+		if err != nil {
+			log.Errorf("[node healer active] %s", err)
+		}
+	}
+}
+
+func UpdateConfig(pool string, config NodeHealerConfig) error {
+	conf, err := provision.FindScopedConfig(nodeHealerConfigEntry)
+	if err != nil {
+		return fmt.Errorf("unable to find config: %s", err)
+	}
+	err = conf.MarshalPool(pool, config)
+	if err != nil {
+		return fmt.Errorf("unable to marshal config: %s", err)
+	}
+	err = conf.SaveEnvs()
+	if err != nil {
+		return fmt.Errorf("unable to save config: %s", err)
+	}
+	return nil
+}
+
+func RemoveConfig(pool, name string) error {
+	conf, err := provision.FindScopedConfig(nodeHealerConfigEntry)
+	if err != nil {
+		return fmt.Errorf("unable to find config: %s", err)
+	}
+	if name == "" {
+		conf.ResetPoolEnvs(pool)
+	} else {
+		conf.RemovePool(pool, name)
+	}
+	err = conf.SaveEnvs()
+	if err != nil {
+		return fmt.Errorf("unable to save config: %s", err)
+	}
+	return nil
+}
+
+func GetConfig() (map[string]NodeHealerConfig, error) {
+	conf, err := provision.FindScopedConfig(nodeHealerConfigEntry)
+	if err != nil {
+		return nil, fmt.Errorf("unable to find config: %s", err)
+	}
+	baseEntries, poolEntries := conf.AllEntries()
+	ret := map[string]NodeHealerConfig{}
+	var config NodeHealerConfig
+	err = baseEntries.Unmarshal(&config)
+	if err != nil {
+		return nil, fmt.Errorf("unable to unmarshal config: %s", err)
+	}
+	ret[""] = config
+	for pName, pEntries := range poolEntries {
+		var pConfig NodeHealerConfig
+		err = pEntries.Unmarshal(&pConfig)
+		if err != nil {
+			return nil, fmt.Errorf("unable to unmarshal pool config: %s", err)
+		}
+		ret[pName] = pConfig
+	}
+	return ret, nil
+}
+
+func nodeDataCollection() (*storage.Collection, error) {
+	conn, err := db.Conn()
+	if err != nil {
+		return nil, err
+	}
+	return conn.Collection("node_status"), nil
 }

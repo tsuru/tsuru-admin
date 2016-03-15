@@ -1,10 +1,11 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package healer
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/tsuru/config"
@@ -18,10 +19,11 @@ import (
 )
 
 type HealingEvent struct {
-	ID               bson.ObjectId `bson:"_id"`
+	ID               interface{} `bson:"_id"`
 	StartTime        time.Time
 	EndTime          time.Time `bson:",omitempty"`
 	Action           string
+	Reason           string
 	FailingNode      cluster.Node        `bson:",omitempty"`
 	CreatedNode      cluster.Node        `bson:",omitempty"`
 	FailingContainer container.Container `bson:",omitempty"`
@@ -48,18 +50,22 @@ func healingCollection() (*storage.Collection, error) {
 	return conn.Collection(name), nil
 }
 
-func NewHealingEvent(failing interface{}) (*HealingEvent, error) {
+func NewHealingEventWithReason(failing interface{}, reason string) (*HealingEvent, error) {
 	evt := HealingEvent{
-		ID:        bson.NewObjectId(),
 		StartTime: time.Now().UTC(),
+		Reason:    reason,
 	}
 	switch v := failing.(type) {
 	case cluster.Node:
+		evt.ID = v.Address
 		evt.Action = "node-healing"
 		evt.FailingNode = v
 	case container.Container:
+		evt.ID = v.ID
 		evt.Action = "container-healing"
 		evt.FailingContainer = v
+	default:
+		return nil, fmt.Errorf("invalid healing object: %#v", failing)
 	}
 	coll, err := healingCollection()
 	if err != nil {
@@ -69,9 +75,21 @@ func NewHealingEvent(failing interface{}) (*HealingEvent, error) {
 	return &evt, coll.Insert(evt)
 }
 
-func (evt *HealingEvent) Update(created interface{}, err error) error {
+func NewHealingEvent(failing interface{}) (*HealingEvent, error) {
+	return NewHealingEventWithReason(failing, "")
+}
+
+func (evt *HealingEvent) Update(created interface{}, healingErr error) error {
+	coll, err := healingCollection()
 	if err != nil {
-		evt.Error = err.Error()
+		return err
+	}
+	defer coll.Close()
+	if created == nil && healingErr == nil {
+		return coll.RemoveId(evt.ID)
+	}
+	if healingErr != nil {
+		evt.Error = healingErr.Error()
 	}
 	evt.EndTime = time.Now().UTC()
 	switch v := created.(type) {
@@ -82,12 +100,9 @@ func (evt *HealingEvent) Update(created interface{}, err error) error {
 		evt.CreatedContainer = v
 		evt.Successful = v.ID != ""
 	}
-	coll, err := healingCollection()
-	if err != nil {
-		return err
-	}
-	defer coll.Close()
-	return coll.UpdateId(evt.ID, evt)
+	defer coll.RemoveId(evt.ID)
+	evt.ID = bson.NewObjectId()
+	return coll.Insert(evt)
 }
 
 func ListHealingHistory(filter string) ([]HealingEvent, error) {

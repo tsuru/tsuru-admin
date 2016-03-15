@@ -7,7 +7,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -21,16 +20,7 @@ import (
 )
 
 func createServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	var body map[string]string
-	err = json.Unmarshal(b, &body)
-	if err != nil {
-		return err
-	}
-	serviceName := body["service_name"]
+	serviceName := r.FormValue("service_name")
 	user, err := t.User()
 	if err != nil {
 		return err
@@ -40,13 +30,14 @@ func createServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 		return err
 	}
 	instance := service.ServiceInstance{
-		Name:        body["name"],
-		PlanName:    body["plan"],
-		TeamOwner:   body["owner"],
-		Description: body["description"],
+		Name:        r.FormValue("name"),
+		PlanName:    r.FormValue("plan"),
+		TeamOwner:   r.FormValue("owner"),
+		Description: r.FormValue("description"),
 	}
+	var teamOwner string
 	if instance.TeamOwner == "" {
-		teamOwner, err := permission.TeamForPermission(t, permission.PermServiceInstanceCreate)
+		teamOwner, err = permission.TeamForPermission(t, permission.PermServiceInstanceCreate)
 		if err != nil {
 			return err
 		}
@@ -67,24 +58,31 @@ func createServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 			return permission.ErrUnauthorized
 		}
 	}
-	rec.Log(user.Email, "create-service-instance", string(b))
-	return service.CreateServiceInstance(instance, &srv, user)
+	rec.Log(user.Email, "create-service-instance", fmt.Sprintf("%#v", instance))
+	err = service.CreateServiceInstance(instance, &srv, user)
+	if err == service.ErrInstanceNameAlreadyExists {
+		return &errors.HTTP{
+			Code:    http.StatusConflict,
+			Message: err.Error(),
+		}
+	}
+	if err == service.ErrInvalidInstanceName {
+		return &errors.HTTP{
+			Code:    http.StatusBadRequest,
+			Message: err.Error(),
+		}
+	}
+	if err == nil {
+		w.WriteHeader(http.StatusCreated)
+	}
+	return err
 }
 
 func updateServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	var body map[string]string
-	err = json.Unmarshal(b, &body)
-	if err != nil {
-		return err
-	}
 	serviceName := r.URL.Query().Get(":service")
 	instanceName := r.URL.Query().Get(":instance")
-	description, ok := body["description"]
-	if !ok || description == "" {
+	description := r.FormValue("description")
+	if description == "" {
 		return &errors.HTTP{
 			Code:    http.StatusBadRequest,
 			Message: "Invalid value for description",
@@ -104,7 +102,7 @@ func updateServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 	if err != nil {
 		return err
 	}
-	rec.Log(user.Email, "update-service-instance", string(b))
+	rec.Log(user.Email, "update-service-instance", "description="+description)
 	si.Description = description
 	return service.UpdateService(si)
 }
@@ -114,7 +112,6 @@ func removeServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 	serviceName := r.URL.Query().Get(":service")
 	instanceName := r.URL.Query().Get(":instance")
 	permissionValue := serviceName + "/" + instanceName
-
 	keepAliveWriter := io.NewKeepAliveWriter(w, 30*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &io.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
@@ -243,6 +240,10 @@ func serviceInstances(w http.ResponseWriter, r *http.Request, t auth.Token) erro
 	result := []service.ServiceModel{}
 	for _, entry := range servicesMap {
 		result = append(result, *entry)
+	}
+	if len(result) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
 	}
 	body, err := json.Marshal(result)
 	if err != nil {

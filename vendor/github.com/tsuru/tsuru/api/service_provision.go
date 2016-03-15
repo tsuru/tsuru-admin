@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -73,6 +73,10 @@ func serviceList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 				results[i].Instances = append(results[i].Instances, si.Name)
 			}
 		}
+	}
+	if len(results) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
 	}
 	b, err := json.Marshal(results)
 	if err != nil {
@@ -289,11 +293,6 @@ func revokeServiceAccess(w http.ResponseWriter, r *http.Request, t auth.Token) e
 }
 
 func serviceAddDoc(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
 	serviceName := r.URL.Query().Get(":name")
 	s, err := getService(serviceName)
 	if err != nil {
@@ -307,8 +306,8 @@ func serviceAddDoc(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	rec.Log(t.GetUserName(), "service-add-doc", serviceName, string(body))
-	s.Doc = string(body)
+	s.Doc = r.FormValue("doc")
+	rec.Log(t.GetUserName(), "service-add-doc", serviceName, s.Doc)
 	return s.Update()
 }
 

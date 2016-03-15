@@ -22,7 +22,19 @@ func addRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleCreate) {
 		return permission.ErrUnauthorized
 	}
-	_, err := permission.NewRole(r.FormValue("name"), r.FormValue("context"))
+	_, err := permission.NewRole(r.FormValue("name"), r.FormValue("context"), r.FormValue("description"))
+	if err == permission.ErrInvalidRoleName {
+		return &errors.HTTP{
+			Code:    http.StatusBadRequest,
+			Message: err.Error(),
+		}
+	}
+	if err == permission.ErrRoleAlreadyExists {
+		return &errors.HTTP{
+			Code:    http.StatusConflict,
+			Message: err.Error(),
+		}
+	}
 	if err == nil {
 		w.WriteHeader(http.StatusCreated)
 	}
@@ -41,9 +53,6 @@ func removeRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	err = permission.DestroyRole(roleName)
 	if err == permission.ErrRoleNotFound {
 		return &errors.HTTP{Code: http.StatusNotFound, Message: err.Error()}
-	}
-	if err == nil {
-		w.WriteHeader(http.StatusOK)
 	}
 	return err
 }
@@ -194,8 +203,23 @@ func addPermissions(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 	err = runWithPermSync(users, func() error {
 		return role.AddPermissions(r.Form["permission"]...)
 	})
-	if err == nil {
-		w.WriteHeader(http.StatusOK)
+	if err == permission.ErrInvalidPermissionName {
+		return &errors.HTTP{
+			Code:    http.StatusBadRequest,
+			Message: err.Error(),
+		}
+	}
+	if perr, ok := err.(*permission.ErrPermissionNotFound); ok {
+		return &errors.HTTP{
+			Code:    http.StatusBadRequest,
+			Message: perr.Error(),
+		}
+	}
+	if perr, ok := err.(*permission.ErrPermissionNotAllowed); ok {
+		return &errors.HTTP{
+			Code:    http.StatusConflict,
+			Message: perr.Error(),
+		}
 	}
 	return err
 }
@@ -217,9 +241,6 @@ func removePermissions(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	err = runWithPermSync(users, func() error {
 		return role.RemovePermissions(permName)
 	})
-	if err == nil {
-		w.WriteHeader(http.StatusOK)
-	}
 	return err
 }
 
@@ -262,9 +283,6 @@ func assignRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	err = runWithPermSync([]auth.User{*user}, func() error {
 		return user.AddRole(roleName, contextValue)
 	})
-	if err == nil {
-		w.WriteHeader(http.StatusOK)
-	}
 	return err
 }
 
@@ -286,9 +304,6 @@ func dissociateRole(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 	err = runWithPermSync([]auth.User{*user}, func() error {
 		return user.RemoveRole(roleName, contextValue)
 	})
-	if err == nil {
-		w.WriteHeader(http.StatusOK)
-	}
 	return err
 }
 
@@ -352,7 +367,6 @@ func addDefaultRole(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 			}
 		}
 	}
-	w.WriteHeader(http.StatusOK)
 	return nil
 }
 
@@ -383,7 +397,6 @@ func removeDefaultRole(w http.ResponseWriter, r *http.Request, t auth.Token) err
 			}
 		}
 	}
-	w.WriteHeader(http.StatusOK)
 	return nil
 }
 

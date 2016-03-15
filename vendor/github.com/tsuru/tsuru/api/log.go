@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -10,6 +10,7 @@ import (
 	"io"
 	"runtime"
 
+	"github.com/tsuru/config"
 	"github.com/tsuru/tsuru/api/context"
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/log"
@@ -47,7 +48,11 @@ func addLogs(ws *websocket.Conn) {
 }
 
 func scanLogs(stream io.Reader) error {
-	dispatcher := app.NewlogDispatcher(2000000, runtime.NumCPU())
+	queueSize, _ := config.GetInt("server:app-log-buffer-size")
+	if queueSize == 0 {
+		queueSize = 500000
+	}
+	dispatcher := app.NewlogDispatcher(queueSize, runtime.NumCPU())
 	decoder := json.NewDecoder(stream)
 	for {
 		var entry app.Applog
@@ -59,17 +64,8 @@ func scanLogs(stream io.Reader) error {
 			dispatcher.Stop()
 			return fmt.Errorf("wslogs: parsing log line: %s", err)
 		}
-		err = dispatcher.Send(&entry)
-		if err != nil {
-			// Do not disconnect by returning here, dispatcher will already
-			// retry db connection and we gain nothing by ending the WS
-			// connection.
-			log.Errorf("wslogs: error storing log: %s", err)
-		}
+		dispatcher.Send(&entry)
 	}
-	err := dispatcher.Stop()
-	if err != nil {
-		return fmt.Errorf("wslogs: error storing log: %s", err)
-	}
+	dispatcher.Stop()
 	return nil
 }

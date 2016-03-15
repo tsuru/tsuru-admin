@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -18,8 +18,11 @@ type Pool struct {
 	Default bool
 }
 
-var ErrPublicDefaultPollCantHaveTeams = errors.New("Public/Default pool can't have teams.")
-var ErrDefaultPoolAlreadyExists = errors.New("Default pool already exists.")
+var (
+	ErrPublicDefaultPollCantHaveTeams = errors.New("Public/Default pool can't have teams.")
+	ErrDefaultPoolAlreadyExists       = errors.New("Default pool already exists.")
+	ErrPoolNameIsRequired             = errors.New("Pool name is required.")
+)
 
 const poolCollection = "pool"
 
@@ -32,7 +35,7 @@ type AddPoolOptions struct {
 
 func AddPool(opts AddPoolOptions) error {
 	if opts.Name == "" {
-		return errors.New("Pool name is required.")
+		return ErrPoolNameIsRequired
 	}
 	conn, err := db.Conn()
 	if err != nil {
@@ -137,13 +140,4 @@ func PoolUpdate(poolName string, query bson.M, forceDefault bool) error {
 		}
 	}
 	return conn.Collection(poolCollection).UpdateId(poolName, bson.M{"$set": query})
-}
-
-// GetPoolsNames find teams by a list of team names.
-func GetPoolsNames(pools []Pool) []string {
-	pn := make([]string, len(pools))
-	for i, p := range pools {
-		pn[i] = p.Name
-	}
-	return pn
 }

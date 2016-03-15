@@ -6,7 +6,6 @@ package api
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -18,12 +17,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-type PoolsByTeam struct {
-	Team  string
-	Pools []string
-}
-
-func listPoolsToUser(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+func poolList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	u, err := t.User()
 	if err != nil {
 		return err
@@ -41,44 +35,25 @@ func listPoolsToUser(w http.ResponseWriter, r *http.Request, t auth.Token) error
 		}
 		teams = append(teams, c.Value)
 	}
-	var filter bson.M
-	if teams != nil {
-		filter = bson.M{"teams": bson.M{"$in": teams}}
+	query := []bson.M{{"public": true}, {"default": true}}
+	if teams == nil {
+		filter := bson.M{"default": false, "public": false}
+		query = append(query, filter)
 	}
-	pools, err := provision.ListPools(filter)
+	if teams != nil && len(teams) > 0 {
+		filter := bson.M{
+			"default": false,
+			"public":  false,
+			"teams":   bson.M{"$in": teams},
+		}
+		query = append(query, filter)
+	}
+	pools, err := provision.ListPools(bson.M{"$or": query})
 	if err != nil {
 		return err
-	}
-	poolsByTeam := []PoolsByTeam{}
-	poolsByTeamMap := map[string]*PoolsByTeam{}
-	for _, p := range pools {
-		for _, t := range p.Teams {
-			if poolsByTeamMap[t] == nil {
-				poolsByTeam = append(poolsByTeam, PoolsByTeam{Team: t})
-				poolsByTeamMap[t] = &poolsByTeam[len(poolsByTeam)-1]
-			}
-			poolsByTeamMap[t].Pools = append(poolsByTeamMap[t].Pools, p.Name)
-		}
-	}
-	publicPools, err := provision.ListPools(bson.M{"public": true})
-	if err != nil {
-		return err
-	}
-	allowedDefault := permission.Check(t, permission.PermPoolUpdate)
-	defaultPool := []provision.Pool{}
-	if allowedDefault {
-		defaultPool, err = provision.ListPools(bson.M{"default": true})
-		if err != nil {
-			return err
-		}
-	}
-	p := map[string]interface{}{
-		"pools_by_team": poolsByTeam,
-		"public_pools":  publicPools,
-		"default_pool":  defaultPool,
 	}
 	w.Header().Set("Content-Type", "application/json")
-	return json.NewEncoder(w).Encode(p)
+	return json.NewEncoder(w).Encode(pools)
 }
 
 func addPoolHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -86,28 +61,32 @@ func addPoolHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
+	public, _ := strconv.ParseBool(r.FormValue("public"))
+	isDefault, _ := strconv.ParseBool(r.FormValue("default"))
+	force, _ := strconv.ParseBool(r.FormValue("force"))
+	p := provision.AddPoolOptions{
+		Name:    r.FormValue("name"),
+		Public:  public,
+		Default: isDefault,
+		Force:   force,
 	}
-	var p provision.AddPoolOptions
-	err = json.Unmarshal(b, &p)
-	if err != nil {
-		return err
-	}
-	forceAdd, _ := strconv.ParseBool(r.URL.Query().Get("force"))
-	p.Force = forceAdd
-	err = provision.AddPool(p)
-	if err != nil {
-		if err == provision.ErrDefaultPoolAlreadyExists {
-			return &terrors.HTTP{
-				Code:    http.StatusConflict,
-				Message: "Default pool already exists.",
-			}
+	err := provision.AddPool(p)
+	if err == provision.ErrDefaultPoolAlreadyExists {
+		return &terrors.HTTP{
+			Code:    http.StatusConflict,
+			Message: err.Error(),
 		}
-		return err
 	}
-	return nil
+	if err == provision.ErrPoolNameIsRequired {
+		return &terrors.HTTP{
+			Code:    http.StatusBadRequest,
+			Message: err.Error(),
+		}
+	}
+	if err == nil {
+		w.WriteHeader(http.StatusCreated)
+	}
+	return err
 }
 
 func removePoolHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -115,20 +94,7 @@ func removePoolHandler(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	var params map[string]string
-	err = json.Unmarshal(b, &params)
-	if err != nil {
-		return err
-	}
-	return provision.RemovePool(params["pool"])
-}
-
-type teamsToPoolParams struct {
-	Teams []string `json:"teams"`
+	return provision.RemovePool(r.URL.Query().Get(":name"))
 }
 
 func addTeamToPoolHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -136,17 +102,13 @@ func addTeamToPoolHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	b, err := ioutil.ReadAll(r.Body)
+	err := r.ParseForm()
 	if err != nil {
-		return err
-	}
-	var params teamsToPoolParams
-	err = json.Unmarshal(b, &params)
-	if err != nil {
-		return err
+		msg := "You must provide the team."
+		return &terrors.HTTP{Code: http.StatusBadRequest, Message: msg}
 	}
 	pool := r.URL.Query().Get(":name")
-	return provision.AddTeamsToPool(pool, params.Teams)
+	return provision.AddTeamsToPool(pool, r.Form["team"])
 }
 
 func removeTeamToPoolHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -154,17 +116,9 @@ func removeTeamToPoolHandler(w http.ResponseWriter, r *http.Request, t auth.Toke
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	var params teamsToPoolParams
-	err = json.Unmarshal(b, &params)
-	if err != nil {
-		return err
-	}
 	pool := r.URL.Query().Get(":name")
-	return provision.RemoveTeamsFromPool(pool, params.Teams)
+	teams := r.URL.Query()["teams"]
+	return provision.RemoveTeamsFromPool(pool, teams)
 }
 
 func poolUpdateHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -172,32 +126,23 @@ func poolUpdateHandler(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	var params map[string]*bool
-	err = json.Unmarshal(b, &params)
-	if err != nil {
-		return err
-	}
 	query := bson.M{}
-	for k, v := range params {
-		if v != nil {
-			query[k] = *v
-		}
+	if v := r.FormValue("default"); v != "" {
+		d, _ := strconv.ParseBool(v)
+		query["default"] = d
+	}
+	if v := r.FormValue("public"); v != "" {
+		public, _ := strconv.ParseBool(v)
+		query["public"] = public
 	}
 	poolName := r.URL.Query().Get(":name")
-	forceDefault, _ := strconv.ParseBool(r.URL.Query().Get("force"))
-	err = provision.PoolUpdate(poolName, query, forceDefault)
-	if err != nil {
-		if err == provision.ErrDefaultPoolAlreadyExists {
-			return &terrors.HTTP{
-				Code:    http.StatusPreconditionFailed,
-				Message: "Default pool already exists.",
-			}
+	forceDefault, _ := strconv.ParseBool(r.FormValue("force"))
+	err := provision.PoolUpdate(poolName, query, forceDefault)
+	if err == provision.ErrDefaultPoolAlreadyExists {
+		return &terrors.HTTP{
+			Code:    http.StatusConflict,
+			Message: err.Error(),
 		}
-		return err
 	}
-	return nil
+	return err
 }

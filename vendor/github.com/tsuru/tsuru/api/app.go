@@ -7,7 +7,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -15,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/schema"
 	"github.com/tsuru/tsuru/api/context"
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/app/bind"
@@ -51,29 +51,6 @@ func getApp(name string) (*app.App, error) {
 		return nil, &errors.HTTP{Code: http.StatusNotFound, Message: fmt.Sprintf("App %s not found.", name)}
 	}
 	return a, nil
-}
-
-func appIsAvailable(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	a, err := app.GetByName(r.URL.Query().Get(":appname"))
-	if err != nil {
-		return err
-	}
-	if t.GetAppName() != app.InternalAppName {
-		allowed := permission.Check(t, permission.PermAppUpdateUnitAdd,
-			append(permission.Contexts(permission.CtxTeam, a.Teams),
-				permission.Context(permission.CtxApp, a.Name),
-				permission.Context(permission.CtxPool, a.Pool),
-			)...,
-		)
-		if !allowed {
-			return permission.ErrUnauthorized
-		}
-	}
-	if !a.Available() {
-		return fmt.Errorf("App must be available to receive pushs.")
-	}
-	w.WriteHeader(http.StatusOK)
-	return nil
 }
 
 func appDelete(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -155,46 +132,36 @@ func appList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if err != nil {
 		return err
 	}
-	name := r.URL.Query().Get("name")
-	platform := r.URL.Query().Get("platform")
-	teamOwner := r.URL.Query().Get("teamowner")
-	owner := r.URL.Query().Get("owner")
-	pool := r.URL.Query().Get("pool")
-	description := r.URL.Query().Get("description")
-	locked, _ := strconv.ParseBool(r.URL.Query().Get("locked"))
-	status := r.URL.Query().Get("status")
 	extra := make([]interface{}, 0, 1)
 	filter := &app.Filter{}
-	if name != "" {
+	if name := r.URL.Query().Get("name"); name != "" {
 		extra = append(extra, fmt.Sprintf("name=%s", name))
-		filter.Name = name
+		filter.NameMatches = name
 	}
-	if platform != "" {
+	if platform := r.URL.Query().Get("platform"); platform != "" {
 		extra = append(extra, fmt.Sprintf("platform=%s", platform))
 		filter.Platform = platform
 	}
-	if teamOwner != "" {
+	if teamOwner := r.URL.Query().Get("teamOwner"); teamOwner != "" {
 		extra = append(extra, fmt.Sprintf("teamowner=%s", teamOwner))
 		filter.TeamOwner = teamOwner
 	}
-	if owner != "" {
+	if owner := r.URL.Query().Get("owner"); owner != "" {
 		extra = append(extra, fmt.Sprintf("owner=%s", owner))
 		filter.UserOwner = owner
 	}
-	if pool != "" {
+	if pool := r.URL.Query().Get("pool"); pool != "" {
 		extra = append(extra, fmt.Sprintf("pool=%s", pool))
 		filter.Pool = pool
 	}
-	if description != "" {
-		extra = append(extra, fmt.Sprintf("description=%s", description))
-	}
+	locked, _ := strconv.ParseBool(r.URL.Query().Get("locked"))
 	if locked {
 		extra = append(extra, fmt.Sprintf("locked=%v", locked))
 		filter.Locked = true
 	}
-	if status != "" {
-		extra = append(extra, fmt.Sprintf("status=%s", status))
-		filter.Statuses = strings.Split(status, ",")
+	if status, ok := r.URL.Query()["status"]; ok {
+		extra = append(extra, fmt.Sprintf("status=%s", strings.Join(status, ",")))
+		filter.Statuses = status
 	}
 	rec.Log(u.Email, "app-list", extra...)
 	contexts := permission.ContextsForPermission(t, permission.PermAppRead)
@@ -245,15 +212,14 @@ func appInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 }
 
 func createApp(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	var a app.App
-	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
+	a := app.App{
+		TeamOwner:   r.FormValue("teamOwner"),
+		Platform:    r.FormValue("platform"),
+		Plan:        app.Plan{Name: r.FormValue("plan")},
+		Name:        r.FormValue("name"),
+		Description: r.FormValue("description"),
 	}
-	if err = json.Unmarshal(body, &a); err != nil {
-		return err
-	}
+	var err error
 	if a.TeamOwner == "" {
 		a.TeamOwner, err = permission.TeamForPermission(t, permission.PermAppCreate)
 		if err != nil {
@@ -310,7 +276,10 @@ func createApp(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		}
 		return err
 	}
-	repo, _ := repository.Manager().GetRepository(a.Name)
+	repo, err := repository.Manager().GetRepository(a.Name)
+	if err != nil {
+		return err
+	}
 	msg := map[string]string{
 		"status":         "success",
 		"repository_url": repo.ReadWriteURL,
@@ -320,19 +289,17 @@ func createApp(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(w, "%s", jsonMsg)
+	w.WriteHeader(http.StatusCreated)
+	w.Write(jsonMsg)
 	return nil
 }
 
 func updateApp(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	var updateData app.App
-	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	if err = json.Unmarshal(body, &updateData); err != nil {
-		return err
+	updateData := app.App{
+		TeamOwner:   r.FormValue("teamOwner"),
+		Plan:        app.Plan{Name: r.FormValue("plan")},
+		Pool:        r.FormValue("pool"),
+		Description: r.FormValue("description"),
 	}
 	appName := r.URL.Query().Get(":appname")
 	a, err := getAppFromContext(appName, r)
@@ -533,10 +500,25 @@ func setUnitStatus(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if _, ok := err.(*provision.UnitNotFoundError); ok {
 		return &errors.HTTP{Code: http.StatusNotFound, Message: err.Error()}
 	}
-	if err == nil {
-		w.WriteHeader(http.StatusOK)
-	}
 	return err
+}
+
+func setNodeStatus(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	if t.GetAppName() != app.InternalAppName {
+		return &errors.HTTP{Code: http.StatusForbidden, Message: "this token is not allowed to execute this action"}
+	}
+	defer r.Body.Close()
+	var hostInput provision.NodeStatusData
+	err := json.NewDecoder(r.Body).Decode(&hostInput)
+	if err != nil {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+	}
+	result, err := app.UpdateNodeStatus(hostInput)
+	if err != nil {
+		return err
+	}
+	w.Header().Add("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(result)
 }
 
 func setUnitsStatus(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -544,17 +526,16 @@ func setUnitsStatus(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 		return &errors.HTTP{Code: http.StatusForbidden, Message: "this token is not allowed to execute this action"}
 	}
 	defer r.Body.Close()
-	var input []app.UpdateUnitsData
+	var input []provision.UnitStatusData
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
-	result, err := app.UpdateUnitsStatus(input)
+	result, err := app.UpdateNodeStatus(provision.NodeStatusData{Units: input})
 	if err != nil {
 		return err
 	}
 	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	return json.NewEncoder(w).Encode(result)
 }
 
@@ -643,17 +624,9 @@ func revokeAppAccess(w http.ResponseWriter, r *http.Request, t auth.Token) error
 }
 
 func runCommand(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	w.Header().Set("Content-Type", "text")
 	msg := "You must provide the command to run"
-	if r.Body == nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
-	}
-	defer r.Body.Close()
-	c, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
-	}
-	if len(c) < 1 {
+	command := r.FormValue("command")
+	if len(command) < 1 {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
 	}
 	u, err := t.User()
@@ -661,7 +634,7 @@ func runCommand(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		return err
 	}
 	appName := r.URL.Query().Get(":app")
-	once := r.URL.Query().Get("once")
+	once := r.FormValue("once")
 	a, err := getAppFromContext(appName, r)
 	if err != nil {
 		return err
@@ -675,26 +648,22 @@ func runCommand(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	rec.Log(u.Email, "run-command", "app="+appName, "command="+string(c))
+	rec.Log(u.Email, "run-command", "app="+appName, "command="+command)
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 30*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
-	err = a.Run(string(c), writer, once == "true")
+	err = a.Run(command, writer, once == "true")
 	if err != nil {
 		writer.Encode(tsuruIo.SimpleJsonMessage{Error: err.Error()})
-		return err
+		return nil
 	}
 	return nil
 }
 
 func getEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	var variables []string
-	if r.Body != nil {
-		defer r.Body.Close()
-		err := json.NewDecoder(r.Body).Decode(&variables)
-		if err != nil && err != io.EOF {
-			return err
-		}
+	if envs, ok := r.URL.Query()["env"]; ok {
+		variables = envs
 	}
 	appName := r.URL.Query().Get(":app")
 	var u *auth.User
@@ -739,23 +708,32 @@ func writeEnvVars(w http.ResponseWriter, a *app.App, variables ...string) error 
 	return json.NewEncoder(w).Encode(result)
 }
 
+type envs struct {
+	Envs      []struct{ Name, Value string } `schema:"envs"`
+	NoRestart bool                           `schema:"noRestart"`
+	Private   bool                           `schema:"private"`
+}
+
 func setEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	msg := "You must provide the environment variables in a JSON object"
-	if r.Body == nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
-	}
-	var variables map[string]string
-	err := json.NewDecoder(r.Body).Decode(&variables)
+	err := r.ParseForm()
 	if err != nil {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+	}
+	decoder := schema.NewDecoder()
+	e := envs{}
+	err = decoder.Decode(&e, r.PostForm)
+	if err != nil {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+	}
+	if len(e.Envs) == 0 {
+		msg := "You must provide the list of environment variables"
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
 	}
 	u, err := t.User()
 	if err != nil {
 		return err
 	}
-	noRestart, _ := strconv.ParseBool(r.URL.Query().Get("noRestart"))
-	isPrivateEnv, _ := strconv.ParseBool(r.URL.Query().Get("private"))
-	extra := fmt.Sprintf("private=%t", isPrivateEnv)
+	extra := fmt.Sprintf("private=%t", e.Private)
 	appName := r.URL.Query().Get(":app")
 	a, err := getAppFromContext(appName, r)
 	if err != nil {
@@ -770,20 +748,22 @@ func setEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	rec.Log(u.Email, "set-env", "app="+appName, variables, extra)
-	envs := make([]bind.EnvVar, 0, len(variables))
-	for k, v := range variables {
-		envs = append(envs, bind.EnvVar{Name: k, Value: v, Public: !isPrivateEnv})
+	envs := map[string]string{}
+	variables := []bind.EnvVar{}
+	for _, v := range e.Envs {
+		envs[v.Name] = v.Value
+		variables = append(variables, bind.EnvVar{Name: v.Name, Value: v.Value, Public: !e.Private})
 	}
+	rec.Log(u.Email, "set-env", "app="+appName, envs, extra)
 	w.Header().Set("Content-Type", "application/json")
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 30*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
 	err = a.SetEnvs(
 		bind.SetEnvApp{
-			Envs:          envs,
+			Envs:          variables,
 			PublicOnly:    true,
-			ShouldRestart: !noRestart,
+			ShouldRestart: !e.NoRestart,
 		}, writer)
 	if err != nil {
 		writer.Encode(tsuruIo.SimpleJsonMessage{Error: err.Error()})
@@ -793,17 +773,14 @@ func setEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 }
 
 func unsetEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	msg := "You must provide the list of environment variables, in JSON format"
-	if r.Body == nil {
+	msg := "You must provide the list of environment variables."
+	if r.URL.Query().Get("env") == "" {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
 	}
 	var variables []string
-	defer r.Body.Close()
-	err := json.NewDecoder(r.Body).Decode(&variables)
-	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
-	}
-	if len(variables) == 0 {
+	if envs, ok := r.URL.Query()["env"]; ok {
+		variables = envs
+	} else {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
 	}
 	appName := r.URL.Query().Get(":app")
@@ -844,16 +821,14 @@ func unsetEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 }
 
 func setCName(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	msg := "You must provide the cname."
-	if r.Body == nil {
+	err := r.ParseForm()
+	if err != nil {
+		msg := "You must provide the cname."
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
 	}
-	var v map[string][]string
-	err := json.NewDecoder(r.Body).Decode(&v)
-	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: "Invalid JSON in request body."}
-	}
-	if _, ok := v["cname"]; !ok {
+	cnames := r.Form["cname"]
+	if len(cnames) == 0 {
+		msg := "You must provide the cname."
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
 	}
 	u, err := t.User()
@@ -861,8 +836,7 @@ func setCName(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		return err
 	}
 	appName := r.URL.Query().Get(":app")
-	rawCName := strings.Join(v["cname"], ", ")
-	rec.Log(u.Email, "add-cname", "app="+appName, "cname="+rawCName)
+	rec.Log(u.Email, "add-cname", "app="+appName, "cname="+strings.Join(cnames, ", "))
 	a, err := getAppFromContext(appName, r)
 	if err != nil {
 		return err
@@ -876,7 +850,7 @@ func setCName(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	if err = a.AddCName(v["cname"]...); err == nil {
+	if err = a.AddCName(cnames...); err == nil {
 		return nil
 	}
 	if err.Error() == "Invalid cname" {
@@ -886,16 +860,9 @@ func setCName(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 }
 
 func unsetCName(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	msg := "You must provide the cname."
-	if r.Body == nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
-	}
-	var v map[string][]string
-	err := json.NewDecoder(r.Body).Decode(&v)
-	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: "Invalid JSON in request body."}
-	}
-	if _, ok := v["cname"]; !ok {
+	cnames := r.URL.Query()["cname"]
+	if len(cnames) == 0 {
+		msg := "You must provide the cname."
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: msg}
 	}
 	u, err := t.User()
@@ -903,7 +870,6 @@ func unsetCName(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		return err
 	}
 	appName := r.URL.Query().Get(":app")
-	rawCName := strings.Join(v["cname"], ", ")
 	a, err := getAppFromContext(appName, r)
 	if err != nil {
 		return err
@@ -917,8 +883,8 @@ func unsetCName(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	rec.Log(u.Email, "remove-cname", "app="+appName, "cnames="+rawCName)
-	if err = a.RemoveCName(v["cname"]...); err == nil {
+	rec.Log(u.Email, "remove-cname", "app="+appName, "cnames="+strings.Join(cnames, ", "))
+	if err = a.RemoveCName(cnames...); err == nil {
 		return nil
 	}
 	if err.Error() == "Invalid cname" {
@@ -1042,9 +1008,10 @@ func getServiceInstance(serviceName, instanceName, appName string) (*service.Ser
 }
 
 func bindServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	instanceName, appName, serviceName := r.URL.Query().Get(":instance"), r.URL.Query().Get(":app"),
-		r.URL.Query().Get(":service")
-	noRestart, _ := strconv.ParseBool(r.URL.Query().Get("noRestart"))
+	instanceName := r.URL.Query().Get(":instance")
+	appName := r.URL.Query().Get(":app")
+	serviceName := r.URL.Query().Get(":service")
+	noRestart, _ := strconv.ParseBool(r.FormValue("noRestart"))
 	instance, a, err := getServiceInstance(serviceName, instanceName, appName)
 	if err != nil {
 		return err
@@ -1233,7 +1200,6 @@ func addLog(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 			return err
 		}
 	}
-	w.WriteHeader(http.StatusOK)
 	return nil
 }
 
@@ -1261,6 +1227,7 @@ func swap(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	app1Name := r.URL.Query().Get("app1")
 	app2Name := r.URL.Query().Get("app2")
 	forceSwap := r.URL.Query().Get("force")
+	cnameOnly, _ := strconv.ParseBool(r.URL.Query().Get("cnameOnly"))
 	if forceSwap == "" {
 		forceSwap = "false"
 	}
@@ -1327,7 +1294,7 @@ func swap(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		}
 	}
 	rec.Log(u.Email, "swap", "app1="+app1Name, "app2="+app2Name)
-	return app.Swap(app1, app2)
+	return app.Swap(app1, app2, cnameOnly)
 }
 
 func start(w http.ResponseWriter, r *http.Request, t auth.Token) error {

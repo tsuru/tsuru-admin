@@ -7,7 +7,6 @@ package docker
 import (
 	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	stderr "errors"
 	"fmt"
 	"io"
@@ -63,6 +62,7 @@ type dockerProvisioner struct {
 	storage        cluster.Storage
 	scheduler      *segregatedScheduler
 	isDryMode      bool
+	nodeHealer     *healer.NodeHealer
 }
 
 func (p *dockerProvisioner) initDockerCluster() error {
@@ -111,14 +111,14 @@ func (p *dockerProvisioner) initDockerCluster() error {
 		if waitSecondsNewMachine <= 0 {
 			waitSecondsNewMachine = 5 * 60
 		}
-		nodeHealer := healer.NewNodeHealer(healer.NodeHealerArgs{
+		p.nodeHealer = healer.NewNodeHealer(healer.NodeHealerArgs{
 			Provisioner:           p,
 			DisabledTime:          time.Duration(disabledSeconds) * time.Second,
 			WaitTimeNewMachine:    time.Duration(waitSecondsNewMachine) * time.Second,
 			FailuresBeforeHealing: maxFailures,
 		})
-		shutdown.Register(nodeHealer)
-		p.cluster.Healer = nodeHealer
+		shutdown.Register(p.nodeHealer)
+		p.cluster.Healer = p.nodeHealer
 	}
 	healContainersSeconds, _ := config.GetInt("docker:healing:heal-containers-timeout")
 	if healContainersSeconds > 0 {
@@ -302,7 +302,7 @@ func (p *dockerProvisioner) Start(app provision.App, process string) error {
 	if err != nil {
 		return stderr.New(fmt.Sprintf("Got error while getting app containers: %s", err))
 	}
-	return runInContainers(containers, func(c *container.Container, _ chan *container.Container) error {
+	err = runInContainers(containers, func(c *container.Container, _ chan *container.Container) error {
 		err := c.Start(&container.StartArgs{
 			Provisioner: p,
 			App:         app,
@@ -316,6 +316,8 @@ func (p *dockerProvisioner) Start(app provision.App, process string) error {
 		}
 		return nil
 	}, nil, true)
+	routesRebuildOrEnqueue(app.GetName())
+	return err
 }
 
 func (p *dockerProvisioner) Stop(app provision.App, process string) error {
@@ -370,17 +372,21 @@ func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.
 	if !strings.Contains(imageId, ":") {
 		imageId = fmt.Sprintf("%s:latest", imageId)
 	}
+	fmt.Fprintln(w, "---- Pulling image to tsuru ----")
 	pullOpts := docker.PullImageOptions{
-		Repository: imageId,
+		Repository:   imageId,
+		OutputStream: w,
 	}
 	err := cluster.PullImage(pullOpts, docker.AuthConfiguration{})
 	if err != nil {
 		return "", err
 	}
+	fmt.Fprintln(w, "---- Getting process from image ----")
 	cmd := "cat /home/application/current/Procfile || cat /app/user/Procfile || cat /Procfile"
 	output, _ := p.runCommandInContainer(imageId, cmd, app)
 	procfile := getProcessesFromProcfile(output.String())
 	if len(procfile) == 0 {
+		fmt.Fprintln(w, "  ---> Procfile not found, trying to get entrypoint")
 		imageInspect, inspectErr := cluster.InspectImage(imageId)
 		if inspectErr != nil {
 			return "", inspectErr
@@ -393,6 +399,9 @@ func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.
 			webProcess += fmt.Sprintf(" %q", c)
 		}
 		procfile["web"] = webProcess
+	}
+	for k, v := range procfile {
+		fmt.Fprintf(w, "  ---> Process %s found with command: %v\n", k, v)
 	}
 	newImage, err := appNewImageName(app.GetName())
 	if err != nil {
@@ -407,10 +416,12 @@ func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.
 	if err != nil {
 		return "", err
 	}
+	fmt.Fprintln(w, "---- Pushing image to tsuru ----")
 	pushOpts := docker.PushImageOptions{
-		Name:     strings.Join(imageInfo[:len(imageInfo)-1], ":"),
-		Tag:      imageInfo[len(imageInfo)-1],
-		Registry: registry,
+		Name:         strings.Join(imageInfo[:len(imageInfo)-1], ":"),
+		Tag:          imageInfo[len(imageInfo)-1],
+		Registry:     registry,
+		OutputStream: w,
 	}
 	err = cluster.PushImage(pushOpts, mainDockerProvisioner.RegistryAuthConfig())
 	if err != nil {
@@ -433,31 +444,18 @@ func (p *dockerProvisioner) ArchiveDeploy(app provision.App, archiveURL string, 
 	return imageId, p.deployAndClean(app, imageId, w)
 }
 
-func (p *dockerProvisioner) UploadDeploy(app provision.App, archiveFile io.ReadCloser, build bool, w io.Writer) (string, error) {
+func (p *dockerProvisioner) UploadDeploy(app provision.App, archiveFile io.ReadCloser, fileSize int64, build bool, w io.Writer) (string, error) {
+	if build {
+		return "", stderr.New("running UploadDeploy with build=true is not yet supported")
+	}
 	dirPath := "/home/application/"
 	filePath := fmt.Sprintf("%sarchive.tar.gz", dirPath)
 	user, err := config.GetString("docker:user")
 	if err != nil {
 		user, _ = config.GetString("docker:ssh:user")
 	}
-	var imageName string
-	var buildErr error
 	defer archiveFile.Close()
-	var fileBuf bytes.Buffer
-	_, err = fileBuf.ReadFrom(archiveFile)
-	fileBytes := bytes.NewReader(fileBuf.Bytes())
-	if err != nil {
-		return "", err
-	}
-	if build {
-		imageName, buildErr = p.BuildImageWithDockerfile(app, &fileBuf, w)
-		if buildErr != nil {
-			return "", buildErr
-		}
-	}
-	if imageName == "" {
-		imageName = p.getBuildImage(app)
-	}
+	imageName := p.getBuildImage(app)
 	options := docker.CreateContainerOptions{
 		Config: &docker.Config{
 			AttachStdout: true,
@@ -480,30 +478,40 @@ func (p *dockerProvisioner) UploadDeploy(app provision.App, archiveFile io.ReadC
 	if err != nil {
 		return "", err
 	}
-	var buf bytes.Buffer
-	var archiveFileBuf bytes.Buffer
-	tarball := tar.NewWriter(&buf)
+	reader, writer := io.Pipe()
+	tarball := tar.NewWriter(writer)
 	if err != nil {
 		return "", err
 	}
-	n, err := archiveFileBuf.ReadFrom(fileBytes)
-	if err != nil {
-		return "", err
-	}
-	header := tar.Header{
-		Name: "archive.tar.gz",
-		Mode: 0666,
-		Size: n,
-	}
-	tarball.WriteHeader(&header)
-	archiveReader := bytes.NewReader(archiveFileBuf.Bytes())
-	_, err = io.Copy(&buf, archiveReader)
-	if err != nil {
-		return "", err
-	}
-	defer tarball.Close()
+	go func() {
+		header := tar.Header{
+			Name: "archive.tar.gz",
+			Mode: 0666,
+			Size: fileSize,
+		}
+		tarball.WriteHeader(&header)
+		n, tarErr := io.Copy(tarball, archiveFile)
+		if tarErr != nil {
+			log.Errorf("upload-deploy: unable to copy archive to tarball: %s", tarErr.Error())
+			writer.CloseWithError(tarErr)
+			tarball.Close()
+			return
+		}
+		if n != fileSize {
+			tarErr = stderr.New("upload-deploy: short-write copying to tarball")
+			log.Errorf(tarErr.Error())
+			writer.CloseWithError(tarErr)
+			tarball.Close()
+			return
+		}
+		tarErr = tarball.Close()
+		if tarErr != nil {
+			writer.CloseWithError(tarErr)
+		}
+		writer.Close()
+	}()
 	uploadOpts := docker.UploadToContainerOptions{
-		InputStream: &buf,
+		InputStream: reader,
 		Path:        dirPath,
 	}
 	err = cluster.UploadToContainer(cont.ID, uploadOpts)
@@ -520,25 +528,6 @@ func (p *dockerProvisioner) UploadDeploy(app provision.App, archiveFile io.ReadC
 		return "", err
 	}
 	return imageId, p.deployAndClean(app, imageId, w)
-}
-
-func (p *dockerProvisioner) BuildImageWithDockerfile(app provision.App, archiveFile io.Reader, w io.Writer) (string, error) {
-	cluster := p.Cluster()
-	archive, err := gzip.NewReader(archiveFile)
-	if err != nil {
-		return "", err
-	}
-	defer archive.Close()
-	imageName := app.GetName() + randomString()
-	buildOpts := docker.BuildImageOptions{
-		Name:           imageName,
-		NoCache:        true,
-		RmTmpContainer: true,
-		InputStream:    archive,
-		OutputStream:   w,
-	}
-	err = cluster.BuildImage(buildOpts)
-	return imageName, err
 }
 
 func (p *dockerProvisioner) deployAndClean(a provision.App, imageId string, w io.Writer) error {
@@ -568,13 +557,13 @@ func (p *dockerProvisioner) deploy(a provision.App, imageId string, w io.Writer)
 			}
 			toAdd[processName].Quantity++
 		}
-		if err := setQuota(a, toAdd); err != nil {
+		if err = setQuota(a, toAdd); err != nil {
 			return err
 		}
 		_, err = p.runCreateUnitsPipeline(w, a, toAdd, imageId)
 	} else {
 		toAdd := getContainersToAdd(imageData, containers)
-		if err := setQuota(a, toAdd); err != nil {
+		if err = setQuota(a, toAdd); err != nil {
 			return err
 		}
 		_, err = p.runReplaceUnitsPipeline(w, a, toAdd, containers, imageId)
@@ -948,6 +937,9 @@ func (p *dockerProvisioner) AdminCommands() []cmd.Command {
 		&removeNodeFromSchedulerCmd{},
 		&listNodesInTheSchedulerCmd{},
 		&healer.ListHealingHistoryCmd{},
+		&healer.GetNodeHealingConfigCmd{},
+		&healer.SetNodeHealingConfigCmd{},
+		&healer.DeleteNodeHealingConfigCmd{},
 		&autoScaleRunCmd{},
 		&listAutoScaleHistoryCmd{},
 		&autoScaleInfoCmd{},
@@ -1254,4 +1246,11 @@ func (p *dockerProvisioner) FilterAppsByUnitStatus(apps []provision.App, status 
 		}
 	}
 	return result, nil
+}
+
+func (p *dockerProvisioner) SetNodeStatus(nodeData provision.NodeStatusData) error {
+	if p.nodeHealer == nil {
+		return nil
+	}
+	return p.nodeHealer.UpdateNodeData(nodeData)
 }

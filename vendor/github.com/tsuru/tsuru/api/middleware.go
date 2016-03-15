@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	tsuruMin      = "0.18.0"
-	craneMin      = "0.7.0"
-	tsuruAdminMin = "0.12.0"
+	tsuruMin      = "1.0.0"
+	craneMin      = "1.0.0"
+	tsuruAdminMin = "1.0.0"
 )
 
 func validate(token string, r *http.Request) (auth.Token, error) {
@@ -208,7 +208,10 @@ func (l *loggerMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Request, ne
 	start := time.Now()
 	next(rw, r)
 	duration := time.Since(start)
-	res := rw.(negroni.ResponseWriter)
+	statusCode := rw.(negroni.ResponseWriter).Status()
+	if statusCode == 0 {
+		statusCode = 200
+	}
 	nowFormatted := time.Now().Format(time.RFC3339Nano)
-	l.logger.Printf("%s %s %s %d in %0.6fms", nowFormatted, r.Method, r.URL.Path, res.Status(), float64(duration)/float64(time.Millisecond))
+	l.logger.Printf("%s %s %s %d in %0.6fms", nowFormatted, r.Method, r.URL.Path, statusCode, float64(duration)/float64(time.Millisecond))
 }

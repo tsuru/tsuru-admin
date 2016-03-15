@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -152,10 +152,5 @@ func templateUpdate(w http.ResponseWriter, r *http.Request, token auth.Token) er
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	err = dbTpl.Update(&paramTemplate)
-	if err != nil {
-		return err
-	}
-	w.WriteHeader(http.StatusOK)
-	return nil
+	return dbTpl.Update(&paramTemplate)
 }

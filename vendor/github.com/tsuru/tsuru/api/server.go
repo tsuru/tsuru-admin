@@ -29,7 +29,7 @@ import (
 	"gopkg.in/tylerb/graceful.v1"
 )
 
-const Version = "1.0.0-rc1"
+const Version = "1.0.0-rc5"
 
 func getProvisioner() (string, error) {
 	provisioner, err := config.GetString("provisioner")
@@ -157,6 +157,7 @@ func RunServer(dry bool) http.Handler {
 	m.Add("1.0", "Post", "/apps/{app}/routes", AuthorizationRequiredHandler(appRebuildRoutes))
 
 	m.Add("1.0", "Post", "/units/status", AuthorizationRequiredHandler(setUnitsStatus))
+	m.Add("1.0", "Post", "/node/status", AuthorizationRequiredHandler(setNodeStatus))
 
 	m.Add("1.0", "Get", "/deploys", AuthorizationRequiredHandler(deploysList))
 	m.Add("1.0", "Get", "/deploys/{deploy}", AuthorizationRequiredHandler(deployInfo))
@@ -169,7 +170,6 @@ func RunServer(dry bool) http.Handler {
 	// These handlers don't use {app} on purpose. Using :app means that only
 	// the token generate for the given app is valid, but these handlers
 	// use a token generated for Gandalf.
-	m.Add("1.0", "Get", "/apps/{appname}/available", AuthorizationRequiredHandler(appIsAvailable))
 	m.Add("1.0", "Post", "/apps/{appname}/repository/clone", AuthorizationRequiredHandler(deploy))
 	m.Add("1.0", "Post", "/apps/{appname}/deploy", AuthorizationRequiredHandler(deploy))
 	diffDeployHandler := AuthorizationRequiredHandler(diffDeploy)
@@ -197,7 +197,7 @@ func RunServer(dry bool) http.Handler {
 	m.Add("1.0", "Delete", "/users", AuthorizationRequiredHandler(removeUser))
 	m.Add("1.0", "Get", "/users/keys", AuthorizationRequiredHandler(listKeys))
 	m.Add("1.0", "Post", "/users/keys", AuthorizationRequiredHandler(addKeyToUser))
-	m.Add("1.0", "Delete", "/users/keys", AuthorizationRequiredHandler(removeKeyFromUser))
+	m.Add("1.0", "Delete", "/users/keys/{key}", AuthorizationRequiredHandler(removeKeyFromUser))
 	m.Add("1.0", "Get", "/users/api-key", AuthorizationRequiredHandler(showAPIToken))
 	m.Add("1.0", "Post", "/users/api-key", AuthorizationRequiredHandler(regenerateAPIToken))
 
@@ -223,12 +223,12 @@ func RunServer(dry bool) http.Handler {
 	m.Add("1.0", "Delete", "/plans/{planname}", AuthorizationRequiredHandler(removePlan))
 	m.Add("1.0", "Get", "/plans/routers", AuthorizationRequiredHandler(listRouters))
 
-	m.Add("1.0", "Get", "/pools", AuthorizationRequiredHandler(listPoolsToUser))
-	m.Add("1.0", "Post", "/pool", AuthorizationRequiredHandler(addPoolHandler))
-	m.Add("1.0", "Delete", "/pool", AuthorizationRequiredHandler(removePoolHandler))
-	m.Add("1.0", "Post", "/pool/{name}", AuthorizationRequiredHandler(poolUpdateHandler))
-	m.Add("1.0", "Post", "/pool/{name}/team", AuthorizationRequiredHandler(addTeamToPoolHandler))
-	m.Add("1.0", "Delete", "/pool/{name}/team", AuthorizationRequiredHandler(removeTeamToPoolHandler))
+	m.Add("1.0", "Get", "/pools", AuthorizationRequiredHandler(poolList))
+	m.Add("1.0", "Post", "/pools", AuthorizationRequiredHandler(addPoolHandler))
+	m.Add("1.0", "Delete", "/pools/{name}", AuthorizationRequiredHandler(removePoolHandler))
+	m.Add("1.0", "Post", "/pools/{name}", AuthorizationRequiredHandler(poolUpdateHandler))
+	m.Add("1.0", "Post", "/pools/{name}/team", AuthorizationRequiredHandler(addTeamToPoolHandler))
+	m.Add("1.0", "Delete", "/pools/{name}/team", AuthorizationRequiredHandler(removeTeamToPoolHandler))
 
 	m.Add("1.0", "Get", "/roles", AuthorizationRequiredHandler(listRoles))
 	m.Add("1.0", "Post", "/roles", AuthorizationRequiredHandler(addRole))
