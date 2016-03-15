@@ -9,7 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/tsuru/gnuflag"
 	"github.com/tsuru/tsuru/cmd"
@@ -54,23 +56,21 @@ func (c *addPoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
 }
 
 func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	b, err := json.Marshal(map[string]interface{}{
-		"name":    ctx.Args[0],
-		"public":  c.public,
-		"default": c.defaultPool,
-	})
-	if err != nil {
-		return err
-	}
-	url, err := cmd.GetURL(fmt.Sprintf("/pool?force=%t", c.forceDefault))
-	err = doRequest(client, url, b)
+	v := url.Values{}
+	v.Set("name", ctx.Args[0])
+	v.Set("public", strconv.FormatBool(c.public))
+	v.Set("default", strconv.FormatBool(c.defaultPool))
+	v.Set("force", strconv.FormatBool(c.forceDefault))
+	u, err := cmd.GetURL("/pools")
+	err = doRequest(client, u, v.Encode())
 	if err != nil {
 		if e, ok := err.(*errors.HTTP); ok && e.Code == http.StatusPreconditionFailed {
 			retryMessage := "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) "
-			url, _ := cmd.GetURL(fmt.Sprintf("/pool?force=%t", true))
+			v.Set("force", "true")
+			url, _ := cmd.GetURL("/pools")
 			successMessage := "Pool successfully registered.\n"
 			failMessage := "Pool add aborted.\n"
-			return confirmAction(ctx, client, url, b, retryMessage, failMessage, successMessage)
+			return confirmAction(ctx, client, url, v.Encode(), retryMessage, failMessage, successMessage)
 		}
 		return err
 	}
@@ -78,11 +78,12 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 	return nil
 }
 
-func doRequest(client *cmd.Client, url string, body []byte) error {
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+func doRequest(client *cmd.Client, url string, body string) error {
+	req, err := http.NewRequest("POST", url, strings.NewReader(body))
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	_, err = client.Do(req)
 	if err != nil {
 		return err
@@ -90,7 +91,7 @@ func doRequest(client *cmd.Client, url string, body []byte) error {
 	return nil
 }
 
-func confirmAction(ctx *cmd.Context, client *cmd.Client, url string, body []byte, retryMessage, failMessage, successMessage string) error {
+func confirmAction(ctx *cmd.Context, client *cmd.Client, url string, body string, retryMessage, failMessage, successMessage string) error {
 	var answer string
 	fmt.Fprintf(ctx.Stdout, retryMessage, ctx.Args[0])
 	fmt.Fscanf(ctx.Stdin, "%s", &answer)
@@ -160,23 +161,28 @@ func (c *updatePoolToSchedulerCmd) Flags() *gnuflag.FlagSet {
 }
 
 func (c *updatePoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	opts := map[string]*bool{
-		"public":  c.public.value,
-		"default": c.defaultPool.value,
+	v := url.Values{}
+	if c.public.value == nil {
+		v.Set("public", "")
+	} else {
+		v.Set("public", strconv.FormatBool(*c.public.value))
 	}
-	b, err := json.Marshal(opts)
-	if err != nil {
-		return err
+	if c.defaultPool.value == nil {
+		v.Set("default", "")
+	} else {
+		v.Set("default", strconv.FormatBool(*c.defaultPool.value))
 	}
-	url, err := cmd.GetURL(fmt.Sprintf("/pool/%s?force=%t", ctx.Args[0], c.forceDefault))
-	err = doRequest(client, url, b)
+	v.Set("force", strconv.FormatBool(c.forceDefault))
+	u, err := cmd.GetURL(fmt.Sprintf("/pools/%s", ctx.Args[0]))
+	err = doRequest(client, u, v.Encode())
 	if err != nil {
 		if e, ok := err.(*errors.HTTP); ok && e.Code == http.StatusPreconditionFailed {
 			retryMessage := "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) "
 			failMessage := "Pool update aborted.\n"
 			successMessage := "Pool successfully updated.\n"
-			url, err = cmd.GetURL(fmt.Sprintf("/pool/%s?force=%t", ctx.Args[0], true))
-			return confirmAction(ctx, client, url, b, retryMessage, failMessage, successMessage)
+			v.Set("force", "true")
+			u, err = cmd.GetURL(fmt.Sprintf("/pools/%s", ctx.Args[0]))
+			return confirmAction(ctx, client, u, v.Encode(), retryMessage, failMessage, successMessage)
 		}
 		return err
 	}
