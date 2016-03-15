@@ -331,6 +331,11 @@
 			"revisionTime": "2013-09-11T13:10:56-07:00"
 		},
 		{
+			"path": "github.com/gorilla/schema",
+			"revision": "ddf016c1034e9cfd3eb5b276f626c8f04d765f6f",
+			"revisionTime": "2016-02-26T13:51:49-08:00"
+		},
+		{
 			"origin": "github.com/tsuru/tsuru/vendor/github.com/howeyc/fsnotify",
 			"path": "github.com/howeyc/fsnotify",
 			"revision": "5102fde921d31f59c6e45d835aa01f0213aade0f",
