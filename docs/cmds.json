@@ -3,6 +3,10 @@
     "usage": "tsuru-admin machine-template-remove <name>", 
     "desc": "Removes an existing machine template.\n\nMinimum # of arguments: 1\n"
   }, 
+  "docker-node-remove": {
+    "usage": "tsuru-admin docker-node-remove <address> [--no-rebalance] [--destroy] [-y]", 
+    "desc": "Removes a node from the cluster.\n\nBy default tsuru will redistribute all containers present on the removed node\namong other nodes. This behavior can be inhibited using the [[--no-rebalance]]\nflag.\n\nIf the node being removed was created using a IaaS provider tsuru will NOT\ndestroy the machine on the IaaS, unless the [[--destroy]] flag is used.\n\nFlags:\n  \n  --destroy  (= false)\n      Destroy node from IaaS\n  --no-rebalance  (= false)\n      Do not rebalance containers from removed node.\n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
+  }, 
   "help": {
     "usage": "tsuru-admin command [args]", 
     "desc": ""
@@ -14,6 +18,10 @@
   "target-list": {
     "usage": "tsuru-admin target-list", 
     "desc": "Displays the list of targets, marking the current.\n\nOther commands related to target:\n\n  - target-add: adds a new target to the list of targets\n  - target-set: defines one of the targets in the list as the current target\n  - target-remove: removes one target from the list\n\n"
+  }, 
+  "docker-healing-info": {
+    "usage": "tsuru-admin docker-healing-info", 
+    "desc": "Show the current configuration for active healing nodes.\n\n"
   }, 
   "docker-node-list": {
     "usage": "tsuru-admin docker-node-list [--filter/-f <metadata>=<value>]...", 
@@ -119,9 +127,9 @@
     "usage": "tsuru-admin log-remove", 
     "desc": "This command was removed. This action is no longer supported.\n\n"
   }, 
-  "docker-node-remove": {
-    "usage": "tsuru-admin docker-node-remove <address> [--no-rebalance] [--destroy] [-y]", 
-    "desc": "Removes a node from the cluster.\n\nBy default tsuru will redistribute all containers present on the removed node\namong other nodes. This behavior can be inhibited using the [[--no-rebalance]]\nflag.\n\nIf the node being removed was created using a IaaS provider tsuru will NOT\ndestroy the machine on the IaaS, unless the [[--destroy]] flag is used.\n\nFlags:\n  \n  --destroy  (= false)\n      Destroy node from IaaS\n  --no-rebalance  (= false)\n      Do not rebalance containers from removed node.\n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \nMinimum # of arguments: 1\n"
+  "docker-healing-delete": {
+    "usage": "tsuru-admin docker-healing-delete [-p/--pool pool] [--enabled] [--max-unresponsive] [--max-unsuccessful]", 
+    "desc": "Delete a node healing configuration entry.\n\nIf [[--pool]] is provided the configuration entries from the specified pool\nwill be removed and the default value will be used.\n\nIf [[--pool]] is not provided the configuration entry will be removed from the\ndefault configuration.\n\nFlags:\n  \n  --enabled  (= false)\n      Remove the 'enabled' configuration option\n  --max-unresponsive  (= false)\n      Remove the 'max-unresponsive' configuration option\n  --max-unsuccessful  (= false)\n      Remove the 'max-unsuccessful' configuration option\n  -p, --pool (= \"\")\n      The pool name from where the configuration will be removed. If unset it'll delete the default healing configuration.\n  -y, --assume-yes  (= false)\n      Don't ask for confirmation.\n  \n"
   }, 
   "docker-autoscale-run": {
     "usage": "tsuru-admin docker-autoscale-run [-y/--assume-yes]", 
@@ -201,6 +209,10 @@
   "app-shell": {
     "usage": "tsuru-admin app-shell [unit-id] -a/--app <appname>", 
     "desc": "Opens a remote shell inside unit, using the API server as a proxy. You\ncan access an app unit just giving app name, or specifying the id of the unit.\nYou can get the ID of the unit using the app-info command.\n\nFlags:\n  \n  -a, --app (= \"\")\n      The name of the app.\n  \n"
+  }, 
+  "docker-healing-update": {
+    "usage": "tsuru-admin docker-healing-update [-p/--pool pool] [--enable] [--disable] [--max-unresponsive <seconds>] [--max-unsuccessful <seconds>]", 
+    "desc": "Update node healing configuration\n\nFlags:\n  \n  --disable  (= false)\n      Disable active node healing\n  --enable  (= false)\n      Enable active node healing\n  --max-unresponsive  (= -1)\n      Number of seconds tsuru will wait for the node to notify it's alive\n  --max-unsuccessful  (= -1)\n      Number of seconds tsuru will wait for the node to run successul checks\n  -p, --pool (= \"\")\n      The pool name to which the configuration will apply. If unset it'll be set as default for all pools.\n  \n"
   }, 
   "login": {
     "usage": "tsuru-admin login [email]", 
