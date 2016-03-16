@@ -125,6 +125,15 @@ Healer
 .. tsuru-command:: docker-healing-list
    :title: List latest healing events
 
+.. tsuru-command:: docker-healing-info
+   :title: Show node healing config information
+
+.. tsuru-command:: docker-healing-update
+   :title: Update node healing configuration
+
+.. tsuru-command:: docker-healing-delete
+   :title: Delete node healing configuration
+
 Platform management
 ===================
 
