@@ -15,11 +15,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ajg/form"
 	"github.com/tsuru/gnuflag"
 	"github.com/tsuru/tsuru/cmd"
 	tsuruIo "github.com/tsuru/tsuru/io"
 	"github.com/tsuru/tsuru/net"
-	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/provision/docker/container"
 )
 
@@ -703,34 +703,22 @@ func (c *dockerLogUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 	if err != nil {
 		return err
 	}
-	envList := []provision.Entry{
-		{Name: "log-driver", Value: c.logDriver},
+	conf := container.DockerLogConfig{
+		Driver:  c.logDriver,
+		LogOpts: map[string]string(c.logOpts),
 	}
-	for name, value := range c.logOpts {
-		envList = append(envList, provision.Entry{Name: name, Value: value})
-	}
-	conf := provision.ScopedConfig{}
-	if c.pool == "" {
-		conf.Envs = envList
-	} else {
-		conf.Pools = []provision.PoolEntry{{
-			Name: c.pool,
-			Envs: envList,
-		}}
-	}
-	b, err := json.Marshal(logsSetData{
-		Restart: c.restart,
-		Config:  conf,
-	})
+	values, err := form.EncodeToValues(conf)
 	if err != nil {
 		return err
 	}
-	buffer := bytes.NewBuffer(b)
-	request, err := http.NewRequest("POST", url, buffer)
+	values.Set("pool", c.pool)
+	values.Set("restart", strconv.FormatBool(c.restart))
+	reader := strings.NewReader(values.Encode())
+	request, err := http.NewRequest("POST", url, reader)
 	if err != nil {
 		return err
 	}
-	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	response, err := client.Do(request)
 	if err != nil {
 		return err
@@ -764,32 +752,33 @@ func (c *dockerLogInfo) Run(context *cmd.Context, client *cmd.Client) error {
 		return err
 	}
 	defer response.Body.Close()
-	var conf provision.ScopedConfig
+	var conf map[string]container.DockerLogConfig
 	err = json.NewDecoder(response.Body).Decode(&conf)
 	if err != nil {
 		return err
 	}
+	baseConf := conf[""]
+	delete(conf, "")
 	t := cmd.Table{Headers: cmd.Row([]string{"Name", "Value"})}
-	for _, envVar := range conf.Envs {
-		if envVar.Name == container.DockerLogDriverConfig {
-			fmt.Fprintf(context.Stdout, "Log driver [default]: %s\n", envVar.Value)
-			continue
-		}
-		t.AddRow(cmd.Row([]string{envVar.Name, fmt.Sprintf("%v", envVar.Value)}))
+	fmt.Fprintf(context.Stdout, "Log driver [default]: %s\n", baseConf.Driver)
+	for optName, optValue := range baseConf.LogOpts {
+		t.AddRow(cmd.Row([]string{optName, optValue}))
 	}
 	if t.Rows() > 0 {
 		t.Sort()
 		context.Stdout.Write(t.Bytes())
 	}
-	sort.Sort(provision.ConfigPoolEntryList(conf.Pools))
-	for _, pool := range conf.Pools {
+	poolNames := make([]string, 0, len(baseConf.LogOpts))
+	for poolName := range conf {
+		poolNames = append(poolNames, poolName)
+	}
+	sort.Strings(poolNames)
+	for _, poolName := range poolNames {
+		poolConf := conf[poolName]
 		t := cmd.Table{Headers: cmd.Row([]string{"Name", "Value"})}
-		for _, envVar := range pool.Envs {
-			if envVar.Name == container.DockerLogDriverConfig {
-				fmt.Fprintf(context.Stdout, "\nLog driver [pool %s]: %s\n", pool.Name, envVar.Value)
-				continue
-			}
-			t.AddRow(cmd.Row([]string{envVar.Name, fmt.Sprintf("%v", envVar.Value)}))
+		fmt.Fprintf(context.Stdout, "\nLog driver [pool %s]: %s\n", poolName, poolConf.Driver)
+		for optName, optValue := range poolConf.LogOpts {
+			t.AddRow(cmd.Row([]string{optName, optValue}))
 		}
 		if t.Rows() > 0 {
 			t.Sort()

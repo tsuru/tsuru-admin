@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/schema"
+	"github.com/ajg/form"
 	"github.com/tsuru/docker-cluster/cluster"
 	"github.com/tsuru/monsterqueue"
 	"github.com/tsuru/tsuru/api"
@@ -31,7 +31,6 @@ import (
 	tsuruIo "github.com/tsuru/tsuru/io"
 	"github.com/tsuru/tsuru/net"
 	"github.com/tsuru/tsuru/permission"
-	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/provision/docker/bs"
 	"github.com/tsuru/tsuru/provision/docker/container"
 	"github.com/tsuru/tsuru/provision/docker/healer"
@@ -320,15 +319,11 @@ func updateNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	if address == "" {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: "address is required"}
 	}
-	nodes, err := mainDockerProvisioner.Cluster().UnfilteredNodes()
+	oldNode, err := mainDockerProvisioner.Cluster().GetNode(address)
 	if err != nil {
-		return err
-	}
-	var oldNode *cluster.Node
-	for i := range nodes {
-		if nodes[i].Address == address {
-			oldNode = &nodes[i]
-			break
+		return &errors.HTTP{
+			Code:    http.StatusNotFound,
+			Message: err.Error(),
 		}
 	}
 	oldPool, _ := oldNode.Metadata["pool"]
@@ -579,29 +574,35 @@ func autoScaleRunHandler(w http.ResponseWriter, r *http.Request, t auth.Token) e
 }
 
 func bsEnvSetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	var requestConfig provision.ScopedConfig
-	err := json.NewDecoder(r.Body).Decode(&requestConfig)
-	if err != nil {
-		return &errors.HTTP{
-			Code:    http.StatusBadRequest,
-			Message: fmt.Sprintf("unable to parse body as json: %s", err),
-		}
-	}
-	if len(requestConfig.Envs) > 0 && !permission.Check(t, permission.PermNodeBs) {
-		return permission.ErrUnauthorized
-	}
-	for _, poolEnv := range requestConfig.Pools {
-		hasPermission := permission.Check(t, permission.PermNodeBs,
-			permission.Context(permission.CtxPool, poolEnv.Name))
-		if !hasPermission {
-			return permission.ErrUnauthorized
-		}
-	}
-	currentConfig, err := bs.LoadConfig(nil)
+	err := r.ParseForm()
 	if err != nil {
 		return err
 	}
-	err = currentConfig.UpdateWith(&requestConfig)
+	poolName := r.FormValue("pool")
+	if poolName == "" {
+		if !permission.Check(t, permission.PermNodeBs) {
+			return permission.ErrUnauthorized
+		}
+	} else {
+		if !permission.Check(t, permission.PermNodeBs,
+			permission.Context(permission.CtxPool, poolName)) {
+			return permission.ErrUnauthorized
+		}
+	}
+	delete(r.Form, "pool")
+	var entry bs.BSConfigEntry
+	err = form.DecodeValues(&entry, r.Form)
+	if err != nil {
+		return &errors.HTTP{
+			Code:    http.StatusBadRequest,
+			Message: fmt.Sprintf("unable to parse entries: %s", err),
+		}
+	}
+	bsConf, err := bs.LoadConfig()
+	if err != nil {
+		return err
+	}
+	err = bsConf.SaveMerge(poolName, entry)
 	if err != nil {
 		return err
 	}
@@ -620,11 +621,16 @@ func bsConfigGetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) er
 	if err != nil {
 		return err
 	}
-	currentConfig, err := bs.LoadConfig(pools)
+	bsConf, err := bs.LoadConfig()
 	if err != nil {
 		return err
 	}
-	return json.NewEncoder(w).Encode(currentConfig)
+	entries := map[string]bs.BSConfigEntry{}
+	err = bsConf.LoadPools(pools, entries)
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(w).Encode(entries)
 }
 
 func bsUpgradeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -665,44 +671,51 @@ func logsConfigGetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	if err != nil {
 		return err
 	}
-	conf, err := provision.FindScopedConfig("logs")
+	configEntries, err := container.LogLoadAll()
 	if err != nil {
 		return err
 	}
-	conf.FilterPools(pools)
-	return json.NewEncoder(w).Encode(conf)
-}
-
-type logsSetData struct {
-	Config  provision.ScopedConfig
-	Restart bool
+	if len(pools) == 0 {
+		return json.NewEncoder(w).Encode(configEntries)
+	}
+	newMap := map[string]container.DockerLogConfig{}
+	for _, p := range pools {
+		if entry, ok := configEntries[p]; ok {
+			newMap[p] = entry
+		}
+	}
+	return json.NewEncoder(w).Encode(newMap)
 }
 
 func logsConfigSetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	var requestData logsSetData
-	err := json.NewDecoder(r.Body).Decode(&requestData)
+	err := r.ParseForm()
 	if err != nil {
 		return &errors.HTTP{
 			Code:    http.StatusBadRequest,
-			Message: fmt.Sprintf("unable to parse body as json: %s", err),
+			Message: fmt.Sprintf("unable to parse form values: %s", err),
 		}
 	}
-	requestConfig := requestData.Config
-	if len(requestConfig.Envs) > 0 && !permission.Check(t, permission.PermPoolUpdateLogs) {
+	pool := r.Form.Get("pool")
+	restart, _ := strconv.ParseBool(r.Form.Get("restart"))
+	delete(r.Form, "pool")
+	delete(r.Form, "restart")
+	var conf container.DockerLogConfig
+	err = form.DecodeValues(&conf, r.Form)
+	if err != nil {
+		return &errors.HTTP{
+			Code:    http.StatusBadRequest,
+			Message: fmt.Sprintf("unable to parse fields in docker log config: %s", err),
+		}
+	}
+	if pool == "" && !permission.Check(t, permission.PermPoolUpdateLogs) {
 		return permission.ErrUnauthorized
 	}
-	updateAll := len(requestConfig.Envs) > 0
-	var receivedPools []string
-	for _, poolEnv := range requestConfig.Pools {
-		receivedPools = append(receivedPools, poolEnv.Name)
-		hasPermission := permission.Check(t, permission.PermPoolUpdateLogs,
-			permission.Context(permission.CtxPool, poolEnv.Name))
-		if !hasPermission {
-			return permission.ErrUnauthorized
-		}
+	hasPermission := permission.Check(t, permission.PermPoolUpdateLogs,
+		permission.Context(permission.CtxPool, pool))
+	if !hasPermission {
+		return permission.ErrUnauthorized
 	}
-	dockerLog := container.DockerLog{}
-	err = dockerLog.Update(&requestConfig)
+	err = conf.Save(pool)
 	if err != nil {
 		return err
 	}
@@ -710,10 +723,10 @@ func logsConfigSetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
 	fmt.Fprintln(writer, "Log config successfully updated.")
-	if requestData.Restart {
+	if restart {
 		filter := &app.Filter{}
-		if !updateAll {
-			filter.Pools = receivedPools
+		if pool != "" {
+			filter.Pools = []string{pool}
 		}
 		tryRestartAppsByFilter(filter, writer)
 	}
@@ -795,11 +808,9 @@ func nodeHealingUpdate(w http.ResponseWriter, r *http.Request, t auth.Token) err
 			return permission.ErrUnauthorized
 		}
 	}
-	dec := schema.NewDecoder()
-	dec.ZeroEmpty(true)
-	dec.IgnoreUnknownKeys(true)
 	var config healer.NodeHealerConfig
-	err = dec.Decode(&config, r.Form)
+	delete(r.Form, "pool")
+	err = form.DecodeValues(&config, r.Form)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/tsuru/tsuru/auth"
@@ -15,30 +14,29 @@ import (
 	"github.com/tsuru/tsuru/permission"
 	"github.com/tsuru/tsuru/rec"
 	"github.com/tsuru/tsuru/service"
-	"gopkg.in/yaml.v1"
 )
 
-type serviceYaml struct {
-	Id       string
-	Username string
-	Password string
-	Endpoint map[string]string
-	Team     string
-}
-
-func (sy *serviceYaml) validate() error {
-	if sy.Id == "" {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: "You must provide an id in the manifest file."}
+func serviceValidate(s service.Service) error {
+	if s.Name == "" {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: "Service id is required"}
 	}
-	if sy.Password == "" {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: "You must provide a password in the manifest file."}
+	if s.Password == "" {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: "Service password is requried"}
 	}
-	if _, ok := sy.Endpoint["production"]; !ok {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: "You must provide a production endpoint in the manifest file."}
+	if endpoint, ok := s.Endpoint["production"]; !ok || endpoint == "" {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: "Service production endpoint is required"}
 	}
 	return nil
 }
 
+// title: service list
+// path: /services
+// method: GET
+// produce: application/json
+// responses:
+//   200: List services
+//   204: No content
+//   401: Unauthorized
 func serviceList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	rec.Log(t.GetUserName(), "list-services")
 	teams := []string{}
@@ -86,22 +84,30 @@ func serviceList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if n != len(b) {
 		return &errors.HTTP{Code: http.StatusInternalServerError, Message: "Failed to write response body"}
 	}
+	w.Header().Set("Content-Type", "application/json")
 	return err
 }
 
+// title: service create
+// path: /services
+// method: POST
+// consume: application/x-www-form-urlencoded
+// responses:
+//   201: Service created
+//   400: Invalid data
+//   401: Unauthorized
+//   409: Service already exists
 func serviceCreate(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err
+	s := service.Service{
+		Name:     r.FormValue("id"),
+		Username: r.FormValue("username"),
+		Endpoint: map[string]string{"production": r.FormValue("endpoint")},
+		Password: r.FormValue("password"),
 	}
-	var input serviceYaml
-	err = yaml.Unmarshal(body, &input)
-	if err != nil {
-		return err
-	}
-	if input.Team == "" {
-		input.Team, err = permission.TeamForPermission(t, permission.PermServiceCreate)
+	team := r.FormValue("team")
+	if team == "" {
+		var err error
+		team, err = permission.TeamForPermission(t, permission.PermServiceCreate)
 		if err == permission.ErrTooManyTeams {
 			return &errors.HTTP{
 				Code:    http.StatusBadRequest,
@@ -112,24 +118,18 @@ func serviceCreate(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 			return err
 		}
 	}
-	err = input.validate()
+	s.OwnerTeams = []string{team}
+	err := serviceValidate(s)
 	if err != nil {
 		return err
 	}
 	allowed := permission.Check(t, permission.PermServiceCreate,
-		permission.Context(permission.CtxTeam, input.Team),
+		permission.Context(permission.CtxTeam, s.OwnerTeams[0]),
 	)
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	rec.Log(t.GetUserName(), "create-service", input.Id, input.Endpoint)
-	s := service.Service{
-		Name:       input.Id,
-		Username:   input.Username,
-		Endpoint:   input.Endpoint,
-		Password:   input.Password,
-		OwnerTeams: []string{input.Team},
-	}
+	rec.Log(t.GetUserName(), "create-service", s.Name, s.Endpoint["production"])
 	err = s.Create()
 	if err != nil {
 		httpError := http.StatusInternalServerError
@@ -138,26 +138,33 @@ func serviceCreate(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		}
 		return &errors.HTTP{Code: httpError, Message: err.Error()}
 	}
+	w.WriteHeader(http.StatusCreated)
 	fmt.Fprint(w, "success")
 	return nil
 }
 
+// title: service update
+// path: /services/{name}
+// method: PUT
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Service updated
+//   400: Invalid data
+//   401: Unauthorized
+//   403: Forbidden (team is not the owner)
+//   404: Service not found
 func serviceUpdate(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
+	d := service.Service{
+		Username: r.FormValue("username"),
+		Endpoint: map[string]string{"production": r.FormValue("endpoint")},
+		Password: r.FormValue("password"),
+		Name:     r.URL.Query().Get(":name"),
+	}
+	err := serviceValidate(d)
 	if err != nil {
 		return err
 	}
-	var y serviceYaml
-	err = yaml.Unmarshal(body, &y)
-	if err != nil {
-		return err
-	}
-	err = y.validate()
-	if err != nil {
-		return err
-	}
-	s, err := getService(y.Id)
+	s, err := getService(d.Name)
 	if err != nil {
 		return err
 	}
@@ -169,17 +176,24 @@ func serviceUpdate(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !allowed {
 		return permission.ErrUnauthorized
 	}
-	rec.Log(t.GetUserName(), "update-service", y.Id, y.Endpoint)
-	s.Endpoint = y.Endpoint
-	s.Password = y.Password
-	s.Username = y.Username
+	rec.Log(t.GetUserName(), "update-service", d.Name, d.Endpoint["production"])
+	s.Endpoint = d.Endpoint
+	s.Password = d.Password
+	s.Username = d.Username
 	if err = s.Update(); err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
 
+// title: service update
+// path: /services/{name}
+// method: DELETE
+// responses:
+//   200: Service removed
+//   401: Unauthorized
+//   403: Forbidden (team is not the owner or service with instances)
+//   404: Service not found
 func serviceDelete(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	s, err := getService(r.URL.Query().Get(":name"))
 	if err != nil {
@@ -199,14 +213,14 @@ func serviceDelete(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		return err
 	}
 	if len(instances) > 0 {
-		msg := "This service cannot be removed because it has instances.\nPlease remove these instances before removing the service."
+		msg := "This service cannot be removed because it has instances.\n"
+		msg += "Please remove these instances before removing the service."
 		return &errors.HTTP{Code: http.StatusForbidden, Message: msg}
 	}
 	err = s.Delete()
 	if err != nil {
 		return err
 	}
-	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
 
@@ -228,6 +242,15 @@ func serviceProxy(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	return service.Proxy(&s, path, w, r)
 }
 
+// title: grant access to a service
+// path: /services/{service}/team/{team}
+// method: PUT
+// responses:
+//   200: Service updated
+//   400: Team not found
+//   401: Unauthorized
+//   404: Service not found
+//   409: Team already has access to this service
 func grantServiceAccess(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	serviceName := r.URL.Query().Get(":service")
 	s, err := getService(serviceName)
@@ -246,7 +269,7 @@ func grantServiceAccess(w http.ResponseWriter, r *http.Request, t auth.Token) er
 	team, err := auth.GetTeam(teamName)
 	if err != nil {
 		if err == auth.ErrTeamNotFound {
-			return &errors.HTTP{Code: http.StatusNotFound, Message: "Team not found"}
+			return &errors.HTTP{Code: http.StatusBadRequest, Message: "Team not found"}
 		}
 		return err
 	}
@@ -258,6 +281,15 @@ func grantServiceAccess(w http.ResponseWriter, r *http.Request, t auth.Token) er
 	return s.Update()
 }
 
+// title: revoke access to a service
+// path: /services/{service}/team/{team}
+// method: DELETE
+// responses:
+//   200: Access revoked
+//   400: Team not found
+//   401: Unauthorized
+//   404: Service not found
+//   409: Team does not has access to this service
 func revokeServiceAccess(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	serviceName := r.URL.Query().Get(":service")
 	s, err := getService(serviceName)
@@ -276,7 +308,7 @@ func revokeServiceAccess(w http.ResponseWriter, r *http.Request, t auth.Token) e
 	team, err := auth.GetTeam(teamName)
 	if err != nil {
 		if err == auth.ErrTeamNotFound {
-			return &errors.HTTP{Code: http.StatusNotFound, Message: "Team not found"}
+			return &errors.HTTP{Code: http.StatusBadRequest, Message: "Team not found"}
 		}
 		return err
 	}
@@ -287,11 +319,19 @@ func revokeServiceAccess(w http.ResponseWriter, r *http.Request, t auth.Token) e
 	rec.Log(t.GetUserName(), "revoke-service-access", "service="+serviceName, "team="+teamName)
 	err = s.RevokeAccess(team)
 	if err != nil {
-		return &errors.HTTP{Code: http.StatusNotFound, Message: err.Error()}
+		return &errors.HTTP{Code: http.StatusConflict, Message: err.Error()}
 	}
 	return s.Update()
 }
 
+// title: change service documentation
+// path: /services/{name}/doc
+// consume: application/x-www-form-urlencoded
+// method: PUT
+// responses:
+//   200: Documentation updated
+//   401: Unauthorized
+//   403: Forbidden (team is not the owner or service with instances)
 func serviceAddDoc(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	serviceName := r.URL.Query().Get(":name")
 	s, err := getService(serviceName)

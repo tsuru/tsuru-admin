@@ -19,8 +19,17 @@ import (
 	"github.com/tsuru/tsuru/service"
 )
 
+// title: service instance create
+// path: /services/{service}/instances
+// method: POST
+// consume: application/x-www-form-urlencoded
+// responses:
+//   201: Service created
+//   400: Invalid data
+//   401: Unauthorized
+//   409: Service already exists
 func createServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	serviceName := r.FormValue("service_name")
+	serviceName := r.URL.Query().Get(":service")
 	user, err := t.User()
 	if err != nil {
 		return err
@@ -78,6 +87,15 @@ func createServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 	return err
 }
 
+// title: service instance update
+// path: /services/{service}/instances/{instance}
+// method: PUT
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Service instance updated
+//   400: Invalid data
+//   401: Unauthorized
+//   404: Service instance not found
 func updateServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	serviceName := r.URL.Query().Get(":service")
 	instanceName := r.URL.Query().Get(":instance")
@@ -107,6 +125,14 @@ func updateServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 	return service.UpdateService(si)
 }
 
+// title: remove service instance
+// path: /services/{name}/instances/{instance}
+// method: DELETE
+// produce: application/x-json-stream
+// responses:
+//   200: Service removed
+//   401: Unauthorized
+//   404: Service instance not found
 func removeServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	unbindAll := r.URL.Query().Get("unbindall")
 	serviceName := r.URL.Query().Get(":service")
@@ -115,6 +141,7 @@ func removeServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 	keepAliveWriter := io.NewKeepAliveWriter(w, 30*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &io.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
+	w.Header().Set("Content-Type", "application/x-json-stream")
 	serviceInstance, err := getServiceInstanceOrError(serviceName, instanceName)
 	if err != nil {
 		writer.Encode(io.SimpleJsonMessage{Error: err.Error()})
@@ -209,6 +236,14 @@ func readableServices(t auth.Token) ([]service.Service, error) {
 	return service.GetServicesByTeamsAndServices(teams, serviceNames)
 }
 
+// title: service instance list
+// path: /services/instances
+// method: GET
+// produce: application/json
+// responses:
+//   200: List services instances
+//   204: No content
+//   401: Unauthorized
 func serviceInstances(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	appName := r.URL.Query().Get("app")
 	rec.Log(t.GetUserName(), "list-service-instances", "app="+appName)
@@ -253,6 +288,7 @@ func serviceInstances(w http.ResponseWriter, r *http.Request, t auth.Token) erro
 	if n != len(body) {
 		return &errors.HTTP{Code: http.StatusInternalServerError, Message: "Failed to write the response body."}
 	}
+	w.Header().Set("Content-Type", "application/json")
 	return err
 }
 

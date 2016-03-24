@@ -18,9 +18,9 @@ import (
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/log"
 	"github.com/tsuru/tsuru/net"
-	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/provision/docker/container"
 	"github.com/tsuru/tsuru/provision/docker/fix"
+	"github.com/tsuru/tsuru/scopedconfig"
 )
 
 type DockerProvisioner interface {
@@ -29,12 +29,20 @@ type DockerProvisioner interface {
 }
 
 const (
-	bsUniqueID         = "bs"
+	bsConfigCollection = "bs"
 	bsDefaultImageName = "tsuru/bs:v1"
 )
 
+type BSConfigEntry struct {
+	Token string
+	Image string
+	Envs  map[string]string
+}
+
 func EnvListForEndpoint(dockerEndpoint, poolName string) ([]string, error) {
-	bsConf, err := provision.FindScopedConfig(bsUniqueID)
+	bsConf := scopedconfig.FindScopedConfig(bsConfigCollection)
+	var baseConf, poolConf BSConfigEntry
+	err := bsConf.LoadWithBase(poolName, &baseConf, &poolConf)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +56,7 @@ func EnvListForEndpoint(dockerEndpoint, poolName string) ([]string, error) {
 	if socket != "" {
 		endpoint = "unix:///var/run/docker.sock"
 	}
-	token, err := getToken(bsConf)
+	token, err := getToken(bsConf, baseConf.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -59,11 +67,11 @@ func EnvListForEndpoint(dockerEndpoint, poolName string) ([]string, error) {
 		"SYSLOG_LISTEN_ADDRESS": fmt.Sprintf("udp://0.0.0.0:%d", container.BsSysLogPort()),
 	}
 	var envList []string
-	for envName, envValue := range bsConf.PoolEntries(poolName) {
+	for envName, envValue := range poolConf.Envs {
 		if _, isBase := baseEnvMap[envName]; isBase {
 			continue
 		}
-		envList = append(envList, fmt.Sprintf("%s=%s", envName, envValue.Value))
+		envList = append(envList, fmt.Sprintf("%s=%s", envName, envValue))
 	}
 	for name, value := range baseEnvMap {
 		envList = append(envList, fmt.Sprintf("%s=%s", name, value))
@@ -71,8 +79,7 @@ func EnvListForEndpoint(dockerEndpoint, poolName string) ([]string, error) {
 	return envList, nil
 }
 
-func getToken(bsConf *provision.ScopedConfig) (string, error) {
-	token := bsConf.GetExtraString("token")
+func getToken(bsConf *scopedconfig.ScopedConfig, token string) (string, error) {
 	if token != "" {
 		return token, nil
 	}
@@ -81,7 +88,7 @@ func getToken(bsConf *provision.ScopedConfig) (string, error) {
 		return "", err
 	}
 	token = tokenData.GetValue()
-	isSet, err := bsConf.SetExtraAtomic("token", token)
+	isSet, err := bsConf.SetFieldAtomic("", "token", token)
 	if isSet {
 		return token, nil
 	}
@@ -89,28 +96,21 @@ func getToken(bsConf *provision.ScopedConfig) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	token = bsConf.GetExtraString("token")
-	if token == "" {
+	var entry BSConfigEntry
+	err = bsConf.LoadBase(&entry)
+	if entry.Token == "" {
 		return "", fmt.Errorf("invalid empty bs api token")
 	}
-	return token, nil
+	return entry.Token, nil
 }
 
 func SaveImage(digest string) error {
-	bsConf, err := provision.FindScopedConfig(bsUniqueID)
-	if err != nil {
-		return err
-	}
-	return bsConf.SetExtra("image", digest)
+	bsConf := scopedconfig.FindScopedConfig(bsConfigCollection)
+	return bsConf.SetField("", "image", digest)
 }
 
-func LoadConfig(pools []string) (*provision.ScopedConfig, error) {
-	bsConf, err := provision.FindScopedConfig(bsUniqueID)
-	if err != nil {
-		return nil, err
-	}
-	bsConf.FilterPools(pools)
-	return bsConf, nil
+func LoadConfig() (*scopedconfig.ScopedConfig, error) {
+	return scopedconfig.FindScopedConfig(bsConfigCollection), nil
 }
 
 func dockerClient(endpoint string) (*docker.Client, error) {
@@ -123,8 +123,7 @@ func dockerClient(endpoint string) (*docker.Client, error) {
 	return client, nil
 }
 
-func getImage(bsConf *provision.ScopedConfig) string {
-	image := bsConf.GetExtraString("image")
+func getImage(image string) string {
 	if image != "" {
 		return image
 	}
@@ -140,11 +139,13 @@ func createContainer(dockerEndpoint, poolName string, p DockerProvisioner, relau
 	if err != nil {
 		return err
 	}
-	bsConf, err := provision.FindScopedConfig(bsUniqueID)
+	bsConf := scopedconfig.FindScopedConfig(bsConfigCollection)
+	var configEntry BSConfigEntry
+	err = bsConf.LoadBase(&configEntry)
 	if err != nil {
 		return err
 	}
-	bsImage := getImage(bsConf)
+	bsImage := getImage(configEntry.Image)
 	err = pullBsImage(bsImage, dockerEndpoint, p)
 	if err != nil {
 		return err
@@ -276,7 +277,7 @@ type ClusterHook struct {
 	Provisioner DockerProvisioner
 }
 
-func (h *ClusterHook) BeforeCreateContainer(node cluster.Node) error {
+func (h *ClusterHook) RunClusterHook(evt cluster.HookEvent, node *cluster.Node) error {
 	err := createContainer(node.Address, node.Metadata["pool"], h.Provisioner, false)
 	if err != nil {
 		return err
