@@ -653,8 +653,8 @@
 		},
 		{
 			"path": "github.com/tsuru/tsuru/provision/docker",
-			"revision": "512a337cdfcdddeddec56a752ad39b7004801dc9",
-			"revisionTime": "2016-03-24T18:51:17-03:00"
+			"revision": "9c0ebb633e0915d36bdcc9f919deaea6f38b1937",
+			"revisionTime": "2016-03-24T19:25:56-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/provision/docker/bs",
@@ -673,8 +673,8 @@
 		},
 		{
 			"path": "github.com/tsuru/tsuru/provision/docker/healer",
-			"revision": "d88bec6acfecb81334c40d4824af419c5d7f4dea",
-			"revisionTime": "2016-03-24T15:59:07-03:00"
+			"revision": "9c0ebb633e0915d36bdcc9f919deaea6f38b1937",
+			"revisionTime": "2016-03-24T19:25:56-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/provision/provisiontest",
@@ -744,8 +744,8 @@
 		},
 		{
 			"path": "github.com/tsuru/tsuru/scopedconfig",
-			"revision": "d88bec6acfecb81334c40d4824af419c5d7f4dea",
-			"revisionTime": "2016-03-24T15:59:07-03:00"
+			"revision": "9c0ebb633e0915d36bdcc9f919deaea6f38b1937",
+			"revisionTime": "2016-03-24T19:25:56-03:00"
 		},
 		{
 			"path": "github.com/tsuru/tsuru/service",
