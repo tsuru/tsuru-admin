@@ -169,7 +169,7 @@ func (s *S) TestUpdatePoolToTheSchedulerCmd(c *check.C) {
 			def := req.FormValue("default") == ""
 			public := req.FormValue("public") == "true"
 			url := strings.HasSuffix(req.URL.Path, "/pools/poolTest")
-			method := req.Method == "POST"
+			method := req.Method == "PUT"
 			force := req.FormValue("force") == "false"
 			return public && method && url && force && def
 		},
@@ -216,7 +216,7 @@ func (s *S) TestForceToOverwriteDefaultPoolInUpdate(c *check.C) {
 			public := req.FormValue("public") == ""
 			url := strings.HasSuffix(req.URL.Path, "/pools/test")
 			force := req.FormValue("force") == "true"
-			method := req.Method == "POST"
+			method := req.Method == "PUT"
 			return url && force && def && public && method
 		},
 	}

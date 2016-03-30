@@ -62,7 +62,7 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 	v.Set("default", strconv.FormatBool(c.defaultPool))
 	v.Set("force", strconv.FormatBool(c.forceDefault))
 	u, err := cmd.GetURL("/pools")
-	err = doRequest(client, u, v.Encode())
+	err = doRequest(client, u, "POST", v.Encode())
 	if err != nil {
 		if e, ok := err.(*errors.HTTP); ok && e.Code == http.StatusPreconditionFailed {
 			retryMessage := "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) "
@@ -70,7 +70,7 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 			url, _ := cmd.GetURL("/pools")
 			successMessage := "Pool successfully registered.\n"
 			failMessage := "Pool add aborted.\n"
-			return confirmAction(ctx, client, url, v.Encode(), retryMessage, failMessage, successMessage)
+			return confirmAction(ctx, client, url, "POST", v.Encode(), retryMessage, failMessage, successMessage)
 		}
 		return err
 	}
@@ -78,8 +78,8 @@ func (c *addPoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error 
 	return nil
 }
 
-func doRequest(client *cmd.Client, url string, body string) error {
-	req, err := http.NewRequest("POST", url, strings.NewReader(body))
+func doRequest(client *cmd.Client, url, method, body string) error {
+	req, err := http.NewRequest(method, url, strings.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -91,12 +91,12 @@ func doRequest(client *cmd.Client, url string, body string) error {
 	return nil
 }
 
-func confirmAction(ctx *cmd.Context, client *cmd.Client, url string, body string, retryMessage, failMessage, successMessage string) error {
+func confirmAction(ctx *cmd.Context, client *cmd.Client, url, method, body string, retryMessage, failMessage, successMessage string) error {
 	var answer string
 	fmt.Fprintf(ctx.Stdout, retryMessage, ctx.Args[0])
 	fmt.Fscanf(ctx.Stdin, "%s", &answer)
 	if answer == "y" || answer == "yes" {
-		err := doRequest(client, url, body)
+		err := doRequest(client, url, method, body)
 		if err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func (c *updatePoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) err
 	}
 	v.Set("force", strconv.FormatBool(c.forceDefault))
 	u, err := cmd.GetURL(fmt.Sprintf("/pools/%s", ctx.Args[0]))
-	err = doRequest(client, u, v.Encode())
+	err = doRequest(client, u, "PUT", v.Encode())
 	if err != nil {
 		if e, ok := err.(*errors.HTTP); ok && e.Code == http.StatusPreconditionFailed {
 			retryMessage := "WARNING: Default pool already exist. Do you want change to %s pool? (y/n) "
@@ -182,7 +182,7 @@ func (c *updatePoolToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) err
 			successMessage := "Pool successfully updated.\n"
 			v.Set("force", "true")
 			u, err = cmd.GetURL(fmt.Sprintf("/pools/%s", ctx.Args[0]))
-			return confirmAction(ctx, client, u, v.Encode(), retryMessage, failMessage, successMessage)
+			return confirmAction(ctx, client, u, "PUT", v.Encode(), retryMessage, failMessage, successMessage)
 		}
 		return err
 	}
