@@ -6,6 +6,7 @@ package docker
 
 import (
 	"encoding/json"
+	stderror "errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -31,9 +32,9 @@ import (
 	tsuruIo "github.com/tsuru/tsuru/io"
 	"github.com/tsuru/tsuru/net"
 	"github.com/tsuru/tsuru/permission"
-	"github.com/tsuru/tsuru/provision/docker/bs"
 	"github.com/tsuru/tsuru/provision/docker/container"
 	"github.com/tsuru/tsuru/provision/docker/healer"
+	"github.com/tsuru/tsuru/provision/docker/nodecontainer"
 	"github.com/tsuru/tsuru/queue"
 	"gopkg.in/mgo.v2"
 )
@@ -62,6 +63,12 @@ func init() {
 	api.RegisterHandler("/docker/bs/upgrade", "POST", api.AuthorizationRequiredHandler(bsUpgradeHandler))
 	api.RegisterHandler("/docker/bs/env", "POST", api.AuthorizationRequiredHandler(bsEnvSetHandler))
 	api.RegisterHandler("/docker/bs", "GET", api.AuthorizationRequiredHandler(bsConfigGetHandler))
+	api.RegisterHandler("/docker/nodecontainers", "GET", api.AuthorizationRequiredHandler(nodeContainerList))
+	api.RegisterHandler("/docker/nodecontainers", "POST", api.AuthorizationRequiredHandler(nodeContainerCreate))
+	api.RegisterHandler("/docker/nodecontainers/{name}", "GET", api.AuthorizationRequiredHandler(nodeContainerInfo))
+	api.RegisterHandler("/docker/nodecontainers/{name}", "DELETE", api.AuthorizationRequiredHandler(nodeContainerDelete))
+	api.RegisterHandler("/docker/nodecontainers/{name}", "POST", api.AuthorizationRequiredHandler(nodeContainerUpdate))
+	api.RegisterHandler("/docker/nodecontainers/{name}/upgrade", "POST", api.AuthorizationRequiredHandler(nodeContainerUpgrade))
 	api.RegisterHandler("/docker/logs", "GET", api.AuthorizationRequiredHandler(logsConfigGetHandler))
 	api.RegisterHandler("/docker/logs", "POST", api.AuthorizationRequiredHandler(logsConfigSetHandler))
 }
@@ -161,7 +168,7 @@ func (p *dockerProvisioner) addNodeForParams(params map[string]string, isRegiste
 		return response, err
 	}
 	jobParams := monsterqueue.JobParams{"endpoint": address, "machine": machineID, "metadata": params}
-	_, err = q.Enqueue(bs.QueueTaskName, jobParams)
+	_, err = q.Enqueue(nodecontainer.QueueTaskName, jobParams)
 	return response, err
 }
 
@@ -574,83 +581,15 @@ func autoScaleRunHandler(w http.ResponseWriter, r *http.Request, t auth.Token) e
 }
 
 func bsEnvSetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	err := r.ParseForm()
-	if err != nil {
-		return err
-	}
-	poolName := r.FormValue("pool")
-	if poolName == "" {
-		if !permission.Check(t, permission.PermNodeBs) {
-			return permission.ErrUnauthorized
-		}
-	} else {
-		if !permission.Check(t, permission.PermNodeBs,
-			permission.Context(permission.CtxPool, poolName)) {
-			return permission.ErrUnauthorized
-		}
-	}
-	delete(r.Form, "pool")
-	var entry bs.BSConfigEntry
-	dec := form.NewDecoder(nil)
-	dec.IgnoreUnknownKeys(true)
-	err = dec.DecodeValues(&entry, r.Form)
-	if err != nil {
-		return &errors.HTTP{
-			Code:    http.StatusBadRequest,
-			Message: fmt.Sprintf("unable to parse entries: %s", err),
-		}
-	}
-	bsConf, err := bs.LoadConfig()
-	if err != nil {
-		return err
-	}
-	err = bsConf.SaveMerge(poolName, entry)
-	if err != nil {
-		return err
-	}
-	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
-	defer keepAliveWriter.Stop()
-	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
-	err = bs.RecreateContainers(mainDockerProvisioner, writer)
-	if err != nil {
-		writer.Encode(tsuruIo.SimpleJsonMessage{Error: err.Error()})
-	}
-	return nil
+	return stderror.New("this route is deprecated, please use POST /docker/nodecontainer/{name} (node-container-update command)")
 }
 
 func bsConfigGetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	pools, err := listContextValues(t, permission.PermNodeBs, true)
-	if err != nil {
-		return err
-	}
-	bsConf, err := bs.LoadConfig()
-	if err != nil {
-		return err
-	}
-	entries := map[string]bs.BSConfigEntry{}
-	err = bsConf.LoadPoolsMerge(pools, entries, false)
-	if err != nil {
-		return err
-	}
-	return json.NewEncoder(w).Encode(entries)
+	return stderror.New("this route is deprecated, please use GET /docker/nodecontainer/{name} (node-container-info command)")
 }
 
 func bsUpgradeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	if !permission.Check(t, permission.PermNodeBs) {
-		return permission.ErrUnauthorized
-	}
-	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
-	defer keepAliveWriter.Stop()
-	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
-	err := bs.SaveImage("")
-	if err != nil {
-		writer.Encode(tsuruIo.SimpleJsonMessage{Error: err.Error()})
-	}
-	err = bs.RecreateContainers(mainDockerProvisioner, writer)
-	if err != nil {
-		writer.Encode(tsuruIo.SimpleJsonMessage{Error: err.Error()})
-	}
-	return nil
+	return stderror.New("this route is deprecated, please use POST /docker/nodecontainer/{name}/upgrade (node-container-upgrade command)")
 }
 
 func listContextValues(t permission.Token, scheme *permission.PermissionScheme, failIfEmpty bool) ([]string, error) {
@@ -847,6 +786,195 @@ func nodeHealingDelete(w http.ResponseWriter, r *http.Request, t auth.Token) err
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func nodeContainerList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	pools, err := listContextValues(t, permission.PermNodecontainerRead, true)
+	if err != nil {
+		return err
+	}
+	lst, err := nodecontainer.AllNodeContainers()
+	if err != nil {
+		return err
+	}
+	if pools != nil {
+		poolMap := map[string]struct{}{}
+		for _, p := range pools {
+			poolMap[p] = struct{}{}
+		}
+		for i, entry := range lst {
+			for poolName := range entry.ConfigPools {
+				if poolName == "" {
+					continue
+				}
+				if _, ok := poolMap[poolName]; !ok {
+					delete(entry.ConfigPools, poolName)
+				}
+			}
+			lst[i] = entry
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(lst)
+}
+
+func nodeContainerCreate(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	err := r.ParseForm()
+	if err != nil {
+		return err
+	}
+	poolName := r.FormValue("pool")
+	if poolName == "" {
+		if !permission.Check(t, permission.PermNodecontainerCreate) {
+			return permission.ErrUnauthorized
+		}
+	} else {
+		if !permission.Check(t, permission.PermNodecontainerCreate,
+			permission.Context(permission.CtxPool, poolName)) {
+			return permission.ErrUnauthorized
+		}
+	}
+	dec := form.NewDecoder(nil)
+	dec.IgnoreUnknownKeys(true)
+	dec.IgnoreCase(true)
+	var config nodecontainer.NodeContainerConfig
+	err = dec.DecodeValues(&config, r.Form)
+	if err != nil {
+		return err
+	}
+	err = nodecontainer.AddNewContainer(poolName, &config)
+	if err != nil {
+		if _, ok := err.(nodecontainer.ValidationErr); ok {
+			return &errors.HTTP{
+				Code:    http.StatusBadRequest,
+				Message: err.Error(),
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+func nodeContainerInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	pools, err := listContextValues(t, permission.PermNodecontainerRead, true)
+	if err != nil {
+		return err
+	}
+	name := r.URL.Query().Get(":name")
+	configMap, err := nodecontainer.LoadNodeContainersForPools(name)
+	if err != nil {
+		return err
+	}
+	if pools != nil {
+		poolMap := map[string]struct{}{}
+		for _, p := range pools {
+			poolMap[p] = struct{}{}
+		}
+		for poolName := range configMap {
+			if poolName == "" {
+				continue
+			}
+			if _, ok := poolMap[poolName]; !ok {
+				delete(configMap, poolName)
+			}
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(configMap)
+}
+
+func nodeContainerUpdate(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	err := r.ParseForm()
+	if err != nil {
+		return err
+	}
+	poolName := r.FormValue("pool")
+	if poolName == "" {
+		if !permission.Check(t, permission.PermNodecontainerUpdate) {
+			return permission.ErrUnauthorized
+		}
+	} else {
+		if !permission.Check(t, permission.PermNodecontainerUpdate,
+			permission.Context(permission.CtxPool, poolName)) {
+			return permission.ErrUnauthorized
+		}
+	}
+	dec := form.NewDecoder(nil)
+	dec.IgnoreUnknownKeys(true)
+	dec.IgnoreCase(true)
+	var config nodecontainer.NodeContainerConfig
+	err = dec.DecodeValues(&config, r.Form)
+	if err != nil {
+		return err
+	}
+	config.Name = r.URL.Query().Get(":name")
+	err = nodecontainer.UpdateContainer(poolName, &config)
+	if err != nil {
+		if err == nodecontainer.ErrNodeContainerNotFound {
+			return &errors.HTTP{
+				Code:    http.StatusNotFound,
+				Message: err.Error(),
+			}
+		}
+		if _, ok := err.(nodecontainer.ValidationErr); ok {
+			return &errors.HTTP{
+				Code:    http.StatusBadRequest,
+				Message: err.Error(),
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+func nodeContainerDelete(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	name := r.URL.Query().Get(":name")
+	poolName := r.FormValue("pool")
+	if poolName == "" {
+		if !permission.Check(t, permission.PermNodecontainerDelete) {
+			return permission.ErrUnauthorized
+		}
+	} else {
+		if !permission.Check(t, permission.PermNodecontainerDelete,
+			permission.Context(permission.CtxPool, poolName)) {
+			return permission.ErrUnauthorized
+		}
+	}
+	err := nodecontainer.RemoveContainer(poolName, name)
+	if err == nodecontainer.ErrNodeContainerNotFound {
+		return &errors.HTTP{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("node container %q not found for pool %q", name, poolName),
+		}
+	}
+	return err
+}
+
+func nodeContainerUpgrade(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	name := r.URL.Query().Get(":name")
+	poolName := r.FormValue("pool")
+	if poolName == "" {
+		if !permission.Check(t, permission.PermNodecontainerUpdateUpgrade) {
+			return permission.ErrUnauthorized
+		}
+	} else {
+		if !permission.Check(t, permission.PermNodecontainerUpdateUpgrade,
+			permission.Context(permission.CtxPool, poolName)) {
+			return permission.ErrUnauthorized
+		}
+	}
+	err := nodecontainer.ResetImage(poolName, name)
+	if err != nil {
+		return err
+	}
+	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
+	defer keepAliveWriter.Stop()
+	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
+	err = nodecontainer.RecreateNamedContainers(mainDockerProvisioner, writer, name)
+	if err != nil {
+		writer.Encode(tsuruIo.SimpleJsonMessage{Error: err.Error()})
 	}
 	return nil
 }

@@ -29,9 +29,9 @@ import (
 	"github.com/tsuru/tsuru/errors"
 	"github.com/tsuru/tsuru/log"
 	"github.com/tsuru/tsuru/provision"
-	"github.com/tsuru/tsuru/provision/docker/bs"
 	"github.com/tsuru/tsuru/provision/docker/container"
 	"github.com/tsuru/tsuru/provision/docker/healer"
+	"github.com/tsuru/tsuru/provision/docker/nodecontainer"
 	"github.com/tsuru/tsuru/router"
 	_ "github.com/tsuru/tsuru/router/galeb"
 	_ "github.com/tsuru/tsuru/router/hipache"
@@ -96,7 +96,7 @@ func (p *dockerProvisioner) initDockerCluster() error {
 	if err != nil {
 		return err
 	}
-	p.cluster.AddHook(cluster.HookEventBeforeContainerCreate, &bs.ClusterHook{Provisioner: p})
+	p.cluster.AddHook(cluster.HookEventBeforeContainerCreate, &nodecontainer.ClusterHook{Provisioner: p})
 	autoHealingNodes, _ := config.GetBool("docker:healing:heal-nodes")
 	if autoHealingNodes {
 		disabledSeconds, _ := config.GetInt("docker:healing:disabled-time")
@@ -251,7 +251,7 @@ func (p *dockerProvisioner) StartupMessage() (string, error) {
 }
 
 func (p *dockerProvisioner) Initialize() error {
-	err := bs.RegisterQueueTask(p)
+	err := nodecontainer.RegisterQueueTask(p)
 	if err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ func (p *dockerProvisioner) Start(app provision.App, process string) error {
 		return stderr.New(fmt.Sprintf("Got error while getting app containers: %s", err))
 	}
 	err = runInContainers(containers, func(c *container.Container, _ chan *container.Container) error {
-		err := c.Start(&container.StartArgs{
+		err = c.Start(&container.StartArgs{
 			Provisioner: p,
 			App:         app,
 		})
@@ -312,7 +312,8 @@ func (p *dockerProvisioner) Start(app provision.App, process string) error {
 			return err
 		}
 		c.SetStatus(p, provision.StatusStarting, true)
-		if info, err := c.NetworkInfo(p); err == nil {
+		var info container.NetworkInfo
+		if info, err = c.NetworkInfo(p); err == nil {
 			p.fixContainer(c, info)
 		}
 		return nil
@@ -947,11 +948,17 @@ func (p *dockerProvisioner) AdminCommands() []cmd.Command {
 		&autoScaleSetRuleCmd{},
 		&autoScaleDeleteRuleCmd{},
 		&updateNodeToSchedulerCmd{},
-		&bs.EnvSetCmd{},
-		&bs.InfoCmd{},
-		&bs.UpgradeCmd{},
 		&dockerLogInfo{},
 		&dockerLogUpdate{},
+		&nodecontainer.NodeContainerList{},
+		&nodecontainer.NodeContainerAdd{},
+		&nodecontainer.NodeContainerInfo{},
+		&nodecontainer.NodeContainerUpdate{},
+		&nodecontainer.NodeContainerDelete{},
+		&nodecontainer.NodeContainerUpgrade{},
+		&cmd.RemovedCommand{Name: "bs-env-set", Help: "You should use `tsuru-admin node-container-update big-sibling` instead."},
+		&cmd.RemovedCommand{Name: "bs-info", Help: "You should use `tsuru-admin node-container-info big-sibling` instead."},
+		&cmd.RemovedCommand{Name: "bs-upgrade", Help: "You should use `tsuru-admin node-container-upgrade big-sibling` instead."},
 	}
 }
 
@@ -1065,7 +1072,7 @@ func (p *dockerProvisioner) RoutableUnits(app provision.App) ([]provision.Unit, 
 	}
 	units := make([]provision.Unit, 0, len(containers))
 	for _, container := range containers {
-		if container.ProcessName == webProcessName {
+		if container.ProcessName == webProcessName && container.ValidAddr() {
 			units = append(units, container.AsUnit(app))
 		}
 	}
@@ -1152,19 +1159,17 @@ func (p *dockerProvisioner) Nodes(app provision.App) ([]cluster.Node, error) {
 }
 
 func (p *dockerProvisioner) MetricEnvs(app provision.App) map[string]string {
-	envMap := map[string]string{}
-	envs, err := bs.EnvListForEndpoint("", app.GetPool())
+	bsContainer, err := nodecontainer.LoadNodeContainer(app.GetPool(), nodecontainer.BsDefaultName)
 	if err != nil {
-		return envMap
+		return map[string]string{}
 	}
-	for _, env := range envs {
-		// TODO(cezarsa): ugly as hell
-		if strings.HasPrefix(env, "METRICS_") {
-			slice := strings.SplitN(env, "=", 2)
-			envMap[slice[0]] = slice[1]
+	envs := bsContainer.EnvMap()
+	for envName := range envs {
+		if !strings.HasPrefix(envName, "METRICS_") {
+			delete(envs, envName)
 		}
 	}
-	return envMap
+	return envs
 }
 
 func (p *dockerProvisioner) LogsEnabled(app provision.App) (bool, string, error) {
@@ -1182,16 +1187,12 @@ func (p *dockerProvisioner) LogsEnabled(app provision.App) (bool, string, error)
 		msg := fmt.Sprintf("Logs not available through tsuru. Enabled log driver is %q.", driver)
 		return false, msg, nil
 	}
-	config, err := bs.LoadConfig()
+	bsContainer, err := nodecontainer.LoadNodeContainer(app.GetPool(), nodecontainer.BsDefaultName)
 	if err != nil {
 		return false, "", err
 	}
-	var entry bs.BSConfigEntry
-	err = config.Load(app.GetPool(), &entry)
-	if err != nil {
-		return false, "", err
-	}
-	enabledBackends := entry.Envs[logBackendsEnv]
+	envs := bsContainer.EnvMap()
+	enabledBackends := envs[logBackendsEnv]
 	if enabledBackends == "" {
 		return true, "", nil
 	}
@@ -1205,7 +1206,7 @@ func (p *dockerProvisioner) LogsEnabled(app provision.App) (bool, string, error)
 	var docs []string
 	for _, backendName := range backendsList {
 		keyName := fmt.Sprintf(logDocKeyFormat, strings.ToUpper(backendName))
-		backendDoc := entry.Envs[keyName]
+		backendDoc := envs[keyName]
 		var docLine string
 		if backendDoc == "" {
 			docLine = fmt.Sprintf("* %s", backendName)

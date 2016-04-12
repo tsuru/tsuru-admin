@@ -18,6 +18,15 @@ import (
 	"github.com/tsuru/tsuru/repository"
 )
 
+// title: role create
+// path: /roles
+// method: POST
+// consume: application/x-www-form-urlencoded
+// responses:
+//   201: Role created
+//   400: Invalid data
+//   401: Unauthorized
+//   409: Role already exists
 func addRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleCreate) {
 		return permission.ErrUnauthorized
@@ -41,6 +50,13 @@ func addRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	return err
 }
 
+// title: remove role
+// path: /roles/{name}
+// method: DELETE
+// responses:
+//   200: Role removed
+//   401: Unauthorized
+//   404: Role not found
 func removeRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleDelete) {
 		return permission.ErrUnauthorized
@@ -57,6 +73,13 @@ func removeRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	return err
 }
 
+// title: role list
+// path: /roles
+// method: GET
+// produce: application/json
+// responses:
+//   200: OK
+//   401: Unauthorized
 func listRoles(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !(permission.Check(t, permission.PermRoleUpdate) ||
 		permission.Check(t, permission.PermRoleUpdateAssign) ||
@@ -78,6 +101,14 @@ func listRoles(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	return err
 }
 
+// title: role info
+// path: /roles/{name}
+// method: GET
+// produce: application/json
+// responses:
+//   200: OK
+//   401: Unauthorized
+//   404: Role not found
 func roleInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !(permission.Check(t, permission.PermRoleUpdate) ||
 		permission.Check(t, permission.PermRoleUpdateAssign) ||
@@ -88,6 +119,12 @@ func roleInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	}
 	roleName := r.URL.Query().Get(":name")
 	role, err := permission.FindRole(roleName)
+	if err == permission.ErrRoleNotFound {
+		return &errors.HTTP{
+			Code:    http.StatusNotFound,
+			Message: err.Error(),
+		}
+	}
 	if err != nil {
 		return err
 	}
@@ -131,6 +168,10 @@ func deployableApps(u *auth.User, rolesCache map[string]*permission.Role) ([]str
 }
 
 func syncRepositoryApps(user *auth.User, beforeApps []string, roleCache map[string]*permission.Role) error {
+	err := user.Reload()
+	if err != nil {
+		return err
+	}
 	afterApps, err := deployableApps(user, roleCache)
 	if err != nil {
 		return err
@@ -156,6 +197,7 @@ func syncRepositoryApps(user *auth.User, beforeApps []string, roleCache map[stri
 		}
 	}
 	return nil
+
 }
 
 func runWithPermSync(users []auth.User, callback func() error) error {

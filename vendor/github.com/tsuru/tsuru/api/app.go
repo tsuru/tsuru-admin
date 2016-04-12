@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/schema"
+	"github.com/cezarsa/form"
 	"github.com/tsuru/tsuru/api/context"
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/app/bind"
@@ -660,6 +660,14 @@ func runCommand(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	return nil
 }
 
+// title: get envs
+// path: /apps/{app}/env
+// method: GET
+// produce: application/x-json-stream
+// responses:
+//   200: OK
+//   401: Unauthorized
+//   404: App not found
 func getEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	var variables []string
 	if envs, ok := r.URL.Query()["env"]; ok {
@@ -708,20 +716,33 @@ func writeEnvVars(w http.ResponseWriter, a *app.App, variables ...string) error 
 	return json.NewEncoder(w).Encode(result)
 }
 
-type envs struct {
+// Envs represents the configuration of an environment variable data
+// for the remote API
+type Envs struct {
 	Envs      []struct{ Name, Value string } `schema:"envs"`
 	NoRestart bool                           `schema:"noRestart"`
 	Private   bool                           `schema:"private"`
 }
 
+// title: set envs
+// path: /apps/{app}/env
+// method: POST
+// consume: application/x-www-form-urlencoded
+// produce: application/x-json-stream
+// responses:
+//   200: Envs updated
+//   400: Invalid data
+//   401: Unauthorized
+//   404: App not found
 func setEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	err := r.ParseForm()
 	if err != nil {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
-	decoder := schema.NewDecoder()
-	e := envs{}
-	err = decoder.Decode(&e, r.PostForm)
+	var e Envs
+	dec := form.NewDecoder(nil)
+	dec.IgnoreUnknownKeys(true)
+	err = dec.DecodeValues(&e, r.Form)
 	if err != nil {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
@@ -755,7 +776,7 @@ func setEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		variables = append(variables, bind.EnvVar{Name: v.Name, Value: v.Value, Public: !e.Private})
 	}
 	rec.Log(u.Email, "set-env", "app="+appName, envs, extra)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/x-json-stream")
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 30*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
@@ -772,6 +793,15 @@ func setEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	return nil
 }
 
+// title: unset envs
+// path: /apps/{app}/env
+// method: DELETE
+// produce: application/x-json-stream
+// responses:
+//   200: Envs removed
+//   400: Invalid data
+//   401: Unauthorized
+//   404: App not found
 func unsetEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	msg := "You must provide the list of environment variables."
 	if r.URL.Query().Get("env") == "" {
@@ -802,7 +832,7 @@ func unsetEnv(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		return permission.ErrUnauthorized
 	}
 	rec.Log(u.Email, "unset-env", "app="+appName, fmt.Sprintf("envs=%s", variables))
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/x-json-stream")
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 30*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
@@ -1201,22 +1231,6 @@ func addLog(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		}
 	}
 	return nil
-}
-
-func platformList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	u, err := t.User()
-	if err != nil {
-		return err
-	}
-	rec.Log(u.Email, "platform-list")
-	canUsePlat := permission.Check(t, permission.PermPlatformUpdate) ||
-		permission.Check(t, permission.PermPlatformCreate)
-	platforms, err := app.Platforms(!canUsePlat)
-	if err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	return json.NewEncoder(w).Encode(platforms)
 }
 
 func swap(w http.ResponseWriter, r *http.Request, t auth.Token) error {

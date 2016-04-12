@@ -138,15 +138,14 @@ func removeServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 	serviceName := r.URL.Query().Get(":service")
 	instanceName := r.URL.Query().Get(":instance")
 	permissionValue := serviceName + "/" + instanceName
+	serviceInstance, err := getServiceInstanceOrError(serviceName, instanceName)
+	if err != nil {
+		return err
+	}
 	keepAliveWriter := io.NewKeepAliveWriter(w, 30*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &io.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
 	w.Header().Set("Content-Type", "application/x-json-stream")
-	serviceInstance, err := getServiceInstanceOrError(serviceName, instanceName)
-	if err != nil {
-		writer.Encode(io.SimpleJsonMessage{Error: err.Error()})
-		return nil
-	}
 	allowed := permission.Check(t, permission.PermServiceInstanceDelete,
 		append(permission.Contexts(permission.CtxTeam, serviceInstance.Teams),
 			permission.Context(permission.CtxServiceInstance, permissionValue),
@@ -292,25 +291,13 @@ func serviceInstances(w http.ResponseWriter, r *http.Request, t auth.Token) erro
 	return err
 }
 
-func serviceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	serviceName := r.URL.Query().Get(":service")
-	instanceName := r.URL.Query().Get(":instance")
-	permissionValue := serviceName + "/" + instanceName
-	instance, err := getServiceInstanceOrError(serviceName, instanceName)
-	if err != nil {
-		return err
-	}
-	allowed := permission.Check(t, permission.PermServiceInstanceRead,
-		append(permission.Contexts(permission.CtxTeam, instance.Teams),
-			permission.Context(permission.CtxServiceInstance, permissionValue),
-		)...,
-	)
-	if !allowed {
-		return permission.ErrUnauthorized
-	}
-	return json.NewEncoder(w).Encode(instance)
-}
-
+// title: service instance status
+// path: /services/{service}/instances/{instance}/status
+// method: GET
+// responses:
+//   200: List services instances
+//   401: Unauthorized
+//   404: Service instance not found
 func serviceInstanceStatus(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	instanceName := r.URL.Query().Get(":instance")
 	serviceName := r.URL.Query().Get(":service")
@@ -341,7 +328,7 @@ func serviceInstanceStatus(w http.ResponseWriter, r *http.Request, t auth.Token)
 	return nil
 }
 
-type ServiceInstanceInfo struct {
+type serviceInstanceInfo struct {
 	Apps            []string
 	Teams           []string
 	TeamOwner       string
@@ -351,7 +338,15 @@ type ServiceInstanceInfo struct {
 	CustomInfo      map[string]string
 }
 
-func serviceInstanceInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+// title: service instance info
+// path: /services/{service}/instances/{instance}
+// method: GET
+// produce: application/json
+// responses:
+//   200: OK
+//   401: Unauthorized
+//   404: Service instance not found
+func serviceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	instanceName := r.URL.Query().Get(":instance")
 	serviceName := r.URL.Query().Get(":service")
 	serviceInstance, err := getServiceInstanceOrError(serviceName, instanceName)
@@ -376,7 +371,7 @@ func serviceInstanceInfo(w http.ResponseWriter, r *http.Request, t auth.Token) e
 	if err != nil {
 		return err
 	}
-	sInfo := ServiceInstanceInfo{
+	sInfo := serviceInstanceInfo{
 		Apps:            serviceInstance.Apps,
 		Teams:           serviceInstance.Teams,
 		TeamOwner:       serviceInstance.TeamOwner,
@@ -385,12 +380,8 @@ func serviceInstanceInfo(w http.ResponseWriter, r *http.Request, t auth.Token) e
 		PlanDescription: plan.Description,
 		CustomInfo:      info,
 	}
-	b, err := json.Marshal(sInfo)
-	if err != nil {
-		return nil
-	}
-	w.Write(b)
-	return nil
+	w.Header().Set("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(sInfo)
 }
 
 func serviceInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -404,12 +395,7 @@ func serviceInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if err != nil {
 		return err
 	}
-	b, err := json.Marshal(instances)
-	if err != nil {
-		return nil
-	}
-	w.Write(b)
-	return nil
+	return json.NewEncoder(w).Encode(instances)
 }
 
 func serviceDoc(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -449,6 +435,14 @@ func getServiceInstanceOrError(serviceName string, instanceName string) (*servic
 	return serviceInstance, nil
 }
 
+// title: service plans
+// path: /services/{name}/plans
+// method: GET
+// produce: application/json
+// responses:
+//   200: OK
+//   401: Unauthorized
+//   404: Service not found
 func servicePlans(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	serviceName := r.URL.Query().Get(":name")
 	s, err := getService(serviceName)
@@ -470,12 +464,8 @@ func servicePlans(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if err != nil {
 		return err
 	}
-	b, err := json.Marshal(plans)
-	if err != nil {
-		return nil
-	}
-	w.Write(b)
-	return nil
+	w.Header().Set("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(plans)
 }
 
 func serviceInstanceProxy(w http.ResponseWriter, r *http.Request, t auth.Token) error {
@@ -499,6 +489,14 @@ func serviceInstanceProxy(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	return service.Proxy(serviceInstance.Service(), path, w, r)
 }
 
+// title: grant access to service instance
+// path: /services/{service}/instances/permission/{instance}/{team}
+// consume: application/x-www-form-urlencoded
+// method: PUT
+// responses:
+//   200: Access revoked
+//   401: Unauthorized
+//   404: Service instance not found
 func serviceInstanceGrantTeam(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	instanceName := r.URL.Query().Get(":instance")
 	serviceName := r.URL.Query().Get(":service")
@@ -520,6 +518,13 @@ func serviceInstanceGrantTeam(w http.ResponseWriter, r *http.Request, t auth.Tok
 	return serviceInstance.Grant(teamName)
 }
 
+// title: revoke access to service instance
+// path: /services/{service}/instances/permission/{instance}/{team}
+// method: DELETE
+// responses:
+//   200: Access revoked
+//   401: Unauthorized
+//   404: Service instance not found
 func serviceInstanceRevokeTeam(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	instanceName := r.URL.Query().Get(":instance")
 	serviceName := r.URL.Query().Get(":service")

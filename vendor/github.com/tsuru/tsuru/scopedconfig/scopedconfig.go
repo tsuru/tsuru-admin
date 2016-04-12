@@ -5,6 +5,7 @@
 package scopedconfig
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -22,11 +23,14 @@ const (
 )
 
 type ScopedConfig struct {
-	coll         string
-	name         string
-	AllowedPools []string
-	AllowEmpty   bool
-	ShallowMerge bool
+	coll          string
+	name          string
+	AllowedPools  []string
+	AllowEmpty    bool
+	ShallowMerge  bool
+	Jsonfy        bool
+	SliceAdd      bool
+	AllowMapEmpty bool
 }
 
 type scopedConfigEntry struct {
@@ -43,13 +47,28 @@ func FindScopedConfigFor(coll, name string) *ScopedConfig {
 	return &ScopedConfig{coll: fmt.Sprintf("scoped_%s", coll), name: name}
 }
 
+func FindAllScopedConfigNames(collName string) ([]string, error) {
+	base := FindScopedConfig(collName)
+	coll, err := base.collection()
+	if err != nil {
+		return nil, err
+	}
+	defer coll.Close()
+	var names []string
+	err = coll.Find(nil).Distinct("name", &names)
+	return names, err
+}
+
+func (n *ScopedConfig) GetName() string {
+	return n.name
+}
+
 func (n *ScopedConfig) SetFieldAtomic(pool, name string, value interface{}) (bool, error) {
 	coll, err := n.collection()
 	if err != nil {
 		return false, err
 	}
 	defer coll.Close()
-	name = strings.ToLower(name)
 	_, err = coll.Upsert(bson.M{
 		"name": n.name,
 		"pool": pool,
@@ -70,7 +89,6 @@ func (n *ScopedConfig) SetField(pool, name string, value interface{}) error {
 		return err
 	}
 	defer coll.Close()
-	name = strings.ToLower(name)
 	_, err = coll.Upsert(bson.M{"name": n.name, "pool": pool}, bson.M{"$set": bson.M{"val." + name: value}})
 	return err
 }
@@ -80,22 +98,53 @@ func (n *ScopedConfig) SaveBase(val interface{}) error {
 }
 
 func (n *ScopedConfig) Save(pool string, val interface{}) error {
+	if reflect.TypeOf(val).Kind() == reflect.Ptr {
+		val = reflect.ValueOf(val).Elem().Interface()
+	}
 	if reflect.TypeOf(val).Kind() != reflect.Struct {
-		return errors.New("a struct type is required as value")
+		return errors.New("a struct type or pointer to a struct is required as value")
 	}
 	coll, err := n.collection()
 	if err != nil {
 		return err
 	}
 	defer coll.Close()
+	if n.Jsonfy {
+		var result map[string]interface{}
+		var data []byte
+		data, err = json.Marshal(val)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(data, &result)
+		if err != nil {
+			return err
+		}
+		val = interface{}(result)
+	}
 	_, err = coll.Upsert(bson.M{"name": n.name, "pool": pool}, bson.M{"name": n.name, "pool": pool, "val": val})
 	return err
 }
 
+func (n *ScopedConfig) HasEntry(pool string) (bool, error) {
+	coll, err := n.collection()
+	if err != nil {
+		return false, err
+	}
+	defer coll.Close()
+	count, err := coll.Find(bson.M{"name": n.name, "pool": pool}).Count()
+	if err != nil {
+		return false, err
+	}
+	return count == 1, nil
+}
+
 func (n *ScopedConfig) SaveMerge(pool string, val interface{}) error {
-	newValue := reflect.ValueOf(val)
-	if newValue.Type().Kind() != reflect.Struct {
-		return errors.New("received object must be a struct")
+	if reflect.TypeOf(val).Kind() == reflect.Ptr {
+		val = reflect.ValueOf(val).Elem().Interface()
+	}
+	if reflect.TypeOf(val).Kind() != reflect.Struct {
+		return errors.New("a struct type or pointer to a struct is required as value")
 	}
 	coll, err := n.collection()
 	if err != nil {
@@ -106,7 +155,7 @@ func (n *ScopedConfig) SaveMerge(pool string, val interface{}) error {
 	previousValue := reflect.New(reflect.ValueOf(val).Type())
 	err = coll.Find(bson.M{"name": n.name, "pool": pool}).One(&poolValues)
 	if err == nil {
-		err = poolValues.Val.Unmarshal(previousValue.Interface())
+		err = n.unmarshal(&poolValues.Val, previousValue.Interface())
 		if err != nil {
 			return err
 		}
@@ -121,14 +170,14 @@ func (n *ScopedConfig) SaveMerge(pool string, val interface{}) error {
 }
 
 func (n *ScopedConfig) LoadAll(allVal interface{}) error {
-	return n.LoadPoolsMerge(nil, allVal, true)
+	return n.LoadPoolsMerge(nil, allVal, true, true)
 }
 
 func (n *ScopedConfig) LoadPools(filterPools []string, allVal interface{}) error {
-	return n.LoadPoolsMerge(filterPools, allVal, true)
+	return n.LoadPoolsMerge(filterPools, allVal, true, true)
 }
 
-func (n *ScopedConfig) LoadPoolsMerge(filterPools []string, allVal interface{}, merge bool) error {
+func (n *ScopedConfig) LoadPoolsMerge(filterPools []string, allVal interface{}, merge bool, includeDefault bool) error {
 	allValValue := reflect.ValueOf(allVal)
 	var isPtr bool
 	if allValValue.Type().Kind() == reflect.Ptr {
@@ -161,12 +210,14 @@ func (n *ScopedConfig) LoadPoolsMerge(filterPools []string, allVal interface{}, 
 	baseValue := reflect.New(mapType)
 	baseVal := baseValue.Interface()
 	if defaultValues.Val.Data != nil {
-		err = defaultValues.Val.Unmarshal(baseVal)
+		err = n.unmarshal(&defaultValues.Val, baseVal)
 		if err != nil {
 			return err
 		}
 	}
-	allValValue.SetMapIndex(reflect.ValueOf(""), baseValue.Elem())
+	if includeDefault || defaultValues.Val.Data != nil {
+		allValValue.SetMapIndex(reflect.ValueOf(""), baseValue.Elem())
+	}
 	if len(filterPools) == 0 {
 		err = coll.Find(bson.M{"name": n.name, "pool": bson.M{"$ne": ""}}).All(&allPoolValues)
 	} else {
@@ -180,7 +231,7 @@ func (n *ScopedConfig) LoadPoolsMerge(filterPools []string, allVal interface{}, 
 			baseValue = reflect.New(mapType)
 			baseVal = baseValue.Interface()
 			if defaultValues.Val.Data != nil {
-				err = defaultValues.Val.Unmarshal(baseVal)
+				err = n.unmarshal(&defaultValues.Val, baseVal)
 				if err != nil {
 					return err
 				}
@@ -188,7 +239,7 @@ func (n *ScopedConfig) LoadPoolsMerge(filterPools []string, allVal interface{}, 
 		}
 		poolValue := reflect.New(mapType)
 		poolVal := poolValue.Interface()
-		err = allPoolValues[i].Val.Unmarshal(poolVal)
+		err = n.unmarshal(&allPoolValues[i].Val, poolVal)
 		if err != nil {
 			return err
 		}
@@ -241,7 +292,7 @@ func (n *ScopedConfig) LoadWithBase(pool string, baseVal interface{}, poolVal in
 	var defaultValues, poolValues scopedConfigEntry
 	err = coll.Find(bson.M{"name": n.name, "pool": ""}).One(&defaultValues)
 	if err == nil {
-		err = defaultValues.Val.Unmarshal(baseVal)
+		err = n.unmarshal(&defaultValues.Val, baseVal)
 		if err != nil {
 			return err
 		}
@@ -255,14 +306,14 @@ func (n *ScopedConfig) LoadWithBase(pool string, baseVal interface{}, poolVal in
 	baseCopy := reflect.New(baseValue.Elem().Type())
 	if defaultValues.Val.Data != nil {
 		baseCopyVal := baseCopy.Interface()
-		err = defaultValues.Val.Unmarshal(baseCopyVal)
+		err = n.unmarshal(&defaultValues.Val, baseCopyVal)
 		if err != nil {
 			return err
 		}
 	}
 	err = coll.Find(bson.M{"name": n.name, "pool": pool}).One(&poolValues)
 	if err == nil {
-		err = poolValues.Val.Unmarshal(poolVal)
+		err = n.unmarshal(&poolValues.Val, poolVal)
 		if err != nil {
 			return err
 		}
@@ -300,11 +351,32 @@ func (n *ScopedConfig) RemoveField(pool, name string) error {
 	return nil
 }
 
+func (n *ScopedConfig) unmarshal(raw *bson.Raw, dst interface{}) error {
+	if !n.Jsonfy {
+		return raw.Unmarshal(dst)
+	}
+	var mapresult map[string]interface{}
+	err := raw.Unmarshal(&mapresult)
+	if err != nil {
+		return err
+	}
+	data, err := json.Marshal(mapresult)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, dst)
+}
+
 func (n *ScopedConfig) mergeInto(base reflect.Value, pool reflect.Value) (merged bool, err error) {
 	return n.mergeIntoInherited(base, pool, true)
 }
 
 func (n *ScopedConfig) mergeIntoInherited(base reflect.Value, pool reflect.Value, setInherited bool) (merged bool, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("error trying to merge items: %s", r)
+		}
+	}()
 	switch base.Kind() {
 	case reflect.Struct:
 		if _, isTime := base.Interface().(time.Time); isTime {
@@ -350,7 +422,7 @@ func (n *ScopedConfig) mergeIntoInherited(base reflect.Value, pool reflect.Value
 	case reflect.Map:
 		for _, k := range pool.MapKeys() {
 			poolVal := pool.MapIndex(k)
-			if !n.isEmpty(poolVal) {
+			if n.AllowMapEmpty || !n.isEmpty(poolVal) {
 				merged = true
 				if base.IsNil() {
 					base.Set(reflect.MakeMap(reflect.MapOf(k.Type(), poolVal.Type())))
@@ -360,12 +432,13 @@ func (n *ScopedConfig) mergeIntoInherited(base reflect.Value, pool reflect.Value
 				base.SetMapIndex(k, reflect.Value{})
 			}
 		}
+	case reflect.Slice:
+		if n.SliceAdd {
+			base.Set(reflect.AppendSlice(base, pool))
+			break
+		}
+		fallthrough
 	default:
-		defer func() {
-			if r := recover(); r != nil {
-				err = fmt.Errorf("error trying to set field: %s", r)
-			}
-		}()
 		if !n.isEmpty(pool) {
 			merged = true
 			base.Set(pool)

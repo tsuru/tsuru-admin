@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -15,6 +15,14 @@ import (
 	"github.com/tsuru/tsuru/permission"
 )
 
+// title: user quota
+// path: /users/{email}/quota
+// method: GET
+// produce: application/json
+// responses:
+//   200: OK
+//   401: Unauthorized
+//   404: User not found
 func getUserQuota(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	allowed := permission.Check(t, permission.PermUserUpdateQuota)
 	if !allowed {
@@ -31,9 +39,19 @@ func getUserQuota(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if err != nil {
 		return err
 	}
+	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(user.Quota)
 }
 
+// title: update user quota
+// path: /users/{email}/quota
+// method: PUT
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Quota updated
+//   400: Invalid data
+//   401: Unauthorized
+//   404: User not found
 func changeUserQuota(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	allowed := permission.Check(t, permission.PermUserUpdateQuota)
 	if !allowed {
@@ -59,6 +77,14 @@ func changeUserQuota(w http.ResponseWriter, r *http.Request, t auth.Token) error
 	return auth.ChangeQuota(user, limit)
 }
 
+// title: application quota
+// path: /apps/{appname}/quota
+// method: GET
+// produce: application/json
+// responses:
+//   200: OK
+//   401: Unauthorized
+//   404: Application not found
 func getAppQuota(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	a, err := getAppFromContext(r.URL.Query().Get(":appname"), r)
 	if err != nil {
@@ -73,9 +99,19 @@ func getAppQuota(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !canRead {
 		return permission.ErrUnauthorized
 	}
+	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(a.Quota)
 }
 
+// title: update application quota
+// path: /apps/{appname}/quota
+// method: PUT
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Quota updated
+//   400: Invalid data
+//   401: Unauthorized
+//   404: Application not found
 func changeAppQuota(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	limit, err := strconv.Atoi(r.FormValue("limit"))
 	if err != nil {

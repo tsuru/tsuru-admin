@@ -29,7 +29,7 @@ import (
 	"gopkg.in/tylerb/graceful.v1"
 )
 
-const Version = "1.0.0-rc5"
+const Version = "1.0.0-rc6"
 
 func getProvisioner() (string, error) {
 	provisioner, err := config.GetString("provisioner")
@@ -82,7 +82,9 @@ func RunServer(dry bool) http.Handler {
 	if err != nil {
 		dbName = db.DefaultDatabaseName
 	}
-	fmt.Printf("Using mongodb database %q from the server %q.\n", dbName, connString)
+	if !dry {
+		fmt.Printf("Using mongodb database %q from the server %q.\n", dbName, connString)
+	}
 
 	m := apiRouter.NewRouter()
 
@@ -105,7 +107,6 @@ func RunServer(dry bool) http.Handler {
 	m.Add("1.0", "Get", "/services/{service}/instances/{instance}/status", AuthorizationRequiredHandler(serviceInstanceStatus))
 	m.Add("1.0", "Put", "/services/{service}/instances/permission/{instance}/{team}", AuthorizationRequiredHandler(serviceInstanceGrantTeam))
 	m.Add("1.0", "Delete", "/services/{service}/instances/permission/{instance}/{team}", AuthorizationRequiredHandler(serviceInstanceRevokeTeam))
-	m.Add("1.0", "Get", "/services/{service}/instances/{instance}/info", AuthorizationRequiredHandler(serviceInstanceInfo))
 
 	m.AddAll("1.0", "/services/{service}/proxy/{instance}", AuthorizationRequiredHandler(serviceInstanceProxy))
 	m.AddAll("1.0", "/services/proxy/service/{service}", AuthorizationRequiredHandler(serviceProxy))
@@ -132,7 +133,7 @@ func RunServer(dry bool) http.Handler {
 	m.Add("1.0", "Post", "/apps/{app}/stop", AuthorizationRequiredHandler(stop))
 	m.Add("1.0", "Post", "/apps/{app}/sleep", AuthorizationRequiredHandler(sleep))
 	m.Add("1.0", "Get", "/apps/{appname}/quota", AuthorizationRequiredHandler(getAppQuota))
-	m.Add("1.0", "Post", "/apps/{appname}/quota", AuthorizationRequiredHandler(changeAppQuota))
+	m.Add("1.0", "Put", "/apps/{appname}/quota", AuthorizationRequiredHandler(changeAppQuota))
 	m.Add("1.0", "Post", "/apps/{appname}", AuthorizationRequiredHandler(updateApp))
 	m.Add("1.0", "Get", "/apps/{app}/env", AuthorizationRequiredHandler(getEnv))
 	m.Add("1.0", "Post", "/apps/{app}/env", AuthorizationRequiredHandler(setEnv))
@@ -191,7 +192,7 @@ func RunServer(dry bool) http.Handler {
 	m.Add("1.0", "Post", "/users/{email}/password", Handler(resetPassword))
 	m.Add("1.0", "Post", "/users/{email}/tokens", Handler(login))
 	m.Add("1.0", "Get", "/users/{email}/quota", AuthorizationRequiredHandler(getUserQuota))
-	m.Add("1.0", "Post", "/users/{email}/quota", AuthorizationRequiredHandler(changeUserQuota))
+	m.Add("1.0", "Put", "/users/{email}/quota", AuthorizationRequiredHandler(changeUserQuota))
 	m.Add("1.0", "Delete", "/users/tokens", AuthorizationRequiredHandler(logout))
 	m.Add("1.0", "Put", "/users/password", AuthorizationRequiredHandler(changePassword))
 	m.Add("1.0", "Delete", "/users", AuthorizationRequiredHandler(removeUser))
@@ -226,7 +227,7 @@ func RunServer(dry bool) http.Handler {
 	m.Add("1.0", "Get", "/pools", AuthorizationRequiredHandler(poolList))
 	m.Add("1.0", "Post", "/pools", AuthorizationRequiredHandler(addPoolHandler))
 	m.Add("1.0", "Delete", "/pools/{name}", AuthorizationRequiredHandler(removePoolHandler))
-	m.Add("1.0", "Post", "/pools/{name}", AuthorizationRequiredHandler(poolUpdateHandler))
+	m.Add("1.0", "Put", "/pools/{name}", AuthorizationRequiredHandler(poolUpdateHandler))
 	m.Add("1.0", "Post", "/pools/{name}/team", AuthorizationRequiredHandler(addTeamToPoolHandler))
 	m.Add("1.0", "Delete", "/pools/{name}/team", AuthorizationRequiredHandler(removeTeamToPoolHandler))
 
@@ -255,7 +256,9 @@ func RunServer(dry bool) http.Handler {
 
 	n := negroni.New()
 	n.Use(negroni.NewRecovery())
-	n.Use(newLoggerMiddleware())
+	if !dry {
+		n.Use(newLoggerMiddleware())
+	}
 	n.UseHandler(m)
 	n.Use(negroni.HandlerFunc(contextClearerMiddleware))
 	n.Use(negroni.HandlerFunc(flushingWriterMiddleware))

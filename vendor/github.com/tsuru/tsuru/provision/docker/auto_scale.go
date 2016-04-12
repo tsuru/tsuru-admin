@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -21,8 +21,8 @@ import (
 	"github.com/tsuru/tsuru/iaas"
 	"github.com/tsuru/tsuru/log"
 	"github.com/tsuru/tsuru/net"
-	"github.com/tsuru/tsuru/provision/docker/bs"
 	"github.com/tsuru/tsuru/provision/docker/container"
+	"github.com/tsuru/tsuru/provision/docker/nodecontainer"
 	"github.com/tsuru/tsuru/queue"
 	"github.com/tsuru/tsuru/safe"
 	"gopkg.in/mgo.v2"
@@ -346,7 +346,7 @@ func (a *autoScaleConfig) addNode(event *autoScaleEvent, modelNodes []*cluster.N
 			"metadata": createdNode.Metadata,
 		}
 		var job monsterqueue.Job
-		job, err = q.EnqueueWait(bs.QueueTaskName, jobParams, a.WaitTimeNewMachine)
+		job, err = q.EnqueueWait(nodecontainer.QueueTaskName, jobParams, a.WaitTimeNewMachine)
 		if err == nil {
 			_, err = job.Result()
 		}

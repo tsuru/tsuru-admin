@@ -123,7 +123,7 @@ func (c *Container) Create(args *CreateArgs) error {
 	if args.Building {
 		user = c.user()
 	}
-	config := docker.Config{
+	conf := docker.Config{
 		Image:        args.ImageID,
 		Cmd:          args.Commands,
 		Entrypoint:   []string{},
@@ -137,8 +137,8 @@ func (c *Container) Create(args *CreateArgs) error {
 		SecurityOpts: securityOpts,
 		User:         user,
 	}
-	c.addEnvsToConfig(args, strings.TrimSuffix(c.ExposedPort, "/tcp"), &config)
-	opts := docker.CreateContainerOptions{Name: c.Name, Config: &config}
+	c.addEnvsToConfig(args, strings.TrimSuffix(c.ExposedPort, "/tcp"), &conf)
+	opts := docker.CreateContainerOptions{Name: c.Name, Config: &conf}
 	var nodeList []string
 	if len(args.DestinationHosts) > 0 {
 		var nodeName string
@@ -590,6 +590,10 @@ func (c *Container) AsUnit(a provision.App) provision.Unit {
 		ProcessName: c.ProcessName,
 		Address:     c.Address(),
 	}
+}
+
+func (c *Container) ValidAddr() bool {
+	return c.HostAddr != "" && c.HostPort != "" && c.HostPort != "0"
 }
 
 func getPort() (string, error) {
