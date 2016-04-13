@@ -16,3 +16,6 @@ env:
     - GOARCH=386
 script:
   - go test -x
+matrix:
+  allow_failures:
+    - go: tip
