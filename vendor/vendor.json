@@ -181,6 +181,12 @@
 			"revisionTime": "2015-09-25T14:57:45-05:00"
 		},
 		{
+			"checksumSHA1": "kktbWelM0xVH61fOWltCEOR/87E=",
+			"path": "github.com/docker/go-connections/nat",
+			"revision": "f549a9393d05688dff0992ef3efd8bbe6c628aeb",
+			"revisionTime": "2016-03-04T22:48:11Z"
+		},
+		{
 			"origin": "github.com/tsuru/tsuru/vendor/github.com/fsouza/go-dockerclient",
 			"path": "github.com/fsouza/go-dockerclient",
 			"revision": "d92e9b886690a7daa42daa3807d1829c6e6a9d0a",
@@ -567,10 +573,10 @@
 			"revisionTime": "2016-04-12T14:07:19Z"
 		},
 		{
-			"checksumSHA1": "ZOSBm3kWBO7bMCYS0nPHHS/fqRI=",
+			"checksumSHA1": "g1efLyfOl9tSf5DVkIsr49SjfZ8=",
 			"path": "github.com/tsuru/tsuru/cmd",
-			"revision": "9e6831c144641489d78051e611223f52a5ec7d77",
-			"revisionTime": "2016-04-12T14:07:19Z"
+			"revision": "111e48330230e149861e5446eea1d597337800b7",
+			"revisionTime": "2016-04-13T15:33:46Z"
 		},
 		{
 			"checksumSHA1": "dCdfvsWx96qtabJ8BQCaDlKYrSY=",
@@ -671,44 +677,44 @@
 		{
 			"checksumSHA1": "zkp11yhipio676j2qozzKyouivQ=",
 			"path": "github.com/tsuru/tsuru/provision",
-			"revision": "9e6831c144641489d78051e611223f52a5ec7d77",
-			"revisionTime": "2016-04-12T14:07:19Z"
+			"revision": "111e48330230e149861e5446eea1d597337800b7",
+			"revisionTime": "2016-04-13T15:33:46Z"
 		},
 		{
 			"checksumSHA1": "hwvbhCqSqOCEXaQGg5n8OV0oK3E=",
 			"path": "github.com/tsuru/tsuru/provision/docker",
-			"revision": "07d752e55e6538c32801295543349af1359c1773",
-			"revisionTime": "2016-04-12T14:07:19Z"
+			"revision": "111e48330230e149861e5446eea1d597337800b7",
+			"revisionTime": "2016-04-13T15:33:46Z"
 		},
 		{
-			"checksumSHA1": "WKnipxtfUnwNUedc3PUqTlnYFyw=",
+			"checksumSHA1": "G277EzQ133ouixOxn6BjQh2Bb6E=",
 			"path": "github.com/tsuru/tsuru/provision/docker/container",
-			"revision": "9e6831c144641489d78051e611223f52a5ec7d77",
-			"revisionTime": "2016-04-12T14:07:19Z"
+			"revision": "111e48330230e149861e5446eea1d597337800b7",
+			"revisionTime": "2016-04-13T15:33:46Z"
 		},
 		{
 			"checksumSHA1": "YopYki2iiLs8hfPo0jgoeyZlhVY=",
 			"path": "github.com/tsuru/tsuru/provision/docker/fix",
-			"revision": "9e6831c144641489d78051e611223f52a5ec7d77",
-			"revisionTime": "2016-04-12T14:07:19Z"
+			"revision": "111e48330230e149861e5446eea1d597337800b7",
+			"revisionTime": "2016-04-13T15:33:46Z"
 		},
 		{
 			"checksumSHA1": "8V0uYodRQnnS0BYlmC/IUkrFFOo=",
 			"path": "github.com/tsuru/tsuru/provision/docker/healer",
-			"revision": "9e6831c144641489d78051e611223f52a5ec7d77",
-			"revisionTime": "2016-04-12T14:07:19Z"
+			"revision": "111e48330230e149861e5446eea1d597337800b7",
+			"revisionTime": "2016-04-13T15:33:46Z"
 		},
 		{
-			"checksumSHA1": "tayyGePnG7+jeVUHfKRxJcjf+5g=",
+			"checksumSHA1": "8Fs5b2nhQHD0Ri5MNw5H+SmzSdI=",
 			"path": "github.com/tsuru/tsuru/provision/docker/nodecontainer",
-			"revision": "9e6831c144641489d78051e611223f52a5ec7d77",
-			"revisionTime": "2016-04-12T14:07:19Z"
+			"revision": "111e48330230e149861e5446eea1d597337800b7",
+			"revisionTime": "2016-04-13T15:33:46Z"
 		},
 		{
 			"checksumSHA1": "OPJodGfMDllGkBsitHLW/GkQqtA=",
 			"path": "github.com/tsuru/tsuru/provision/provisiontest",
-			"revision": "9e6831c144641489d78051e611223f52a5ec7d77",
-			"revisionTime": "2016-04-12T14:07:19Z"
+			"revision": "111e48330230e149861e5446eea1d597337800b7",
+			"revisionTime": "2016-04-13T15:33:46Z"
 		},
 		{
 			"checksumSHA1": "zgN7NG0C0Elt5z795j6wXRqg5u0=",
