@@ -42,20 +42,6 @@ provisioner.
 .. tsuru-command:: containers-rebalance
    :title: Rebalance containers in nodes
 
-bs management
-=============
-
-.. _tsuru_admin_bs_management:
-
-.. tsuru-command:: bs-info
-   :title: Show bs container information
-
-.. tsuru-command:: bs-env-set
-   :title: Set environment variables for bs container
-
-.. tsuru-command:: bs-upgrade
-   :title: Upgrade bs image
-
 Node management
 ===============
 
@@ -76,6 +62,27 @@ Node management
 
 .. tsuru-command:: docker-node-remove
    :title: Remove a docker node
+
+Node Containers management
+==========================
+
+.. tsuru-command:: node-container-add
+   :title: Add a new node container
+
+.. tsuru-command:: node-container-delete
+   :title: Delete an existing node container
+
+.. tsuru-command:: node-container-update
+   :title: Update an existing node container
+
+.. tsuru-command:: node-container-list
+   :title: List existing node containers
+
+.. tsuru-command:: node-container-info
+   :title: Show information abort a node container
+
+.. tsuru-command:: node-container-upgrade
+   :title: Upgrade node container version on docker nodes
 
 Machine management
 ==================
