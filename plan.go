@@ -8,10 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/tsuru/gnuflag"
-	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/router"
 )
@@ -61,27 +62,23 @@ func (c *planCreate) Info() *cmd.Info {
 }
 
 func (c *planCreate) Run(context *cmd.Context, client *cmd.Client) error {
-	url, err := cmd.GetURL("/plans")
+	u, err := cmd.GetURL("/plans")
 	if err != nil {
 		return err
 	}
-	plan := app.Plan{
-		Name:     context.Args[0],
-		Memory:   c.memory,
-		Swap:     c.swap,
-		CpuShare: c.cpushare,
-		Default:  c.setDefault,
-		Router:   c.router,
-	}
-	planData, err := json.Marshal(plan)
+	v := url.Values{}
+	v.Set("name", context.Args[0])
+	v.Set("memory", strconv.FormatInt(c.memory, 10))
+	v.Set("swap", strconv.FormatInt(c.swap, 10))
+	v.Set("cpushare", strconv.Itoa(c.cpushare))
+	v.Set("default", strconv.FormatBool(c.setDefault))
+	v.Set("router", c.router)
+	b := strings.NewReader(v.Encode())
+	request, err := http.NewRequest("POST", u, b)
 	if err != nil {
 		return err
 	}
-	body := strings.NewReader(string(planData))
-	request, err := http.NewRequest("POST", url, body)
-	if err != nil {
-		return err
-	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	_, err = client.Do(request)
 	if err != nil {
 		fmt.Fprintf(context.Stdout, "Failed to create plan!\n")

@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"github.com/tsuru/tsuru/router"
@@ -27,19 +26,16 @@ func (s *S) TestPlanCreate(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusCreated},
 		CondFunc: func(req *http.Request) bool {
-			var plan app.Plan
-			err := json.NewDecoder(req.Body).Decode(&plan)
-			c.Assert(err, check.IsNil)
-			expected := app.Plan{
-				Name:     "myplan",
-				Memory:   0,
-				Swap:     0,
-				CpuShare: 100,
-				Default:  false,
-				Router:   "",
-			}
-			c.Assert(plan, check.DeepEquals, expected)
-			return strings.HasSuffix(req.URL.Path, "/plans") && req.Method == "POST"
+			name := req.FormValue("name") == "myplan"
+			memory := req.FormValue("memory") == "0"
+			swap := req.FormValue("swap") == "0"
+			cpuShare := req.FormValue("cpushare") == "100"
+			deflt := req.FormValue("default") == "false"
+			router := req.FormValue("router") == ""
+			method := req.Method == "POST"
+			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
+			url := strings.HasSuffix(req.URL.Path, "/plans")
+			return method && url && contentType && name && memory && method && swap && cpuShare && deflt && router
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -60,19 +56,16 @@ func (s *S) TestPlanCreateFlags(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusCreated},
 		CondFunc: func(req *http.Request) bool {
-			var plan app.Plan
-			err := json.NewDecoder(req.Body).Decode(&plan)
-			c.Assert(err, check.IsNil)
-			expected := app.Plan{
-				Name:     "myplan",
-				Memory:   4194304,
-				Swap:     512,
-				CpuShare: 100,
-				Default:  true,
-				Router:   "myrouter",
-			}
-			c.Assert(plan, check.DeepEquals, expected)
-			return strings.HasSuffix(req.URL.Path, "/plans") && req.Method == "POST"
+			name := req.FormValue("name") == "myplan"
+			memory := req.FormValue("memory") == "4194304"
+			swap := req.FormValue("swap") == "512"
+			cpuShare := req.FormValue("cpushare") == "100"
+			deflt := req.FormValue("default") == "true"
+			router := req.FormValue("router") == "myrouter"
+			method := req.Method == "POST"
+			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
+			url := strings.HasSuffix(req.URL.Path, "/plans")
+			return method && url && contentType && name && memory && method && swap && cpuShare && deflt && router
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -114,19 +107,16 @@ func (s *S) TestPlanCreateInvalidMemory(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusBadRequest},
 		CondFunc: func(req *http.Request) bool {
-			var plan app.Plan
-			err := json.NewDecoder(req.Body).Decode(&plan)
-			c.Assert(err, check.IsNil)
-			expected := app.Plan{
-				Name:     "myplan",
-				Memory:   4,
-				Swap:     0,
-				CpuShare: 100,
-				Default:  false,
-				Router:   "",
-			}
-			c.Assert(plan, check.DeepEquals, expected)
-			return strings.HasSuffix(req.URL.Path, "/plans") && req.Method == "POST"
+			name := req.FormValue("name") == "myplan"
+			memory := req.FormValue("memory") == "4"
+			swap := req.FormValue("swap") == "0"
+			cpuShare := req.FormValue("cpushare") == "100"
+			deflt := req.FormValue("default") == "false"
+			router := req.FormValue("router") == ""
+			method := req.Method == "POST"
+			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
+			url := strings.HasSuffix(req.URL.Path, "/plans")
+			return method && url && contentType && name && memory && method && swap && cpuShare && deflt && router
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
@@ -147,19 +137,16 @@ func (s *S) TestPlanCreateInvalidCpushare(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusBadRequest},
 		CondFunc: func(req *http.Request) bool {
-			var plan app.Plan
-			err := json.NewDecoder(req.Body).Decode(&plan)
-			c.Assert(err, check.IsNil)
-			expected := app.Plan{
-				Name:     "myplan",
-				Memory:   4194304,
-				Swap:     0,
-				CpuShare: 1,
-				Default:  false,
-				Router:   "",
-			}
-			c.Assert(plan, check.DeepEquals, expected)
-			return strings.HasSuffix(req.URL.Path, "/plans") && req.Method == "POST"
+			name := req.FormValue("name") == "myplan"
+			memory := req.FormValue("memory") == "4194304"
+			swap := req.FormValue("swap") == "0"
+			cpuShare := req.FormValue("cpushare") == "1"
+			deflt := req.FormValue("default") == "false"
+			router := req.FormValue("router") == ""
+			method := req.Method == "POST"
+			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
+			url := strings.HasSuffix(req.URL.Path, "/plans")
+			return method && url && contentType && name && memory && method && swap && cpuShare && deflt && router
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
