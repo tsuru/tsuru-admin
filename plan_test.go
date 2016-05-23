@@ -76,6 +76,36 @@ func (s *S) TestPlanCreateFlags(c *check.C) {
 	c.Assert(stdout.String(), check.Equals, "Plan successfully created!\n")
 }
 
+func (s *S) TestPlanCreateMemoryAndSwapUnits(c *check.C) {
+	var stdout, stderr bytes.Buffer
+	context := cmd.Context{
+		Args:   []string{"myplan"},
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}
+	trans := &cmdtest.ConditionalTransport{
+		Transport: cmdtest.Transport{Message: "", Status: http.StatusCreated},
+		CondFunc: func(req *http.Request) bool {
+			name := req.FormValue("name") == "myplan"
+			memory := req.FormValue("memory") == "100M"
+			swap := req.FormValue("swap") == "512K"
+			cpuShare := req.FormValue("cpushare") == "100"
+			deflt := req.FormValue("default") == "true"
+			router := req.FormValue("router") == "myrouter"
+			method := req.Method == "POST"
+			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
+			url := strings.HasSuffix(req.URL.Path, "/plans")
+			return method && url && contentType && name && memory && method && swap && cpuShare && deflt && router
+		},
+	}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	command := planCreate{}
+	command.Flags().Parse(true, []string{"-c", "100", "-m", "100M", "-s", "512K", "-d", "-r", "myrouter"})
+	err := command.Run(&context, client)
+	c.Assert(err, check.IsNil)
+	c.Assert(stdout.String(), check.Equals, "Plan successfully created!\n")
+}
+
 func (s *S) TestPlanCreateError(c *check.C) {
 	var stdout, stderr bytes.Buffer
 	context := cmd.Context{

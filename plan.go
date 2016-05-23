@@ -18,8 +18,8 @@ import (
 )
 
 type planCreate struct {
-	memory     int64
-	swap       int64
+	memory     string
+	swap       string
 	cpushare   int
 	setDefault bool
 	router     string
@@ -29,12 +29,14 @@ type planCreate struct {
 func (c *planCreate) Flags() *gnuflag.FlagSet {
 	if c.fs == nil {
 		c.fs = gnuflag.NewFlagSet("plan-create", gnuflag.ExitOnError)
-		memory := "Amount of available memory for units in bytes."
-		c.fs.Int64Var(&c.memory, "memory", 0, memory)
-		c.fs.Int64Var(&c.memory, "m", 0, memory)
-		swap := "Amount of available swap space for units in bytes."
-		c.fs.Int64Var(&c.swap, "swap", 0, swap)
-		c.fs.Int64Var(&c.swap, "s", 0, swap)
+		memory := `Amount of available memory for units in bytes or an integer value followed
+by M, K or G for megabytes, kilobytes or gigabytes respectively.`
+		c.fs.StringVar(&c.memory, "memory", "0", memory)
+		c.fs.StringVar(&c.memory, "m", "0", memory)
+		swap := `Amount of available swap space for units in bytes or an integer value followed
+by M, K or G for megabytes, kilobytes or gigabytes respectively.`
+		c.fs.StringVar(&c.swap, "swap", "0", swap)
+		c.fs.StringVar(&c.swap, "s", "0", swap)
 		cpushare := `Relative cpu share each unit will have available. This value is unitless and
 relative, so specifying the same value for all plans means all units will
 equally share processing power.`
@@ -68,8 +70,8 @@ func (c *planCreate) Run(context *cmd.Context, client *cmd.Client) error {
 	}
 	v := url.Values{}
 	v.Set("name", context.Args[0])
-	v.Set("memory", strconv.FormatInt(c.memory, 10))
-	v.Set("swap", strconv.FormatInt(c.swap, 10))
+	v.Set("memory", c.memory)
+	v.Set("swap", c.swap)
 	v.Set("cpushare", strconv.Itoa(c.cpushare))
 	v.Set("default", strconv.FormatBool(c.setDefault))
 	v.Set("router", c.router)
