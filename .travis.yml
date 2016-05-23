@@ -19,3 +19,11 @@ script:
 matrix:
   allow_failures:
     - go: tip
+notifications:
+  email:
+    on_success: change
+    on_failure: always
+  slack:
+    rooms:
+      secure: S12HYeu9EpeXdpJYCHpaJcG+8T6LJGmgq2+xb86TjF8bEJ1qyeJcAkUZJPpq/NnTC6XKABWkGzf0EIJmnwpfHr2ymRvwVFJTDOf4kU8AzeqwJb5SW51J6PYtIg8N/DPrnYDAcddEntVIUvwHVnigz5NBUmCV3m7wc61x8oG4Sow=
+
