@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/tsuru/tsuru/cmd"
@@ -129,7 +130,7 @@ The new limit must be an integer, it may also be "unlimited".`
 }
 
 func (appQuotaChange) Run(context *cmd.Context, client *cmd.Client) error {
-	url, err := cmd.GetURL("/apps/" + context.Args[0] + "/quota")
+	u, err := cmd.GetURL("/apps/" + context.Args[0] + "/quota")
 	if err != nil {
 		return err
 	}
@@ -137,8 +138,9 @@ func (appQuotaChange) Run(context *cmd.Context, client *cmd.Client) error {
 	if err != nil {
 		return err
 	}
-	body := bytes.NewBufferString("limit=" + limit)
-	request, _ := http.NewRequest("POST", url, body)
+	v := url.Values{}
+	v.Set("limit", limit)
+	request, _ := http.NewRequest("PUT", u, bytes.NewBufferString(v.Encode()))
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	_, err = client.Do(request)
 	if err != nil {
