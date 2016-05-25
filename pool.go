@@ -5,8 +5,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -270,15 +268,15 @@ pool when creating a new application.`,
 }
 
 func (removeTeamsFromPoolCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	body, err := json.Marshal(map[string]interface{}{"pool": ctx.Args[0], "teams": ctx.Args[1:]})
+	v := url.Values{}
+	for _, team := range ctx.Args[1:] {
+		v.Add("team", team)
+	}
+	u, err := cmd.GetURL(fmt.Sprintf("/pools/%s/team?%s", ctx.Args[0], v.Encode()))
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL(fmt.Sprintf("/pool/%s/team", ctx.Args[0]))
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("DELETE", url, bytes.NewBuffer(body))
+	req, err := http.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return err
 	}

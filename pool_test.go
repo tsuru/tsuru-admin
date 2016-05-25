@@ -333,7 +333,10 @@ func (s *S) TestRemoveTeamsFromPoolCmdRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return strings.HasSuffix(req.URL.Path, "/pool/pool1/team")
+			url := strings.HasSuffix(req.URL.Path, "/pools/pool1/team")
+			method := req.Method == "DELETE"
+			rq := req.URL.RawQuery == "team=team1"
+			return url && method && rq
 		},
 	}
 	manager := cmd.Manager{}
