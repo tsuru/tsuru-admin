@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -63,11 +62,11 @@ func (s *S) TestUserChangeQuotaRun(c *check.C) {
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			called = true
-			defer req.Body.Close()
-			body, err := ioutil.ReadAll(req.Body)
-			c.Assert(err, check.IsNil)
-			c.Assert(string(body), check.Equals, `limit=5`)
-			return req.Method == "POST" && strings.HasSuffix(req.URL.Path, "/users/fss@corp.globo.com/quota")
+			path := strings.HasSuffix(req.URL.Path, "/users/fss@corp.globo.com/quota")
+			method := req.Method == "PUT"
+			limit := req.FormValue("limit") == "5"
+			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
+			return path && method && limit
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
@@ -91,12 +90,11 @@ func (s *S) TestUserChangeQuotaRunUnlimited(c *check.C) {
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
 			called = true
-			defer req.Body.Close()
-			body, err := ioutil.ReadAll(req.Body)
-			c.Assert(err, check.IsNil)
-			c.Assert(string(body), check.Equals, "limit=-1")
+			path := strings.HasSuffix(req.URL.Path, "/users/fss@corp.globo.com/quota")
+			method := req.Method == "PUT"
+			limit := req.FormValue("limit") == "-1"
 			c.Assert(req.Header.Get("Content-Type"), check.Equals, "application/x-www-form-urlencoded")
-			return req.Method == "POST" && strings.HasSuffix(req.URL.Path, "/users/fss@corp.globo.com/quota")
+			return path && method && limit
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)

@@ -64,7 +64,7 @@ The new limit must be an integer, it may also be "unlimited".`
 }
 
 func (*userChangeQuota) Run(context *cmd.Context, client *cmd.Client) error {
-	url, err := cmd.GetURL("/users/" + context.Args[0] + "/quota")
+	u, err := cmd.GetURL("/users/" + context.Args[0] + "/quota")
 	if err != nil {
 		return err
 	}
@@ -72,8 +72,9 @@ func (*userChangeQuota) Run(context *cmd.Context, client *cmd.Client) error {
 	if err != nil {
 		return err
 	}
-	body := bytes.NewBufferString("limit=" + limit)
-	request, _ := http.NewRequest("POST", url, body)
+	v := url.Values{}
+	v.Set("limit", limit)
+	request, _ := http.NewRequest("PUT", u, bytes.NewBufferString(v.Encode()))
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	_, err = client.Do(request)
 	if err != nil {
