@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cezarsa/form"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"github.com/tsuru/tsuru/iaas"
@@ -116,14 +117,28 @@ func (s *S) TestTemplateListRun(c *check.C) {
 func (s *S) TestTemplateAddCmdRun(c *check.C) {
 	var buf bytes.Buffer
 	context := cmd.Context{Args: []string{"my-tpl", "ec2", "zone=xyz", "image=ami-something"}, Stdout: &buf}
-	expectedBody := `{"Name":"my-tpl","IaaSName":"ec2",` +
-		`"Data":[{"Name":"zone","Value":"xyz"},{"Name":"image","Value":"ami-something"}]}`
+	expectedBody := iaas.Template{
+		Name:     "my-tpl",
+		IaaSName: "ec2",
+		Data: []iaas.TemplateData{
+			{Name: "zone", Value: "xyz"},
+			{Name: "image", Value: "ami-something"},
+		},
+	}
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			body, _ := ioutil.ReadAll(req.Body)
-			c.Assert(string(body), check.DeepEquals, expectedBody)
-			return strings.HasSuffix(req.URL.Path, "/iaas/templates") && req.Method == "POST"
+			err := req.ParseForm()
+			c.Assert(err, check.IsNil)
+			var paramTemplate iaas.Template
+			dec := form.NewDecoder(nil)
+			dec.IgnoreUnknownKeys(true)
+			err = dec.DecodeValues(&paramTemplate, req.Form)
+			c.Assert(err, check.IsNil)
+			c.Assert(paramTemplate, check.DeepEquals, expectedBody)
+			path := strings.HasSuffix(req.URL.Path, "/iaas/templates")
+			method := req.Method == "POST"
+			return path && method
 		},
 	}
 	manager := cmd.Manager{}

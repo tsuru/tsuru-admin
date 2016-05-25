@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/cezarsa/form"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/iaas"
 )
@@ -163,18 +164,19 @@ func (c *templateAdd) Run(context *cmd.Context, client *cmd.Client) error {
 			})
 		}
 	}
-	templateBytes, err := json.Marshal(template)
+	v, err := form.EncodeToValues(&template)
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL("/iaas/templates")
+	u, err := cmd.GetURL("/iaas/templates")
 	if err != nil {
 		return err
 	}
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(templateBytes))
+	request, err := http.NewRequest("POST", u, bytes.NewBufferString(v.Encode()))
 	if err != nil {
 		return err
 	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	_, err = client.Do(request)
 	if err != nil {
 		context.Stderr.Write([]byte("Failed to add template.\n"))
