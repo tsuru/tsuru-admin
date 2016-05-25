@@ -651,10 +651,11 @@
 			"revisionTime": "2016-05-24T21:51:02Z"
 		},
 		{
-			"checksumSHA1": "viTTkTGRUa4Ro6PEKDeRekkVDS4=",
+			"checksumSHA1": "6gtWAd5N+6WXkUUDDbRsnBrq/xs=",
+			"origin": "github.com/tsuru/tsuru-admin/vendor/github.com/tsuru/tsuru/provision/docker",
 			"path": "github.com/tsuru/tsuru/provision/docker",
-			"revision": "8661ab0efc2c952d541346aea7e46f2ef54a70c7",
-			"revisionTime": "2016-05-24T21:51:02Z"
+			"revision": "ae87ddb8474cc3b2fe141c84a55f1fd94bdfa838",
+			"revisionTime": "2016-05-25T14:56:26-03:00"
 		},
 		{
 			"checksumSHA1": "tNCdKIqzFHB1GNntLDVSHSHkjh8=",
