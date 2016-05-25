@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -23,7 +23,7 @@ import (
 
 // errNoDefaultPool is the error returned when no default hosts are configured in
 // the segregated scheduler.
-var errNoDefaultPool = errors.New("No default pool configured in the scheduler: you should create a default pool.")
+var errNoDefaultPool = errors.New("no default pool configured in the scheduler: you should create a default pool.")
 
 type segregatedScheduler struct {
 	hostMutex           sync.Mutex
@@ -37,24 +37,27 @@ type segregatedScheduler struct {
 }
 
 func (s *segregatedScheduler) Schedule(c *cluster.Cluster, opts docker.CreateContainerOptions, schedulerOpts cluster.SchedulerOptions) (cluster.Node, error) {
-	schedOpts, _ := schedulerOpts.([]string)
-	if len(schedOpts) != 2 {
-		return cluster.Node{}, fmt.Errorf("invalid scheduler opts: %#v", schedulerOpts)
+	schedOpts, ok := schedulerOpts.(*container.SchedulerOpts)
+	if !ok {
+		return cluster.Node{}, &container.SchedulerError{
+			Base: fmt.Errorf("invalid scheduler opts: %#v", schedulerOpts),
+		}
 	}
-	appName := schedOpts[0]
-	processName := schedOpts[1]
-	a, _ := app.GetByName(appName)
+	a, _ := app.GetByName(schedOpts.AppName)
 	nodes, err := s.provisioner.Nodes(a)
 	if err != nil {
-		return cluster.Node{}, err
+		return cluster.Node{}, &container.SchedulerError{Base: err}
 	}
 	nodes, err = s.filterByMemoryUsage(a, nodes, s.maxMemoryRatio, s.TotalMemoryMetadata)
 	if err != nil {
-		return cluster.Node{}, err
+		return cluster.Node{}, &container.SchedulerError{Base: err}
 	}
-	node, err := s.chooseNode(nodes, opts.Name, appName, processName)
+	node, err := s.chooseNodeToAdd(nodes, opts.Name, schedOpts.AppName, schedOpts.ProcessName)
 	if err != nil {
-		return cluster.Node{}, err
+		return cluster.Node{}, &container.SchedulerError{Base: err}
+	}
+	if schedOpts.ActionLimiter != nil {
+		schedOpts.LimiterDone = schedOpts.ActionLimiter.Start(net.URLToHost(node))
 	}
 	return cluster.Node{Address: node}, nil
 }
@@ -167,42 +170,7 @@ func (s *segregatedScheduler) GetRemovableContainer(appName string, process stri
 	if err != nil {
 		return "", err
 	}
-	return s.chooseContainerFromMaxContainersCountInNode(nodes, appName, process)
-}
-
-// chooseNodeWithMaxContainersCount finds which is the node with maximum number
-// of containers and returns it
-func (s *segregatedScheduler) chooseContainerFromMaxContainersCountInNode(nodes []cluster.Node, appName, process string) (string, error) {
-	hosts, hostsMap := s.nodesToHosts(nodes)
-	log.Debugf("[scheduler] Possible nodes for remove a container: %#v", hosts)
-	s.hostMutex.Lock()
-	defer s.hostMutex.Unlock()
-	hostCountMap, err := s.aggregateContainersByHost(hosts)
-	if err != nil {
-		return "", err
-	}
-	appCountMap, err := s.aggregateContainersByHostAppProcess(hosts, appName, process)
-	if err != nil {
-		return "", err
-	}
-	// Finally finding the host with the maximum value for
-	// the pair [appCount, hostCount]
-	var maxHost string
-	maxCount := 0
-	for _, host := range hosts {
-		adjCount := appCountMap[host]*10000 + hostCountMap[host]
-		if adjCount > maxCount {
-			maxCount = adjCount
-			maxHost = host
-		}
-	}
-	chosenNode := hostsMap[maxHost]
-	log.Debugf("[scheduler] Chosen node for remove a container: %#v Count: %d", chosenNode, hostCountMap[maxHost])
-	containerID, err := s.getContainerFromHost(maxHost, appName, process)
-	if err != nil {
-		return "", err
-	}
-	return containerID, err
+	return s.chooseContainerToRemove(nodes, appName, process)
 }
 
 func (s *segregatedScheduler) getContainerFromHost(host string, appName, process string) (string, error) {
@@ -210,7 +178,7 @@ func (s *segregatedScheduler) getContainerFromHost(host string, appName, process
 	defer coll.Close()
 	var c container.Container
 	query := bson.M{
-		"hostaddr": host,
+		"hostaddr": net.URLToHost(host),
 		"appname":  appName,
 		"id":       bson.M{"$nin": s.ignoredContainers},
 	}
@@ -236,39 +204,96 @@ func (s *segregatedScheduler) nodesToHosts(nodes []cluster.Node) ([]string, map[
 	return hosts, hostsMap
 }
 
-// chooseNode finds which is the node with the minimum number
-// of containers and returns it
-func (s *segregatedScheduler) chooseNode(nodes []cluster.Node, contName string, appName, process string) (string, error) {
-	var chosenNode string
-	hosts, hostsMap := s.nodesToHosts(nodes)
-	log.Debugf("[scheduler] Possible nodes for container %s: %#v", contName, hosts)
+// chooseNodeToAdd finds which is the node with the minimum number of containers
+// and returns it
+func (s *segregatedScheduler) chooseNodeToAdd(nodes []cluster.Node, contName string, appName, process string) (string, error) {
+	log.Debugf("[scheduler] Possible nodes for container %s: %#v", contName, nodes)
 	s.hostMutex.Lock()
 	defer s.hostMutex.Unlock()
-	hostCountMap, err := s.aggregateContainersByHost(hosts)
+	chosenNode, _, err := s.minMaxNodes(nodes, appName, process)
 	if err != nil {
-		return chosenNode, err
+		return "", err
 	}
-	appCountMap, err := s.aggregateContainersByHostAppProcess(hosts, appName, process)
-	if err != nil {
-		return chosenNode, err
-	}
-	// Finally finding the host with the minimum value for
-	// the pair [appCount, hostCount]
-	var minHost string
-	minCount := math.MaxInt32
-	for _, host := range hosts {
-		adjCount := appCountMap[host]*10000 + hostCountMap[host]
-		if adjCount < minCount {
-			minCount = adjCount
-			minHost = host
-		}
-	}
-	chosenNode = hostsMap[minHost]
-	log.Debugf("[scheduler] Chosen node for container %s: %#v Count: %d", contName, chosenNode, minCount)
+	log.Debugf("[scheduler] Chosen node for container %s: %#v", contName, chosenNode)
 	if contName != "" {
 		coll := s.provisioner.Collection()
 		defer coll.Close()
-		err = coll.Update(bson.M{"name": contName}, bson.M{"$set": bson.M{"hostaddr": minHost}})
+		err = coll.Update(bson.M{"name": contName}, bson.M{"$set": bson.M{"hostaddr": net.URLToHost(chosenNode)}})
 	}
 	return chosenNode, err
+}
+
+// chooseContainerToRemove finds a container from the the node with maximum
+// number of containers and returns it
+func (s *segregatedScheduler) chooseContainerToRemove(nodes []cluster.Node, appName, process string) (string, error) {
+	_, chosenNode, err := s.minMaxNodes(nodes, appName, process)
+	if err != nil {
+		return "", err
+	}
+	log.Debugf("[scheduler] Chosen node for remove a container: %#v", chosenNode)
+	containerID, err := s.getContainerFromHost(chosenNode, appName, process)
+	if err != nil {
+		return "", err
+	}
+	return containerID, err
+}
+
+func appGroupCount(hostGroups map[string]int, appCountHost map[string]int) map[string]int {
+	groupCounters := map[int]int{}
+	for host, count := range appCountHost {
+		groupCounters[hostGroups[host]] += count
+	}
+	result := map[string]int{}
+	for host := range hostGroups {
+		result[host] = groupCounters[hostGroups[host]]
+	}
+	return result
+}
+
+// Find the host with the minimum (good to add a new container) and maximum
+// (good to remove a container) value for the pair [(number of containers for
+// app-process), (number of containers in host)]
+func (s *segregatedScheduler) minMaxNodes(nodes []cluster.Node, appName, process string) (string, string, error) {
+	nodesPtr := make([]*cluster.Node, len(nodes))
+	for i := range nodes {
+		nodesPtr[i] = &nodes[i]
+	}
+	metaFreqList, _, err := splitMetadata(nodesPtr)
+	if err != nil {
+		log.Debugf("[scheduler] ignoring metadata diff when selecting node: %s", err)
+	}
+	hostGroupMap := map[string]int{}
+	for i, m := range metaFreqList {
+		for _, n := range m.nodes {
+			hostGroupMap[net.URLToHost(n.Address)] = i
+		}
+	}
+	hosts, hostsMap := s.nodesToHosts(nodes)
+	hostCountMap, err := s.aggregateContainersByHost(hosts)
+	if err != nil {
+		return "", "", err
+	}
+	appCountMap, err := s.aggregateContainersByHostAppProcess(hosts, appName, process)
+	if err != nil {
+		return "", "", err
+	}
+	priorityEntries := []map[string]int{appGroupCount(hostGroupMap, appCountMap), appCountMap, hostCountMap}
+	var minHost, maxHost string
+	var minScore uint64 = math.MaxUint64
+	var maxScore uint64 = 0
+	for _, host := range hosts {
+		var score uint64
+		for i, e := range priorityEntries {
+			score += uint64(e[host]) << uint((len(priorityEntries)-i-1)*(64/len(priorityEntries)))
+		}
+		if score < minScore {
+			minScore = score
+			minHost = host
+		}
+		if score > maxScore {
+			maxScore = score
+			maxHost = host
+		}
+	}
+	return hostsMap[minHost], hostsMap[maxHost], nil
 }

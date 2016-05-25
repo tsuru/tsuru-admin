@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	stderror "errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sort"
@@ -41,11 +39,11 @@ import (
 
 func init() {
 	api.RegisterHandler("/docker/node", "GET", api.AuthorizationRequiredHandler(listNodesHandler))
-	api.RegisterHandler("/docker/node/apps/{appname}/containers", "GET", api.AuthorizationRequiredHandler(listContainersHandler))
-	api.RegisterHandler("/docker/node/{address:.*}/containers", "GET", api.AuthorizationRequiredHandler(listContainersHandler))
+	api.RegisterHandler("/docker/node/apps/{appname}/containers", "GET", api.AuthorizationRequiredHandler(listContainersByApp))
+	api.RegisterHandler("/docker/node/{address:.*}/containers", "GET", api.AuthorizationRequiredHandler(listContainersByNode))
 	api.RegisterHandler("/docker/node", "POST", api.AuthorizationRequiredHandler(addNodeHandler))
 	api.RegisterHandler("/docker/node", "PUT", api.AuthorizationRequiredHandler(updateNodeHandler))
-	api.RegisterHandler("/docker/node", "DELETE", api.AuthorizationRequiredHandler(removeNodeHandler))
+	api.RegisterHandler("/docker/node/{address:.*}", "DELETE", api.AuthorizationRequiredHandler(removeNodeHandler))
 	api.RegisterHandler("/docker/container/{id}/move", "POST", api.AuthorizationRequiredHandler(moveContainerHandler))
 	api.RegisterHandler("/docker/containers/move", "POST", api.AuthorizationRequiredHandler(moveContainersHandler))
 	api.RegisterHandler("/docker/containers/rebalance", "POST", api.AuthorizationRequiredHandler(rebalanceContainersHandler))
@@ -58,7 +56,7 @@ func init() {
 	api.RegisterHandler("/docker/autoscale/run", "POST", api.AuthorizationRequiredHandler(autoScaleRunHandler))
 	api.RegisterHandler("/docker/autoscale/rules", "GET", api.AuthorizationRequiredHandler(autoScaleListRules))
 	api.RegisterHandler("/docker/autoscale/rules", "POST", api.AuthorizationRequiredHandler(autoScaleSetRule))
-	api.RegisterHandler("/docker/autoscale/rules/", "DELETE", api.AuthorizationRequiredHandler(autoScaleDeleteRule))
+	api.RegisterHandler("/docker/autoscale/rules", "DELETE", api.AuthorizationRequiredHandler(autoScaleDeleteRule))
 	api.RegisterHandler("/docker/autoscale/rules/{id}", "DELETE", api.AuthorizationRequiredHandler(autoScaleDeleteRule))
 	api.RegisterHandler("/docker/bs/upgrade", "POST", api.AuthorizationRequiredHandler(bsUpgradeHandler))
 	api.RegisterHandler("/docker/bs/env", "POST", api.AuthorizationRequiredHandler(bsEnvSetHandler))
@@ -73,15 +71,30 @@ func init() {
 	api.RegisterHandler("/docker/logs", "POST", api.AuthorizationRequiredHandler(logsConfigSetHandler))
 }
 
+// title: get autoscale config
+// path: /docker/autoscale/config
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   401: Unauthorized
 func autoScaleGetConfig(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	allowedGetConfig := permission.Check(t, permission.PermNodeAutoscale)
 	if !allowedGetConfig {
 		return permission.ErrUnauthorized
 	}
 	config := mainDockerProvisioner.initAutoScaleConfig()
+	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(config)
 }
 
+// title: autoscale rules list
+// path: /docker/autoscale/rules
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   401: Unauthorized
 func autoScaleListRules(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	allowedListRule := permission.Check(t, permission.PermNodeAutoscale)
 	if !allowedListRule {
@@ -94,19 +107,40 @@ func autoScaleListRules(w http.ResponseWriter, r *http.Request, t auth.Token) er
 	return json.NewEncoder(w).Encode(&rules)
 }
 
+// title: autoscale set rule
+// path: /docker/autoscale/rules
+// method: POST
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Ok
+//   400: Invalid data
+//   401: Unauthorized
 func autoScaleSetRule(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	allowedSetRule := permission.Check(t, permission.PermNodeAutoscale)
 	if !allowedSetRule {
 		return permission.ErrUnauthorized
 	}
-	var rule autoScaleRule
-	err := json.NewDecoder(r.Body).Decode(&rule)
+	err := r.ParseForm()
 	if err != nil {
-		return err
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+	}
+	var rule autoScaleRule
+	dec := form.NewDecoder(nil)
+	dec.IgnoreUnknownKeys(true)
+	err = dec.DecodeValues(&rule, r.Form)
+	if err != nil {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	return rule.update()
 }
 
+// title: delete autoscale rule
+// path: /docker/autoscale/rules/{id}
+// method: DELETE
+// responses:
+//   200: Ok
+//   401: Unauthorized
+//   404: Not found
 func autoScaleDeleteRule(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	allowedDeleteRule := permission.Check(t, permission.PermNodeAutoscale)
 	if !allowedDeleteRule {
@@ -172,13 +206,26 @@ func (p *dockerProvisioner) addNodeForParams(params map[string]string, isRegiste
 	return response, err
 }
 
-// addNodeHandler can provide an machine and/or register a node address.
-// If register flag is true, it will just register a node.
-// It checks if node address is valid and accessible.
+// title: add node
+// path: /docker/node
+// method: POST
+// consume: application/x-www-form-urlencoded
+// produce: application/x-json-stream
+// responses:
+//   201: Ok
+//   401: Unauthorized
+//   404: Not found
 func addNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	params, err := unmarshal(r.Body)
+	err := r.ParseForm()
 	if err != nil {
-		return err
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+	}
+	params := map[string]string{}
+	dec := form.NewDecoder(nil)
+	dec.IgnoreUnknownKeys(true)
+	err = dec.DecodeValues(&params, r.Form)
+	if err != nil {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	if templateName, ok := params["template"]; ok {
 		params, err = iaas.ExpandTemplate(templateName)
@@ -193,7 +240,7 @@ func addNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 	if !permission.Check(t, permission.PermNodeCreate, permission.Context(permission.CtxPool, pool)) {
 		return permission.ErrUnauthorized
 	}
-	isRegister, _ := strconv.ParseBool(r.URL.Query().Get("register"))
+	isRegister, _ := strconv.ParseBool(params["register"])
 	if !isRegister {
 		canCreateMachine := permission.Check(t, permission.PermMachineCreate,
 			permission.Context(permission.CtxIaaS, params["iaas"]))
@@ -201,6 +248,8 @@ func addNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 			return permission.ErrUnauthorized
 		}
 	}
+	delete(params, "register")
+	w.Header().Set("Content-Type", "application/x-json-stream")
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
@@ -210,22 +259,28 @@ func addNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 			Error: fmt.Sprintf("%s\n\n%s", err, response["description"]),
 		})
 	}
+	w.WriteHeader(http.StatusCreated)
 	return nil
 }
 
-// removeNodeHandler calls scheduler.Unregister to unregistering a node into it.
+// title: remove node
+// path: /docker/node/{address}
+// method: DELETE
+// responses:
+//   200: Ok
+//   401: Unauthorized
+//   404: Not found
 func removeNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	params, err := unmarshal(r.Body)
-	if err != nil {
-		return err
-	}
-	address, _ := params["address"]
+	address := r.URL.Query().Get(":address")
 	if address == "" {
 		return fmt.Errorf("Node address is required.")
 	}
 	node, err := mainDockerProvisioner.Cluster().GetNode(address)
 	if err != nil {
-		return err
+		return &errors.HTTP{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("Node %s not found.", address),
+		}
 	}
 	allowedNodeRemove := permission.Check(t, permission.PermNodeDelete,
 		permission.Context(permission.CtxPool, node.Metadata["pool"]),
@@ -233,7 +288,7 @@ func removeNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	if !allowedNodeRemove {
 		return permission.ErrUnauthorized
 	}
-	removeIaaS, _ := strconv.ParseBool(params["remove_iaas"])
+	removeIaaS, _ := strconv.ParseBool(r.URL.Query().Get("remove-iaas"))
 	if removeIaaS {
 		allowedIaasRemove := permission.Check(t, permission.PermMachineDelete,
 			permission.Context(permission.CtxIaaS, node.Metadata["iaas"]),
@@ -262,13 +317,20 @@ func removeNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) err
 		var m iaas.Machine
 		m, err = iaas.FindMachineByIdOrAddress(node.Metadata["iaas-id"], net.URLToHost(address))
 		if err != nil && err != mgo.ErrNotFound {
-			return err
+			return nil
 		}
 		return m.Destroy()
 	}
 	return nil
 }
 
+// title: list nodes
+// path: /docker/node
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   204: No content
 func listNodesHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	pools, err := listContextValues(t, permission.PermNodeRead, false)
 	if err != nil {
@@ -310,20 +372,41 @@ func listNodesHandler(w http.ResponseWriter, r *http.Request, t auth.Token) erro
 		}
 		machines = filteredMachines
 	}
+	if len(nodes) == 0 && len(machines) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
 	result := map[string]interface{}{
 		"nodes":    nodes,
 		"machines": machines,
 	}
+	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(result)
 }
 
+// title: update nodes
+// path: /docker/node
+// method: PUT
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Ok
+//   400: Invalid data
+//   401: Unauthorized
+//   404: Not found
 func updateNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	params, err := unmarshal(r.Body)
+	err := r.ParseForm()
 	if err != nil {
-		return err
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
-	address, _ := params["address"]
-	if address == "" {
+	params := map[string]string{}
+	dec := form.NewDecoder(nil)
+	dec.IgnoreUnknownKeys(true)
+	err = dec.DecodeValues(&params, r.Form)
+	if err != nil {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+	}
+	address := params["address"]
+	if params["address"] == "" {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: "address is required"}
 	}
 	oldNode, err := mainDockerProvisioner.Cluster().GetNode(address)
@@ -351,28 +434,45 @@ func updateNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	}
 	delete(params, "address")
 	node := cluster.Node{Address: address, Metadata: params}
-	disabled, _ := strconv.ParseBool(r.URL.Query().Get("disabled"))
-	enabled, _ := strconv.ParseBool(r.URL.Query().Get("enabled"))
-	if disabled && enabled {
+	disable, _ := strconv.ParseBool(params["disable"])
+	enable, _ := strconv.ParseBool(params["enable"])
+	if disable && enable {
 		return &errors.HTTP{
 			Code:    http.StatusBadRequest,
 			Message: "You can't make a node enable and disable at the same time.",
 		}
 	}
-	if disabled {
+	if disable {
 		node.CreationStatus = cluster.NodeCreationStatusDisabled
 	}
-	if enabled {
+	if enable {
 		node.CreationStatus = cluster.NodeCreationStatusCreated
 	}
 	_, err = mainDockerProvisioner.Cluster().UpdateNode(node)
 	return err
 }
 
+// title: move container
+// path: /docker/container/{id}/move
+// method: POST
+// consume: application/x-www-form-urlencoded
+// produce: application/x-json-stream
+// responses:
+//   200: Ok
+//   400: Invalid data
+//   401: Unauthorized
+//   404: Not found
 func moveContainerHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	params, err := unmarshal(r.Body)
+	err := r.ParseForm()
 	if err != nil {
-		return err
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+	}
+	params := map[string]string{}
+	dec := form.NewDecoder(nil)
+	dec.IgnoreUnknownKeys(true)
+	err = dec.DecodeValues(&params, r.Form)
+	if err != nil {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	contId := r.URL.Query().Get(":id")
 	to := params["to"]
@@ -390,6 +490,7 @@ func moveContainerHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	if !permission.Check(t, permission.PermNode, permContexts...) {
 		return permission.ErrUnauthorized
 	}
+	w.Header().Set("Content-Type", "application/x-json-stream")
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
@@ -402,10 +503,27 @@ func moveContainerHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	return nil
 }
 
+// title: move containers
+// path: /docker/containers/move
+// method: POST
+// consume: application/x-www-form-urlencoded
+// produce: application/x-json-stream
+// responses:
+//   200: Ok
+//   400: Invalid data
+//   401: Unauthorized
+//   404: Not found
 func moveContainersHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	params, err := unmarshal(r.Body)
+	err := r.ParseForm()
 	if err != nil {
-		return err
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+	}
+	params := map[string]string{}
+	dec := form.NewDecoder(nil)
+	dec.IgnoreUnknownKeys(true)
+	err = dec.DecodeValues(&params, r.Form)
+	if err != nil {
+		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	from := params["from"]
 	to := params["to"]
@@ -419,6 +537,7 @@ func moveContainersHandler(w http.ResponseWriter, r *http.Request, t auth.Token)
 	if !permission.Check(t, permission.PermNode, permContexts...) {
 		return permission.ErrUnauthorized
 	}
+	w.Header().Set("Content-Type", "application/x-json-stream")
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
@@ -451,16 +570,33 @@ func moveContainersPermissionContexts(from, to string) ([]permission.PermissionC
 	return permContexts, nil
 }
 
+type rebalanceOptions struct {
+	Dry            bool
+	MetadataFilter map[string]string
+	AppFilter      []string
+}
+
+// title: rebalance containers
+// path: /docker/containers/rebalance
+// method: POST
+// consume: application/x-www-form-urlencoded
+// produce: application/x-json-stream
+// responses:
+//   200: Ok
+//   204: No content
+//   400: Invalid data
+//   401: Unauthorized
 func rebalanceContainersHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	var dry bool
-	var params struct {
-		Dry            string
-		MetadataFilter map[string]string
-		AppFilter      []string
-	}
-	err := json.NewDecoder(r.Body).Decode(&params)
-	if err == nil {
-		dry, _ = strconv.ParseBool(params.Dry)
+	r.ParseForm()
+	var params rebalanceOptions
+	dec := form.NewDecoder(nil)
+	dec.IgnoreUnknownKeys(true)
+	err := dec.DecodeValues(&params, r.Form)
+	if err != nil {
+		return &errors.HTTP{
+			Code:    http.StatusBadRequest,
+			Message: err.Error(),
+		}
 	}
 	var permContexts []permission.PermissionContext
 	if pool, ok := params.MetadataFilter["pool"]; ok {
@@ -469,10 +605,11 @@ func rebalanceContainersHandler(w http.ResponseWriter, r *http.Request, t auth.T
 	if !permission.Check(t, permission.PermNode, permContexts...) {
 		return permission.ErrUnauthorized
 	}
+	w.Header().Set("Content-Type", "application/x-json-stream")
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
-	_, err = mainDockerProvisioner.rebalanceContainersByFilter(writer, params.AppFilter, params.MetadataFilter, dry)
+	_, err = mainDockerProvisioner.rebalanceContainersByFilter(writer, params.AppFilter, params.MetadataFilter, params.Dry)
 	if err != nil {
 		fmt.Fprintf(writer, "Error trying to rebalance containers: %s\n", err)
 	} else {
@@ -481,54 +618,83 @@ func rebalanceContainersHandler(w http.ResponseWriter, r *http.Request, t auth.T
 	return nil
 }
 
-func listContainersHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+// title: list containers by node
+// path: /docker/node/{address}/containers
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   204: No content
+//   401: Unauthorized
+//   404: Not found
+func listContainersByNode(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	address := r.URL.Query().Get(":address")
-	if address != "" {
-		node, err := mainDockerProvisioner.Cluster().GetNode(address)
-		if err != nil {
-			return err
+	node, err := mainDockerProvisioner.Cluster().GetNode(address)
+	if err != nil {
+		return &errors.HTTP{
+			Code:    http.StatusNotFound,
+			Message: fmt.Sprintf("Node %s not found.", address),
 		}
-		hasAccess := permission.Check(t, permission.PermNodeRead,
-			permission.Context(permission.CtxPool, node.Metadata["pool"]))
-		if !hasAccess {
-			return permission.ErrUnauthorized
-		}
-		containerList, err := mainDockerProvisioner.listContainersByHost(net.URLToHost(address))
-		if err != nil {
-			return err
-		}
-		return json.NewEncoder(w).Encode(containerList)
 	}
-	appName := r.URL.Query().Get(":appname")
-	a, err := app.GetByName(appName)
+	hasAccess := permission.Check(t, permission.PermNodeRead,
+		permission.Context(permission.CtxPool, node.Metadata["pool"]))
+	if !hasAccess {
+		return permission.ErrUnauthorized
+	}
+	containerList, err := mainDockerProvisioner.listContainersByHost(net.URLToHost(address))
 	if err != nil {
 		return err
 	}
-	hasAccess := permission.Check(t, permission.PermNodeRead,
-		permission.Context(permission.CtxPool, a.Pool))
-	if !hasAccess {
-		return permission.ErrUnauthorized
+	if len(containerList) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json")
+	return json.NewEncoder(w).Encode(containerList)
+}
+
+// title: list containers by app
+// path: "/docker/node/apps/{appname}/containers
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   204: No content
+//   401: Unauthorized
+//   404: Not found
+func listContainersByApp(w http.ResponseWriter, r *http.Request, t auth.Token) error {
+	appName := r.URL.Query().Get(":appname")
+	_, err := app.GetByName(appName)
+	if err != nil {
+		if err == app.ErrAppNotFound {
+			return &errors.HTTP{
+				Code:    http.StatusNotFound,
+				Message: err.Error(),
+			}
+		}
+		return err
 	}
 	containerList, err := mainDockerProvisioner.listContainersByApp(appName)
 	if err != nil {
 		return err
 	}
+	if len(containerList) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(containerList)
 }
 
-func unmarshal(body io.ReadCloser) (map[string]string, error) {
-	b, err := ioutil.ReadAll(body)
-	if err != nil {
-		return nil, err
-	}
-	params := map[string]string{}
-	err = json.Unmarshal(b, &params)
-	if err != nil {
-		return nil, err
-	}
-	return params, nil
-}
-
+// title: list healing history
+// path: /docker/healing
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   204: No content
+//   400: Invalid data
+//   401: Unauthorized
 func healingHistoryHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermHealingRead) {
 		return permission.ErrUnauthorized
@@ -544,9 +710,22 @@ func healingHistoryHandler(w http.ResponseWriter, r *http.Request, t auth.Token)
 	if err != nil {
 		return err
 	}
+	if len(history) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(history)
 }
 
+// title: list autoscale history
+// path: /docker/healing
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   204: No content
+//   401: Unauthorized
 func autoScaleHistoryHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermNodeAutoscale) {
 		return permission.ErrUnauthorized
@@ -557,14 +736,26 @@ func autoScaleHistoryHandler(w http.ResponseWriter, r *http.Request, t auth.Toke
 	if err != nil {
 		return err
 	}
+	if len(history) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(&history)
 }
 
+// title: autoscale run
+// path: /docker/autoscale/run
+// method: POST
+// produce: application/x-json-stream
+// responses:
+//   200: Ok
+//   401: Unauthorized
 func autoScaleRunHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermNodeAutoscale) {
 		return permission.ErrUnauthorized
 	}
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/x-json-stream")
 	w.WriteHeader(http.StatusOK)
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
 	defer keepAliveWriter.Stop()
@@ -607,6 +798,13 @@ func listContextValues(t permission.Token, scheme *permission.PermissionScheme, 
 	return values, nil
 }
 
+// title: logs config
+// path: /docker/logs
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   401: Unauthorized
 func logsConfigGetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	pools, err := listContextValues(t, permission.PermPoolUpdateLogs, true)
 	if err != nil {
@@ -616,6 +814,7 @@ func logsConfigGetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	if err != nil {
 		return err
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if len(pools) == 0 {
 		return json.NewEncoder(w).Encode(configEntries)
 	}
@@ -628,6 +827,15 @@ func logsConfigGetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	return json.NewEncoder(w).Encode(newMap)
 }
 
+// title: logs config set
+// path: /docker/logs
+// method: POST
+// consume: application/x-www-form-urlencoded
+// produce: application/x-json-stream
+// responses:
+//   200: Ok
+//   400: Invalid data
+//   401: Unauthorized
 func logsConfigSetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	err := r.ParseForm()
 	if err != nil {
@@ -636,8 +844,8 @@ func logsConfigSetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 			Message: fmt.Sprintf("unable to parse form values: %s", err),
 		}
 	}
-	pool := r.Form.Get("pool")
-	restart, _ := strconv.ParseBool(r.Form.Get("restart"))
+	pool := r.FormValue("pool")
+	restart, _ := strconv.ParseBool(r.FormValue("restart"))
 	delete(r.Form, "pool")
 	delete(r.Form, "restart")
 	var conf container.DockerLogConfig
@@ -662,6 +870,7 @@ func logsConfigSetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	if err != nil {
 		return err
 	}
+	w.Header().Set("Content-Type", "application/x-json-stream")
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
@@ -708,6 +917,13 @@ func tryRestartAppsByFilter(filter *app.Filter, writer *tsuruIo.SimpleJsonMessag
 	wg.Wait()
 }
 
+// title: node healing info
+// path: /docker/healing/node
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   401: Unauthorized
 func nodeHealingRead(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	pools, err := listContextValues(t, permission.PermHealingRead, true)
 	if err != nil {
@@ -735,6 +951,13 @@ func nodeHealingRead(w http.ResponseWriter, r *http.Request, t auth.Token) error
 	return json.NewEncoder(w).Encode(configMap)
 }
 
+// title: node healing update
+// path: /docker/healing/node
+// method: POST
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Ok
+//   401: Unauthorized
 func nodeHealingUpdate(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	err := r.ParseForm()
 	if err != nil {
@@ -762,12 +985,15 @@ func nodeHealingUpdate(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	return healer.UpdateConfig(poolName, config)
 }
 
+// title: remove node healing
+// path: /docker/healing/node
+// method: DELETE
+// produce: application/json
+// responses:
+//   200: Ok
+//   401: Unauthorized
 func nodeHealingDelete(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	err := r.ParseForm()
-	if err != nil {
-		return err
-	}
-	poolName := r.FormValue("pool")
+	poolName := r.URL.Query().Get("pool")
 	if poolName == "" {
 		if !permission.Check(t, permission.PermHealingUpdate) {
 			return permission.ErrUnauthorized
@@ -778,11 +1004,11 @@ func nodeHealingDelete(w http.ResponseWriter, r *http.Request, t auth.Token) err
 			return permission.ErrUnauthorized
 		}
 	}
-	if len(r.Form["name"]) == 0 {
+	if len(r.URL.Query()["name"]) == 0 {
 		return healer.RemoveConfig(poolName, "")
 	}
-	for _, v := range r.Form["name"] {
-		err = healer.RemoveConfig(poolName, v)
+	for _, v := range r.URL.Query()["name"] {
+		err := healer.RemoveConfig(poolName, v)
 		if err != nil {
 			return err
 		}
@@ -790,6 +1016,13 @@ func nodeHealingDelete(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	return nil
 }
 
+// title: remove node container list
+// path: /docker/nodecontainers
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   401: Unauthorized
 func nodeContainerList(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	pools, err := listContextValues(t, permission.PermNodecontainerRead, true)
 	if err != nil {
@@ -820,6 +1053,14 @@ func nodeContainerList(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	return json.NewEncoder(w).Encode(lst)
 }
 
+// title: node container create
+// path: /docker/nodecontainers
+// method: POST
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Ok
+//   400: Invald data
+//   401: Unauthorized
 func nodeContainerCreate(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	err := r.ParseForm()
 	if err != nil {
@@ -857,6 +1098,14 @@ func nodeContainerCreate(w http.ResponseWriter, r *http.Request, t auth.Token) e
 	return nil
 }
 
+// title: node container info
+// path: /docker/nodecontainers/{name}
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   401: Unauthorized
+//   404: Not found
 func nodeContainerInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	pools, err := listContextValues(t, permission.PermNodecontainerRead, true)
 	if err != nil {
@@ -865,6 +1114,12 @@ func nodeContainerInfo(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	name := r.URL.Query().Get(":name")
 	configMap, err := nodecontainer.LoadNodeContainersForPools(name)
 	if err != nil {
+		if err == nodecontainer.ErrNodeContainerNotFound {
+			return &errors.HTTP{
+				Code:    http.StatusNotFound,
+				Message: err.Error(),
+			}
+		}
 		return err
 	}
 	if pools != nil {
@@ -885,6 +1140,15 @@ func nodeContainerInfo(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	return json.NewEncoder(w).Encode(configMap)
 }
 
+// title: node container update
+// path: /docker/nodecontainers/{name}
+// method: POST
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Ok
+//   400: Invald data
+//   401: Unauthorized
+//   404: Not found
 func nodeContainerUpdate(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	err := r.ParseForm()
 	if err != nil {
@@ -929,9 +1193,16 @@ func nodeContainerUpdate(w http.ResponseWriter, r *http.Request, t auth.Token) e
 	return nil
 }
 
+// title: remove node container
+// path: /docker/nodecontainers/{name}
+// method: DELETE
+// responses:
+//   200: Ok
+//   401: Unauthorized
+//   404: Not found
 func nodeContainerDelete(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	name := r.URL.Query().Get(":name")
-	poolName := r.FormValue("pool")
+	poolName := r.URL.Query().Get("pool")
 	if poolName == "" {
 		if !permission.Check(t, permission.PermNodecontainerDelete) {
 			return permission.ErrUnauthorized
@@ -952,6 +1223,16 @@ func nodeContainerDelete(w http.ResponseWriter, r *http.Request, t auth.Token) e
 	return err
 }
 
+// title: node container upgrade
+// path: /docker/nodecontainers/{name}/upgrade
+// method: POST
+// consume: application/x-www-form-urlencoded
+// produce: application/x-json-stream
+// responses:
+//   200: Ok
+//   400: Invald data
+//   401: Unauthorized
+//   404: Not found
 func nodeContainerUpgrade(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	name := r.URL.Query().Get(":name")
 	poolName := r.FormValue("pool")
@@ -967,8 +1248,15 @@ func nodeContainerUpgrade(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	}
 	err := nodecontainer.ResetImage(poolName, name)
 	if err != nil {
+		if err == nodecontainer.ErrNodeContainerNotFound {
+			return &errors.HTTP{
+				Code:    http.StatusNotFound,
+				Message: err.Error(),
+			}
+		}
 		return err
 	}
+	w.Header().Set("Content-Type", "application/x-json-stream")
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}

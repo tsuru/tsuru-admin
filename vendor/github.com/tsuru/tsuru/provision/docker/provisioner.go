@@ -28,6 +28,7 @@ import (
 	"github.com/tsuru/tsuru/db/storage"
 	"github.com/tsuru/tsuru/errors"
 	"github.com/tsuru/tsuru/log"
+	"github.com/tsuru/tsuru/net"
 	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/provision/docker/container"
 	"github.com/tsuru/tsuru/provision/docker/healer"
@@ -63,6 +64,7 @@ type dockerProvisioner struct {
 	scheduler      *segregatedScheduler
 	isDryMode      bool
 	nodeHealer     *healer.NodeHealer
+	actionLimiter  provision.ActionLimiter
 }
 
 func (p *dockerProvisioner) initDockerCluster() error {
@@ -141,7 +143,21 @@ func (p *dockerProvisioner) initDockerCluster() error {
 		shutdown.Register(autoScale)
 		go autoScale.run()
 	}
+	limitMode, _ := config.GetString("docker:limit:mode")
+	if limitMode == "global" {
+		p.actionLimiter = &provision.MongodbLimiter{}
+	} else {
+		p.actionLimiter = &provision.LocalLimiter{}
+	}
+	actionLimit, _ := config.GetUint("docker:limit:actions-per-host")
+	if actionLimit > 0 {
+		p.actionLimiter.Initialize(actionLimit)
+	}
 	return nil
+}
+
+func (p *dockerProvisioner) ActionLimiter() provision.ActionLimiter {
+	return p.actionLimiter
 }
 
 func (p *dockerProvisioner) initAutoScaleConfig() *autoScaleConfig {
@@ -196,6 +212,7 @@ func (p *dockerProvisioner) dryMode(ignoredContainers []container.Container) (*d
 	overridenProvisioner := &dockerProvisioner{
 		collectionName: "containers_dry_" + randomString(),
 		isDryMode:      true,
+		actionLimiter:  &provision.LocalLimiter{},
 	}
 	containerIds := make([]string, len(ignoredContainers))
 	for i := range ignoredContainers {
@@ -304,16 +321,15 @@ func (p *dockerProvisioner) Start(app provision.App, process string) error {
 		return stderr.New(fmt.Sprintf("Got error while getting app containers: %s", err))
 	}
 	err = runInContainers(containers, func(c *container.Container, _ chan *container.Container) error {
-		err = c.Start(&container.StartArgs{
+		startErr := c.Start(&container.StartArgs{
 			Provisioner: p,
 			App:         app,
 		})
-		if err != nil {
-			return err
+		if startErr != nil {
+			return startErr
 		}
 		c.SetStatus(p, provision.StatusStarting, true)
-		var info container.NetworkInfo
-		if info, err = c.NetworkInfo(p); err == nil {
+		if info, infoErr := c.NetworkInfo(p); infoErr == nil {
 			p.fixContainer(c, info)
 		}
 		return nil
@@ -376,10 +392,19 @@ func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.
 	}
 	fmt.Fprintln(w, "---- Pulling image to tsuru ----")
 	pullOpts := docker.PullImageOptions{
-		Repository:   imageId,
-		OutputStream: w,
+		Repository:        imageId,
+		OutputStream:      w,
+		InactivityTimeout: net.StreamInactivityTimeout,
 	}
-	err := cluster.PullImage(pullOpts, docker.AuthConfiguration{})
+	nodes, err := cluster.NodesForMetadata(map[string]string{"pool": app.GetPool()})
+	if err != nil {
+		return "", err
+	}
+	node, _, err := p.scheduler.minMaxNodes(nodes, app.GetName(), "")
+	if err != nil {
+		return "", err
+	}
+	err = cluster.PullImage(pullOpts, docker.AuthConfiguration{}, node)
 	if err != nil {
 		return "", err
 	}
@@ -420,10 +445,11 @@ func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.
 	}
 	fmt.Fprintln(w, "---- Pushing image to tsuru ----")
 	pushOpts := docker.PushImageOptions{
-		Name:         strings.Join(imageInfo[:len(imageInfo)-1], ":"),
-		Tag:          imageInfo[len(imageInfo)-1],
-		Registry:     registry,
-		OutputStream: w,
+		Name:              strings.Join(imageInfo[:len(imageInfo)-1], ":"),
+		Tag:               imageInfo[len(imageInfo)-1],
+		Registry:          registry,
+		OutputStream:      w,
+		InactivityTimeout: net.StreamInactivityTimeout,
 	}
 	err = cluster.PushImage(pushOpts, mainDockerProvisioner.RegistryAuthConfig())
 	if err != nil {
@@ -471,12 +497,26 @@ func (p *dockerProvisioner) UploadDeploy(app provision.App, archiveFile io.ReadC
 		},
 	}
 	cluster := p.Cluster()
-	_, cont, err := cluster.CreateContainerSchedulerOpts(options, []string{app.GetName(), ""})
+	schedOpts := &container.SchedulerOpts{
+		AppName:       app.GetName(),
+		ActionLimiter: p.ActionLimiter(),
+	}
+	addr, cont, err := cluster.CreateContainerSchedulerOpts(options, schedOpts, net.StreamInactivityTimeout)
+	hostAddr := net.URLToHost(addr)
+	if schedOpts.LimiterDone != nil {
+		schedOpts.LimiterDone()
+	}
 	if err != nil {
 		return "", err
 	}
-	defer cluster.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID, Force: true})
+	defer func() {
+		done := p.ActionLimiter().Start(hostAddr)
+		cluster.RemoveContainer(docker.RemoveContainerOptions{ID: cont.ID, Force: true})
+		done()
+	}()
+	done := p.ActionLimiter().Start(hostAddr)
 	err = cluster.StartContainer(cont.ID, nil)
+	done()
 	if err != nil {
 		return "", err
 	}
@@ -520,11 +560,15 @@ func (p *dockerProvisioner) UploadDeploy(app provision.App, archiveFile io.ReadC
 	if err != nil {
 		return "", err
 	}
+	done = p.ActionLimiter().Start(hostAddr)
 	err = cluster.StopContainer(cont.ID, 10)
+	done()
 	if err != nil {
 		return "", err
 	}
+	done = p.ActionLimiter().Start(hostAddr)
 	image, err := cluster.CommitContainer(docker.CommitContainerOptions{Container: cont.ID})
+	done()
 	imageId, err := p.archiveDeploy(app, image.ID, "file://"+filePath, w)
 	if err != nil {
 		return "", err
@@ -1009,13 +1053,14 @@ func (p *dockerProvisioner) buildPlatform(name string, args map[string]string, w
 	imageName := platformImageName(name)
 	cluster := p.Cluster()
 	buildOptions := docker.BuildImageOptions{
-		Name:           imageName,
-		Pull:           true,
-		NoCache:        true,
-		RmTmpContainer: true,
-		Remote:         dockerfileURL,
-		InputStream:    inputStream,
-		OutputStream:   w,
+		Name:              imageName,
+		Pull:              true,
+		NoCache:           true,
+		RmTmpContainer:    true,
+		Remote:            dockerfileURL,
+		InputStream:       inputStream,
+		OutputStream:      w,
+		InactivityTimeout: net.StreamInactivityTimeout,
 	}
 	err := cluster.BuildImage(buildOptions)
 	if err != nil {

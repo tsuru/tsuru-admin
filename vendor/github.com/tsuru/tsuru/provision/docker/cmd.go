@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -64,25 +65,23 @@ Parameters with special meaning:
 }
 
 func (a *addNodeToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	jsonParams := map[string]string{}
+	v := url.Values{}
 	for _, param := range ctx.Args {
 		if strings.Contains(param, "=") {
 			keyValue := strings.SplitN(param, "=", 2)
-			jsonParams[keyValue[0]] = keyValue[1]
+			v.Set(keyValue[0], keyValue[1])
 		}
 	}
-	b, err := json.Marshal(jsonParams)
+	v.Set("register", strconv.FormatBool(a.register))
+	u, err := cmd.GetURL("/docker/node")
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL(fmt.Sprintf("/docker/node?register=%t", a.register))
+	req, err := http.NewRequest("POST", u, bytes.NewBufferString(v.Encode()))
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(b))
-	if err != nil {
-		return err
-	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -132,26 +131,25 @@ func (a *updateNodeToSchedulerCmd) Flags() *gnuflag.FlagSet {
 }
 
 func (a *updateNodeToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	jsonParams := map[string]string{}
+	v := url.Values{}
 	for _, param := range ctx.Args[1:] {
 		if strings.Contains(param, "=") {
 			keyValue := strings.SplitN(param, "=", 2)
-			jsonParams[keyValue[0]] = keyValue[1]
+			v.Set(keyValue[0], keyValue[1])
 		}
 	}
-	jsonParams["address"] = ctx.Args[0]
-	b, err := json.Marshal(jsonParams)
+	v.Set("address", ctx.Args[0])
+	v.Set("disable", strconv.FormatBool(a.disabled))
+	v.Set("enable", strconv.FormatBool(a.enabled))
+	u, err := cmd.GetURL("/docker/node")
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL(fmt.Sprintf("/docker/node?disabled=%t&enabled=%t", a.disabled, a.enabled))
+	req, err := http.NewRequest("PUT", u, bytes.NewBufferString(v.Encode()))
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(b))
-	if err != nil {
-		return err
-	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	_, err = client.Do(req)
 	if err != nil {
 		return err
@@ -191,19 +189,16 @@ func (c *removeNodeFromSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) e
 	if !c.Confirm(ctx, fmt.Sprintf(msg+"?", ctx.Args[0])) {
 		return nil
 	}
-	params := map[string]string{"address": ctx.Args[0]}
+	v := url.Values{}
 	if c.destroy {
-		params["remove_iaas"] = "true"
+		v.Set("remove_iaas", "true")
 	}
-	b, err := json.Marshal(params)
+	v.Set("no-rebalance", strconv.FormatBool(c.noRebalance))
+	u, err := cmd.GetURL(fmt.Sprintf("/docker/node/%s?%s", ctx.Args[0], v.Encode()))
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL(fmt.Sprintf("/docker/node?no-rebalance=%t", c.noRebalance))
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("DELETE", url, bytes.NewBuffer(b))
+	req, err := http.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return err
 	}
@@ -255,11 +250,11 @@ func (c *listNodesInTheSchedulerCmd) Flags() *gnuflag.FlagSet {
 }
 
 func (c *listNodesInTheSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	url, err := cmd.GetURL("/docker/node")
+	u, err := cmd.GetURL("/docker/node")
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return err
 	}
@@ -280,40 +275,24 @@ func (c *listNodesInTheSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) e
 			machineMap[machine["Address"].(string)] = m.(map[string]interface{})
 		}
 	}
-	var nodes []interface{}
+	var nodes []map[string]interface{}
 	if result["nodes"] != nil {
-		nodes = result["nodes"].([]interface{})
+		nodes = c.filterNodes(result["nodes"].([]interface{}))
 	}
 	if c.simplified {
-		for _, n := range nodes {
-			node := n.(map[string]interface{})
+		for _, node := range nodes {
 			fmt.Fprintln(ctx.Stdout, node["Address"].(string))
 		}
 		return nil
 	}
 	t := cmd.Table{Headers: cmd.Row([]string{"Address", "IaaS ID", "Status", "Metadata"}), LineSeparator: true}
-	for _, n := range nodes {
-		node := n.(map[string]interface{})
+	for _, node := range nodes {
 		addr := node["Address"].(string)
 		status := node["Status"].(string)
 		result := []string{}
 		metadataField, _ := node["Metadata"]
-		if c.filter != nil && metadataField == nil {
-			continue
-		}
 		if metadataField != nil {
 			metadata := metadataField.(map[string]interface{})
-			valid := true
-			for key, value := range c.filter {
-				metaVal, _ := metadata[key]
-				if metaVal != value {
-					valid = false
-					break
-				}
-			}
-			if !valid {
-				continue
-			}
 			for key, value := range metadata {
 				result = append(result, fmt.Sprintf("%s=%s", key, value.(string)))
 			}
@@ -329,6 +308,34 @@ func (c *listNodesInTheSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) e
 	t.Sort()
 	ctx.Stdout.Write(t.Bytes())
 	return nil
+}
+
+func (c *listNodesInTheSchedulerCmd) filterNodes(nodes []interface{}) []map[string]interface{} {
+	filteredNodes := make([]map[string]interface{}, 0)
+	for _, n := range nodes {
+		node := n.(map[string]interface{})
+		if c.nodeMetadataMatchesFilters(node) {
+			filteredNodes = append(filteredNodes, node)
+		}
+	}
+	return filteredNodes
+}
+
+func (c *listNodesInTheSchedulerCmd) nodeMetadataMatchesFilters(node map[string]interface{}) bool {
+	metadataField, _ := node["Metadata"]
+	if c.filter != nil && metadataField == nil {
+		return false
+	}
+	if metadataField != nil {
+		metadata := metadataField.(map[string]interface{})
+		for key, value := range c.filter {
+			metaVal, _ := metadata[key]
+			if metaVal != value {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 type listAutoScaleHistoryCmd struct {
@@ -350,11 +357,11 @@ func (c *listAutoScaleHistoryCmd) Run(ctx *cmd.Context, client *cmd.Client) erro
 	}
 	limit := 20
 	skip := (c.page - 1) * limit
-	url, err := cmd.GetURL(fmt.Sprintf("/docker/autoscale?skip=%d&limit=%d", skip, limit))
+	u, err := cmd.GetURL(fmt.Sprintf("/docker/autoscale?skip=%d&limit=%d", skip, limit))
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return err
 	}
@@ -416,11 +423,11 @@ func (c *autoScaleRunCmd) Run(context *cmd.Context, client *cmd.Client) error {
 	if !c.Confirm(context, "Are you sure you want to run auto scaling checks?") {
 		return nil
 	}
-	url, err := cmd.GetURL("/docker/autoscale/run")
+	u, err := cmd.GetURL("/docker/autoscale/run")
 	if err != nil {
 		return err
 	}
-	request, err := http.NewRequest("POST", url, nil)
+	request, err := http.NewRequest("POST", u, nil)
 	if err != nil {
 		return err
 	}
@@ -473,11 +480,11 @@ func (c *autoScaleInfoCmd) Run(context *cmd.Context, client *cmd.Client) error {
 }
 
 func (c *autoScaleInfoCmd) getAutoScaleConfig(client *cmd.Client) (*autoScaleConfig, error) {
-	url, err := cmd.GetURL("/docker/autoscale/config")
+	u, err := cmd.GetURL("/docker/autoscale/config")
 	if err != nil {
 		return nil, err
 	}
-	request, err := http.NewRequest("GET", url, nil)
+	request, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -495,11 +502,11 @@ func (c *autoScaleInfoCmd) getAutoScaleConfig(client *cmd.Client) (*autoScaleCon
 }
 
 func (c *autoScaleInfoCmd) getAutoScaleRules(client *cmd.Client) ([]autoScaleRule, error) {
-	url, err := cmd.GetURL("/docker/autoscale/rules")
+	u, err := cmd.GetURL("/docker/autoscale/rules")
 	if err != nil {
 		return nil, err
 	}
-	request, err := http.NewRequest("GET", url, nil)
+	request, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -574,11 +581,11 @@ func (c *autoScaleSetRuleCmd) Run(context *cmd.Context, client *cmd.Client) erro
 		return err
 	}
 	body := bytes.NewBuffer(data)
-	url, err := cmd.GetURL("/docker/autoscale/rules")
+	u, err := cmd.GetURL("/docker/autoscale/rules")
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", url, body)
+	req, err := http.NewRequest("POST", u, body)
 	if err != nil {
 		return err
 	}
@@ -631,11 +638,11 @@ func (c *autoScaleDeleteRuleCmd) Run(context *cmd.Context, client *cmd.Client) e
 	if !c.Confirm(context, confirmMsg) {
 		return nil
 	}
-	url, err := cmd.GetURL("/docker/autoscale/rules/" + rule)
+	u, err := cmd.GetURL("/docker/autoscale/rules/" + rule)
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("DELETE", url, nil)
+	req, err := http.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return err
 	}
@@ -708,7 +715,7 @@ func (c *dockerLogUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 			return nil
 		}
 	}
-	url, err := cmd.GetURL("/docker/logs")
+	u, err := cmd.GetURL("/docker/logs")
 	if err != nil {
 		return err
 	}
@@ -723,7 +730,7 @@ func (c *dockerLogUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 	values.Set("pool", c.pool)
 	values.Set("restart", strconv.FormatBool(c.restart))
 	reader := strings.NewReader(values.Encode())
-	request, err := http.NewRequest("POST", url, reader)
+	request, err := http.NewRequest("POST", u, reader)
 	if err != nil {
 		return err
 	}
@@ -748,11 +755,11 @@ func (c *dockerLogInfo) Info() *cmd.Info {
 }
 
 func (c *dockerLogInfo) Run(context *cmd.Context, client *cmd.Client) error {
-	url, err := cmd.GetURL("/docker/logs")
+	u, err := cmd.GetURL("/docker/logs")
 	if err != nil {
 		return err
 	}
-	request, err := http.NewRequest("GET", url, nil)
+	request, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return err
 	}
