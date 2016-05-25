@@ -16,6 +16,7 @@ package hipache
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -27,7 +28,7 @@ import (
 	"gopkg.in/redis.v3"
 )
 
-const routerName = "hipache"
+const routerType = "hipache"
 
 var (
 	redisClients    = map[string]tsuruRedis.Client{}
@@ -35,8 +36,10 @@ var (
 )
 
 func init() {
-	router.Register(routerName, createRouter)
+	router.Register(routerType, createRouter)
+	router.Register("planb", createRouter)
 	hc.AddChecker("Router Hipache", router.BuildHealthCheck("hipache"))
+	hc.AddChecker("Router Planb", router.BuildHealthCheck("planb"))
 }
 
 func createRouter(routerName, configPrefix string) (router.Router, error) {
@@ -99,7 +102,7 @@ func (r *hipacheRouter) AddBackend(name string) error {
 	if err != nil {
 		return &router.RouterError{Op: "add", Err: err}
 	}
-	return router.Store(name, name, routerName)
+	return router.Store(name, name, routerType)
 }
 
 func (r *hipacheRouter) RemoveBackend(name string) error {
@@ -491,10 +494,14 @@ func (r *hipacheRouter) Routes(name string) ([]*url.URL, error) {
 	if err != nil {
 		return nil, &router.RouterError{Op: "routes", Err: err}
 	}
-	routes, err := conn.LRange(frontend, 1, -1).Result()
+	routes, err := conn.LRange(frontend, 0, -1).Result()
 	if err != nil {
 		return nil, &router.RouterError{Op: "routes", Err: err}
 	}
+	if len(routes) == 0 {
+		return nil, router.ErrBackendNotFound
+	}
+	routes = routes[1:]
 	result := make([]*url.URL, len(routes))
 	for i, route := range routes {
 		result[i], err = url.Parse(route)
@@ -544,4 +551,29 @@ func (r *hipacheRouter) StartupMessage() (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("hipache router %q with redis at %q.", domain, "TODO"), nil
+}
+
+func (r *hipacheRouter) SetHealthcheck(name string, data router.HealthcheckData) error {
+	backendName, err := router.Retrieve(name)
+	if err != nil {
+		return err
+	}
+	domain, err := config.GetString(r.prefix + ":domain")
+	if err != nil {
+		return &router.RouterError{Op: "setHealthcheck", Err: err}
+	}
+	conn, err := r.connect()
+	if err != nil {
+		return &router.RouterError{Op: "setHealthcheck", Err: err}
+	}
+	healthcheck := "healthcheck:" + backendName + "." + domain
+	err = conn.HMSetMap(healthcheck, map[string]string{
+		"path":   data.Path,
+		"body":   data.Body,
+		"status": strconv.Itoa(data.Status),
+	}).Err()
+	if err != nil {
+		return &router.RouterError{Op: "setHealthcheck", Err: err}
+	}
+	return nil
 }

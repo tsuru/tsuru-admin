@@ -7,7 +7,6 @@ package healer
 import (
 	"bytes"
 	"fmt"
-	"gopkg.in/mgo.v2"
 	"sync"
 	"time"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/tsuru/tsuru/provision/docker/nodecontainer"
 	"github.com/tsuru/tsuru/queue"
 	"github.com/tsuru/tsuru/scopedconfig"
+	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -71,9 +71,6 @@ func NewNodeHealer(args NodeHealerArgs) *NodeHealer {
 		waitTimeNewMachine:    args.WaitTimeNewMachine,
 		failuresBeforeHealing: args.FailuresBeforeHealing,
 		started:               time.Now().UTC(),
-	}
-	if healer.provisioner == nil {
-		return healer
 	}
 	healer.wg.Add(1)
 	go func() {
@@ -163,7 +160,7 @@ func (h *NodeHealer) tryHealingNode(node *cluster.Node, reason string, extra int
 	}
 	evt, err := NewHealingEventWithReason(*node, reason, extra)
 	if err != nil {
-		if mgo.IsDup(err) {
+		if err == errHealingInProgress {
 			// Healing in progress.
 			return nil
 		}

@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tsuru/config"
+	"github.com/tsuru/tsuru/api/context"
 	"github.com/tsuru/tsuru/auth"
 	"github.com/tsuru/tsuru/errors"
 	"github.com/tsuru/tsuru/io"
@@ -68,7 +70,9 @@ func createServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 		}
 	}
 	rec.Log(user.Email, "create-service-instance", fmt.Sprintf("%#v", instance))
-	err = service.CreateServiceInstance(instance, &srv, user)
+	requestIDHeader, _ := config.GetString("request-id-header")
+	requestID := context.GetRequestID(r, requestIDHeader)
+	err = service.CreateServiceInstance(instance, &srv, user, requestID)
 	if err == service.ErrInstanceNameAlreadyExists {
 		return &errors.HTTP{
 			Code:    http.StatusConflict,
@@ -179,7 +183,9 @@ func removeServiceInstance(w http.ResponseWriter, r *http.Request, t auth.Token)
 			}
 		}
 	}
-	err = service.DeleteInstance(serviceInstance)
+	requestIDHeader, _ := config.GetString("request-id-header")
+	requestID := context.GetRequestID(r, requestIDHeader)
+	err = service.DeleteInstance(serviceInstance, requestID)
 	if err != nil {
 		var msg string
 		if err == service.ErrServiceInstanceBound {
@@ -316,7 +322,9 @@ func serviceInstanceStatus(w http.ResponseWriter, r *http.Request, t auth.Token)
 	}
 	rec.Log(t.GetUserName(), "service-instance-status", serviceName, instanceName)
 	var b string
-	if b, err = serviceInstance.Status(); err != nil {
+	requestIDHeader, _ := config.GetString("request-id-header")
+	requestID := context.GetRequestID(r, requestIDHeader)
+	if b, err = serviceInstance.Status(requestID); err != nil {
 		msg := fmt.Sprintf("Could not retrieve status of service instance, error: %s", err)
 		return &errors.HTTP{Code: http.StatusInternalServerError, Message: msg}
 	}
@@ -363,11 +371,13 @@ func serviceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error
 		return permission.ErrUnauthorized
 	}
 	rec.Log(t.GetUserName(), "service-instance-info", serviceName, instanceName)
-	info, err := serviceInstance.Info()
+	requestIDHeader, _ := config.GetString("request-id-header")
+	requestID := context.GetRequestID(r, requestIDHeader)
+	info, err := serviceInstance.Info(requestID)
 	if err != nil {
 		return err
 	}
-	plan, err := service.GetPlanByServiceNameAndPlanName(serviceName, serviceInstance.PlanName)
+	plan, err := service.GetPlanByServiceNameAndPlanName(serviceName, serviceInstance.PlanName, requestID)
 	if err != nil {
 		return err
 	}
@@ -384,6 +394,12 @@ func serviceInstance(w http.ResponseWriter, r *http.Request, t auth.Token) error
 	return json.NewEncoder(w).Encode(sInfo)
 }
 
+// title: service info
+// path: /services/{name}
+// method: GET
+// produce: application/json
+// responses:
+//   200: OK
 func serviceInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	serviceName := r.URL.Query().Get(":name")
 	_, err := getService(serviceName)
@@ -398,6 +414,13 @@ func serviceInfo(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	return json.NewEncoder(w).Encode(instances)
 }
 
+// title: service doc
+// path: /services/{name}/doc
+// method: GET
+// responses:
+//   200: OK
+//   401: Unauthorized
+//   404: Not found
 func serviceDoc(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	serviceName := r.URL.Query().Get(":name")
 	rec.Log(t.GetUserName(), "service-doc", serviceName)
@@ -460,7 +483,9 @@ func servicePlans(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 		}
 	}
 	rec.Log(t.GetUserName(), "service-plans", serviceName)
-	plans, err := service.GetPlansByServiceName(serviceName)
+	requestIDHeader, _ := config.GetString("request-id-header")
+	requestID := context.GetRequestID(r, requestIDHeader)
+	plans, err := service.GetPlansByServiceName(serviceName, requestID)
 	if err != nil {
 		return err
 	}
@@ -468,6 +493,11 @@ func servicePlans(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	return json.NewEncoder(w).Encode(plans)
 }
 
+// title: service instance proxy
+// path: /services/{service}/proxy/{instance}
+// responses:
+//   401: Unauthorized
+//   404: Instance not found
 func serviceInstanceProxy(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	serviceName := r.URL.Query().Get(":service")
 	instanceName := r.URL.Query().Get(":instance")
@@ -494,7 +524,7 @@ func serviceInstanceProxy(w http.ResponseWriter, r *http.Request, t auth.Token) 
 // consume: application/x-www-form-urlencoded
 // method: PUT
 // responses:
-//   200: Access revoked
+//   200: Access granted
 //   401: Unauthorized
 //   404: Service instance not found
 func serviceInstanceGrantTeam(w http.ResponseWriter, r *http.Request, t auth.Token) error {

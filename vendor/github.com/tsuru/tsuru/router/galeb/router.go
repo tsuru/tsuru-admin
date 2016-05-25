@@ -283,3 +283,19 @@ func (r *galebRouter) RemoveBackend(name string) error {
 	}
 	return router.Remove(backendName)
 }
+
+func (r *galebRouter) SetHealthcheck(name string, data router.HealthcheckData) error {
+	backendName, err := router.Retrieve(name)
+	if err != nil {
+		return err
+	}
+	if data.Path == "" {
+		data.Path = "/"
+	}
+	poolProperties := galebClient.BackendPoolProperties{
+		HcPath:       data.Path,
+		HcStatusCode: fmt.Sprintf("%d", data.Status),
+		HcBody:       data.Body,
+	}
+	return r.client.UpdatePoolProperties(r.poolName(backendName), poolProperties)
+}

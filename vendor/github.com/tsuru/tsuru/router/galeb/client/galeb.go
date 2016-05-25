@@ -73,7 +73,7 @@ func (c *GalebClient) doRequest(method, path string, params interface{}) (*http.
 		req.SetBasicAuth(c.Username, c.Password)
 	}
 	req.Header.Set("Content-Type", contentType)
-	rsp, err := net.Dial5Full60Client.Do(req)
+	rsp, err := net.Dial5Full60ClientNoKeepAlive.Do(req)
 	if c.Debug {
 		var code int
 		if err == nil {
@@ -163,6 +163,27 @@ func (c *GalebClient) AddBackendPool(name string) (string, error) {
 		return "", err
 	}
 	return resource, c.waitStatusOK(resource)
+}
+
+func (c *GalebClient) UpdatePoolProperties(poolName string, properties BackendPoolProperties) error {
+	poolID, err := c.findItemByName("pool", poolName)
+	if err != nil {
+		return err
+	}
+	path := strings.TrimPrefix(poolID, c.ApiUrl)
+	var poolParam Pool
+	c.fillDefaultPoolValues(&poolParam)
+	poolParam.Name = poolName
+	poolParam.Properties = properties
+	rsp, err := c.doRequest("PATCH", path, poolParam)
+	if err != nil {
+		return err
+	}
+	if rsp.StatusCode != http.StatusNoContent {
+		responseData, _ := ioutil.ReadAll(rsp.Body)
+		return fmt.Errorf("PATCH %s: invalid response code: %d: %s", path, rsp.StatusCode, string(responseData))
+	}
+	return c.waitStatusOK(poolID)
 }
 
 func (c *GalebClient) AddBackend(backend *url.URL, poolName string) (string, error) {

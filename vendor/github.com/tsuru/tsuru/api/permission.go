@@ -225,6 +225,15 @@ func runWithPermSync(users []auth.User, callback func() error) error {
 	return nil
 }
 
+// title: add permissions
+// path: /roles/{name}/permissions
+// method: POST
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Ok
+//   400: Invalid data
+//   401: Unauthorized
+//   409: Permission not allowed
 func addPermissions(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleUpdate) {
 		return permission.ErrUnauthorized
@@ -266,6 +275,13 @@ func addPermissions(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 	return err
 }
 
+// title: remove permission
+// path: /roles/{name}/permissions/{permission}
+// method: DELETE
+// responses:
+//   200: Permission removed
+//   401: Unauthorized
+//   404: Not found
 func removePermissions(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleUpdate) {
 		return permission.ErrUnauthorized
@@ -274,6 +290,12 @@ func removePermissions(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	permName := r.URL.Query().Get(":permission")
 	role, err := permission.FindRole(roleName)
 	if err != nil {
+		if err == permission.ErrRoleNotFound {
+			return &errors.HTTP{
+				Code:    http.StatusNotFound,
+				Message: err.Error(),
+			}
+		}
 		return err
 	}
 	users, err := auth.ListUsersWithRole(roleName)
@@ -289,6 +311,12 @@ func removePermissions(w http.ResponseWriter, r *http.Request, t auth.Token) err
 func canUseRole(t auth.Token, roleName, contextValue string) error {
 	role, err := permission.FindRole(roleName)
 	if err != nil {
+		if err == permission.ErrRoleNotFound {
+			return &errors.HTTP{
+				Code:    http.StatusNotFound,
+				Message: err.Error(),
+			}
+		}
 		return err
 	}
 	userPerms, err := t.Permissions()
@@ -307,6 +335,15 @@ func canUseRole(t auth.Token, roleName, contextValue string) error {
 	return nil
 }
 
+// title: assign role to user
+// path: /roles/{name}/user
+// method: POST
+// consume: application/x-www-form-urlencoded
+// responses:
+//   200: Ok
+//   400: Invalid data
+//   401: Unauthorized
+//   404: Role not found
 func assignRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleUpdateAssign) {
 		return permission.ErrUnauthorized
@@ -328,6 +365,14 @@ func assignRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	return err
 }
 
+// title: dissociate role from user
+// path: /roles/{name}/user/{email}
+// method: DELETE
+// responses:
+//   200: Ok
+//   400: Invalid data
+//   401: Unauthorized
+//   404: Role not found
 func dissociateRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleUpdateDissociate) {
 		return permission.ErrUnauthorized
@@ -354,6 +399,13 @@ type permissionSchemeData struct {
 	Contexts []string
 }
 
+// title: list permissions
+// path: /permissions
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   401: Unauthorized
 func listPermissions(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleUpdate) {
 		return permission.ErrUnauthorized
@@ -376,6 +428,14 @@ func listPermissions(w http.ResponseWriter, r *http.Request, t auth.Token) error
 	return json.NewEncoder(w).Encode(permList)
 }
 
+// title: add default role
+// path: /role/default
+// method: POST
+// consme: application/x-www-form-urlencoded
+// responses:
+//   200: Ok
+//   400: Invalid data
+//   401: Unauthorized
 func addDefaultRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleDefaultCreate) {
 		return permission.ErrUnauthorized
@@ -412,16 +472,19 @@ func addDefaultRole(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 	return nil
 }
 
+// title: remove default role
+// path: /role/default
+// method: DELETE
+// responses:
+//   200: Ok
+//   400: Invalid data
+//   401: Unauthorized
 func removeDefaultRole(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleDefaultDelete) {
 		return permission.ErrUnauthorized
 	}
-	err := r.ParseForm()
-	if err != nil {
-		return err
-	}
 	for evtName := range permission.RoleEventMap {
-		roles := r.Form[evtName]
+		roles := r.URL.Query()[evtName]
 		for _, roleName := range roles {
 			role, err := permission.FindRole(roleName)
 			if err != nil {
@@ -442,6 +505,13 @@ func removeDefaultRole(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	return nil
 }
 
+// title: list default roles
+// path: /role/default
+// method: GET
+// produce: application/json
+// responses:
+//   200: Ok
+//   401: Unauthorized
 func listDefaultRoles(w http.ResponseWriter, r *http.Request, t auth.Token) error {
 	if !permission.Check(t, permission.PermRoleDefaultCreate) &&
 		!permission.Check(t, permission.PermRoleDefaultDelete) {
