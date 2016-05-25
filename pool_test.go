@@ -311,7 +311,14 @@ func (s *S) TestAddTeamsToPoolCmdRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			return strings.HasSuffix(req.URL.Path, "/pool/pool1/team")
+			url := strings.HasSuffix(req.URL.Path, "/pools/pool1/team")
+			method := req.Method == "POST"
+			err := req.ParseForm()
+			c.Assert(err, check.IsNil)
+			teams := req.Form["team"]
+			c.Assert(teams, check.DeepEquals, []string{"team1", "team2"})
+			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
+			return url && method && contentType
 		},
 	}
 	manager := cmd.Manager{}

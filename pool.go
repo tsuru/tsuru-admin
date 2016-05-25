@@ -236,18 +236,19 @@ creating a new application for one of the added teams.`,
 }
 
 func (addTeamsToPoolCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	body, err := json.Marshal(map[string]interface{}{"teams": ctx.Args[1:]})
+	v := url.Values{}
+	for _, team := range ctx.Args[1:] {
+		v.Add("team", team)
+	}
+	u, err := cmd.GetURL(fmt.Sprintf("/pools/%s/team", ctx.Args[0]))
 	if err != nil {
 		return err
 	}
-	url, err := cmd.GetURL(fmt.Sprintf("/pool/%s/team", ctx.Args[0]))
+	req, err := http.NewRequest("POST", u, strings.NewReader(v.Encode()))
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
-	if err != nil {
-		return err
-	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	_, err = client.Do(req)
 	if err != nil {
 		return err
