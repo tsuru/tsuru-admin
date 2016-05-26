@@ -169,14 +169,28 @@ func (s *S) TestTemplateRemoveCmdRun(c *check.C) {
 func (s *S) TestTemplateUpdateCmdRun(c *check.C) {
 	var buf bytes.Buffer
 	context := cmd.Context{Args: []string{"my-tpl", "zone=", "image=ami-something"}, Stdout: &buf}
-	expectedBody := `{"Name":"my-tpl","IaaSName":"",` +
-		`"Data":[{"Name":"zone","Value":""},{"Name":"image","Value":"ami-something"}]}`
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: "", Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			body, _ := ioutil.ReadAll(req.Body)
-			c.Assert(string(body), check.DeepEquals, expectedBody)
-			return strings.HasSuffix(req.URL.Path, "/iaas/templates/my-tpl") && req.Method == "PUT"
+			var template iaas.Template
+			dec := form.NewDecoder(nil)
+			dec.IgnoreUnknownKeys(true)
+			err := req.ParseForm()
+			c.Assert(err, check.IsNil)
+			err = dec.DecodeValues(&template, req.Form)
+			c.Assert(err, check.IsNil)
+			expected := iaas.Template{
+				Name: "my-tpl",
+				Data: iaas.TemplateDataList{
+					{Name: "zone", Value: ""},
+					{Name: "image", Value: "ami-something"},
+				},
+			}
+			c.Assert(template, check.DeepEquals, expected)
+			path := strings.HasSuffix(req.URL.Path, "/iaas/templates/my-tpl")
+			method := req.Method == "PUT"
+			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
+			return path && method && contentType
 		},
 	}
 	manager := cmd.Manager{}

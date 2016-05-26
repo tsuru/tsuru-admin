@@ -227,8 +227,7 @@ func (c *templateUpdate) Info() *cmd.Info {
 }
 
 func (c *templateUpdate) Run(context *cmd.Context, client *cmd.Client) error {
-	var template iaas.Template
-	template.Name = context.Args[0]
+	template := iaas.Template{Name: context.Args[0]}
 	for _, param := range context.Args[1:] {
 		if strings.Contains(param, "=") {
 			keyValue := strings.SplitN(param, "=", 2)
@@ -238,7 +237,7 @@ func (c *templateUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 			})
 		}
 	}
-	templateBytes, err := json.Marshal(template)
+	v, err := form.EncodeToValues(&template)
 	if err != nil {
 		return err
 	}
@@ -246,10 +245,11 @@ func (c *templateUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 	if err != nil {
 		return err
 	}
-	request, err := http.NewRequest("PUT", url, bytes.NewBuffer(templateBytes))
+	request, err := http.NewRequest("PUT", url, strings.NewReader(v.Encode()))
 	if err != nil {
 		return err
 	}
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	_, err = client.Do(request)
 	if err != nil {
 		context.Stderr.Write([]byte("Failed to update template.\n"))
