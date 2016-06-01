@@ -658,10 +658,10 @@
 			"revisionTime": "2016-06-01T19:15:16Z"
 		},
 		{
-			"checksumSHA1": "VVkLvHP+knZmMH4eose7EBOFahY=",
+			"checksumSHA1": "XrINp5mbADaFyLfrLg8zR6q1Nw8=",
 			"path": "github.com/tsuru/tsuru/provision/docker",
-			"revision": "bff2208a2720a2fd9b970724e4f861ca153d27df",
-			"revisionTime": "2016-06-01T19:15:16Z"
+			"revision": "42457ffae40adb210405a87962a47caee49b4eae",
+			"revisionTime": "2016-06-01T21:13:53Z"
 		},
 		{
 			"checksumSHA1": "tNCdKIqzFHB1GNntLDVSHSHkjh8=",
@@ -676,10 +676,10 @@
 			"revisionTime": "2016-06-01T19:15:16Z"
 		},
 		{
-			"checksumSHA1": "5RexbOrj+Ge0zGLB+22N6Zy8uyo=",
+			"checksumSHA1": "8QuqMWGD7pPSfYB/GNv95fir6rI=",
 			"path": "github.com/tsuru/tsuru/provision/docker/healer",
-			"revision": "bff2208a2720a2fd9b970724e4f861ca153d27df",
-			"revisionTime": "2016-06-01T19:15:16Z"
+			"revision": "47b6eac7508f78e61cd0c29277ee9050a62e1f6f",
+			"revisionTime": "2016-06-01T20:42:14Z"
 		},
 		{
 			"checksumSHA1": "93En/NlXBmnVJ2viBc/VRLGFGtM=",
