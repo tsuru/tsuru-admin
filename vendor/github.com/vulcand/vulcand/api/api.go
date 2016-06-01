@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/mailgun/scroll"
+	"github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/log"
+	"github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/scroll"
 	"github.com/vulcand/vulcand/anomaly"
 	"github.com/vulcand/vulcand/engine"
 	"github.com/vulcand/vulcand/plugin"
@@ -114,12 +113,12 @@ func (c *ProxyController) getLogSeverity(w http.ResponseWriter, r *http.Request,
 }
 
 func (c *ProxyController) updateLogSeverity(w http.ResponseWriter, r *http.Request, params map[string]string) (interface{}, error) {
-	sev, err := log.ParseLevel(strings.ToLower(r.Form.Get("severity")))
+	s, err := log.SeverityFromString(r.Form.Get("severity"))
 	if err != nil {
 		return nil, formatError(err)
 	}
-	c.ng.SetLogSeverity(sev)
-	return scroll.Response{"message": fmt.Sprintf("Severity has been updated to %v", sev.String())}, nil
+	c.ng.SetLogSeverity(s)
+	return scroll.Response{"message": fmt.Sprintf("Severity has been updated to %v", s)}, nil
 }
 
 func (c *ProxyController) getHosts(w http.ResponseWriter, r *http.Request, params map[string]string, body []byte) (interface{}, error) {

@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/codegangsta/cli"
-	"github.com/vulcand/oxy/utils"
+	"github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/codegangsta/cli"
+	"github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/log"
+	"github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/vulcand/oxy/utils"
 	"github.com/vulcand/vulcand/plugin"
 )
 

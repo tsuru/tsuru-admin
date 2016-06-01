@@ -3,7 +3,7 @@ package engine
 import (
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/vulcand/vulcand/Godeps/_workspace/src/github.com/mailgun/log"
 	"github.com/vulcand/vulcand/plugin"
 )
 
@@ -87,9 +87,9 @@ type Engine interface {
 	GetRegistry() *plugin.Registry
 
 	// GetLogSeverity returns the current logging severity level
-	GetLogSeverity() log.Level
+	GetLogSeverity() log.Severity
 	// SetLogSeverity updates the logging severity level
-	SetLogSeverity(log.Level)
+	SetLogSeverity(log.Severity)
 
 	// Close should close all underlying resources such as connections, files, etc.
 	Close()

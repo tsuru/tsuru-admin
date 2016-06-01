@@ -22,9 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/fsouza/go-dockerclient"
-	"github.com/gorilla/mux"
+	"github.com/fsouza/go-dockerclient/external/github.com/docker/docker/pkg/stdcopy"
+	"github.com/fsouza/go-dockerclient/external/github.com/gorilla/mux"
 )
 
 var nameRegexp = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]+$`)
@@ -731,8 +731,10 @@ func (s *DockerServer) removeContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-	s.containers[index] = s.containers[len(s.containers)-1]
-	s.containers = s.containers[:len(s.containers)-1]
+	if s.containers[index].ID == id || s.containers[index].Name == id {
+		s.containers[index] = s.containers[len(s.containers)-1]
+		s.containers = s.containers[:len(s.containers)-1]
+	}
 }
 
 func (s *DockerServer) commitContainer(w http.ResponseWriter, r *http.Request) {
