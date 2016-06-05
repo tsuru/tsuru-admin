@@ -211,6 +211,11 @@ func (p *dockerProvisioner) addNodeForParams(params map[string]string, isRegiste
 	return response, err
 }
 
+type addNodeOptions struct {
+	Metadata map[string]string
+	Register bool
+}
+
 // title: add node
 // path: /docker/node
 // method: POST
@@ -225,40 +230,39 @@ func addNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error 
 	if err != nil {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
-	params := map[string]string{}
+	var params addNodeOptions
 	dec := form.NewDecoder(nil)
 	dec.IgnoreUnknownKeys(true)
 	err = dec.DecodeValues(&params, r.Form)
 	if err != nil {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
-	if templateName, ok := params["template"]; ok {
-		params, err = iaas.ExpandTemplate(templateName)
+	if templateName, ok := params.Metadata["template"]; ok {
+		params.Metadata, err = iaas.ExpandTemplate(templateName)
 		if err != nil {
 			return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 		}
 	}
-	pool := params["pool"]
+	pool := params.Metadata["pool"]
 	if pool == "" {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: "pool is required"}
 	}
 	if !permission.Check(t, permission.PermNodeCreate, permission.Context(permission.CtxPool, pool)) {
 		return permission.ErrUnauthorized
 	}
-	isRegister, _ := strconv.ParseBool(params["register"])
+	isRegister := params.Register
 	if !isRegister {
 		canCreateMachine := permission.Check(t, permission.PermMachineCreate,
-			permission.Context(permission.CtxIaaS, params["iaas"]))
+			permission.Context(permission.CtxIaaS, params.Metadata["iaas"]))
 		if !canCreateMachine {
 			return permission.ErrUnauthorized
 		}
 	}
-	delete(params, "register")
 	w.Header().Set("Content-Type", "application/x-json-stream")
 	keepAliveWriter := tsuruIo.NewKeepAliveWriter(w, 15*time.Second, "")
 	defer keepAliveWriter.Stop()
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
-	response, err := mainDockerProvisioner.addNodeForParams(params, isRegister)
+	response, err := mainDockerProvisioner.addNodeForParams(params.Metadata, isRegister)
 	if err != nil {
 		writer.Encode(tsuruIo.SimpleJsonMessage{
 			Error: fmt.Sprintf("%s\n\n%s", err, response["description"]),
@@ -389,6 +393,13 @@ func listNodesHandler(w http.ResponseWriter, r *http.Request, t auth.Token) erro
 	return json.NewEncoder(w).Encode(result)
 }
 
+type updateNodeOptions struct {
+	Address  string
+	Metadata map[string]string
+	Enable   bool
+	Disable  bool
+}
+
 // title: update nodes
 // path: /docker/node
 // method: PUT
@@ -403,18 +414,17 @@ func updateNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	if err != nil {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
-	params := map[string]string{}
+	var params updateNodeOptions
 	dec := form.NewDecoder(nil)
 	dec.IgnoreUnknownKeys(true)
 	err = dec.DecodeValues(&params, r.Form)
 	if err != nil {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
-	address := params["address"]
-	if params["address"] == "" {
+	if params.Address == "" {
 		return &errors.HTTP{Code: http.StatusBadRequest, Message: "address is required"}
 	}
-	oldNode, err := mainDockerProvisioner.Cluster().GetNode(address)
+	oldNode, err := mainDockerProvisioner.Cluster().GetNode(params.Address)
 	if err != nil {
 		return &errors.HTTP{
 			Code:    http.StatusNotFound,
@@ -428,7 +438,7 @@ func updateNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) err
 	if !allowedOldPool {
 		return permission.ErrUnauthorized
 	}
-	newPool, ok := params["pool"]
+	newPool, ok := params.Metadata["pool"]
 	if ok {
 		allowedNewPool := permission.Check(t, permission.PermNodeUpdate,
 			permission.Context(permission.CtxPool, newPool),
@@ -437,20 +447,17 @@ func updateNodeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) err
 			return permission.ErrUnauthorized
 		}
 	}
-	delete(params, "address")
-	node := cluster.Node{Address: address, Metadata: params}
-	disable, _ := strconv.ParseBool(params["disable"])
-	enable, _ := strconv.ParseBool(params["enable"])
-	if disable && enable {
+	node := cluster.Node{Address: params.Address, Metadata: params.Metadata}
+	if params.Disable && params.Enable {
 		return &errors.HTTP{
 			Code:    http.StatusBadRequest,
 			Message: "You can't make a node enable and disable at the same time.",
 		}
 	}
-	if disable {
+	if params.Disable {
 		node.CreationStatus = cluster.NodeCreationStatusDisabled
 	}
-	if enable {
+	if params.Enable {
 		node.CreationStatus = cluster.NodeCreationStatusCreated
 	}
 	_, err = mainDockerProvisioner.Cluster().UpdateNode(node)

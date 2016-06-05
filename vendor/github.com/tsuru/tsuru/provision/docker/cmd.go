@@ -66,14 +66,20 @@ Parameters with special meaning:
 }
 
 func (a *addNodeToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	v := url.Values{}
+	opts := addNodeOptions{
+		Register: a.register,
+		Metadata: map[string]string{},
+	}
 	for _, param := range ctx.Args {
 		if strings.Contains(param, "=") {
 			keyValue := strings.SplitN(param, "=", 2)
-			v.Set(keyValue[0], keyValue[1])
+			opts.Metadata[keyValue[0]] = keyValue[1]
 		}
 	}
-	v.Set("register", strconv.FormatBool(a.register))
+	v, err := form.EncodeToValues(&opts)
+	if err != nil {
+		return err
+	}
 	u, err := cmd.GetURL("/docker/node")
 	if err != nil {
 		return err
@@ -104,9 +110,9 @@ func (a *addNodeToSchedulerCmd) Flags() *gnuflag.FlagSet {
 }
 
 type updateNodeToSchedulerCmd struct {
-	fs       *gnuflag.FlagSet
-	disabled bool
-	enabled  bool
+	fs      *gnuflag.FlagSet
+	disable bool
+	enable  bool
 }
 
 func (updateNodeToSchedulerCmd) Info() *cmd.Info {
@@ -125,24 +131,30 @@ scheduler won't consider it when selecting a node to receive containers.`,
 func (a *updateNodeToSchedulerCmd) Flags() *gnuflag.FlagSet {
 	if a.fs == nil {
 		a.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
-		a.fs.BoolVar(&a.disabled, "disable", false, "Disable node in scheduler.")
-		a.fs.BoolVar(&a.enabled, "enable", false, "Enable node in scheduler.")
+		a.fs.BoolVar(&a.disable, "disable", false, "Disable node in scheduler.")
+		a.fs.BoolVar(&a.enable, "enable", false, "Enable node in scheduler.")
 	}
 	return a.fs
 }
 
 func (a *updateNodeToSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) error {
-	v := url.Values{}
+	opts := updateNodeOptions{
+		Address:  ctx.Args[0],
+		Disable:  a.disable,
+		Enable:   a.enable,
+		Metadata: map[string]string{},
+	}
 	for _, param := range ctx.Args[1:] {
 		if strings.Contains(param, "=") {
 			keyValue := strings.SplitN(param, "=", 2)
-			v.Set(keyValue[0], keyValue[1])
+			opts.Metadata[keyValue[0]] = keyValue[1]
 		}
 	}
-	v.Set("address", ctx.Args[0])
-	v.Set("disable", strconv.FormatBool(a.disabled))
-	v.Set("enable", strconv.FormatBool(a.enabled))
 	u, err := cmd.GetURL("/docker/node")
+	if err != nil {
+		return err
+	}
+	v, err := form.EncodeToValues(&opts)
 	if err != nil {
 		return err
 	}
@@ -192,7 +204,7 @@ func (c *removeNodeFromSchedulerCmd) Run(ctx *cmd.Context, client *cmd.Client) e
 	}
 	v := url.Values{}
 	if c.destroy {
-		v.Set("remove_iaas", "true")
+		v.Set("remove-iaas", "true")
 	}
 	v.Set("no-rebalance", strconv.FormatBool(c.noRebalance))
 	u, err := cmd.GetURL(fmt.Sprintf("/docker/node/%s?%s", ctx.Args[0], v.Encode()))

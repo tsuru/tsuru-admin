@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -39,8 +39,8 @@ func (a *countScaler) scale(groupMetadata string, nodes []*cluster.Node) (*scale
 		return nil, nil
 	}
 	nodesToAdd := -freeSlots / a.rule.MaxContainerCount
-	if nodesToAdd == 0 {
-		nodesToAdd = 1
+	if freeSlots%a.rule.MaxContainerCount != 0 {
+		nodesToAdd++
 	}
 	return &scalerResult{
 		toAdd:  nodesToAdd,
