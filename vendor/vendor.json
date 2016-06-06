@@ -676,10 +676,10 @@
 			"revisionTime": "2016-06-05T03:22:20Z"
 		},
 		{
-			"checksumSHA1": "uLbmhep2zzhglpB2JGKUXwy/vP4=",
+			"checksumSHA1": "hu4PbR3ht9tLLr4h33vP+poHwT0=",
 			"path": "github.com/tsuru/tsuru/provision/docker/healer",
-			"revision": "04238f4a25c85c7053a7511c914482ff4af2dc71",
-			"revisionTime": "2016-06-05T03:22:20Z"
+			"revision": "7f85e6a9de8b8fe807b7add87585f5a94e5ca421",
+			"revisionTime": "2016-06-06T18:05:45Z"
 		},
 		{
 			"checksumSHA1": "93En/NlXBmnVJ2viBc/VRLGFGtM=",
