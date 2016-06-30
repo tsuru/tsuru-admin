@@ -484,10 +484,10 @@
 			"revisionTime": "2016-06-01T19:15:16Z"
 		},
 		{
-			"checksumSHA1": "+fasu7Q3ylw2euIOmKjdnHZNmVQ=",
+			"checksumSHA1": "eAUY3/5bSmfOX35KpchP65U/sAY=",
 			"path": "github.com/tsuru/tsuru-client/tsuru/platform",
-			"revision": "2608413cdf2c5bfba4970833f2e27e479ab0def7",
-			"revisionTime": "2016-06-30T14:59:11Z"
+			"revision": "30d244887116a405bf619ee1301c9f5a717789aa",
+			"revisionTime": "2016-06-30T22:04:10Z"
 		},
 		{
 			"checksumSHA1": "ARa0YB3UDUz0FFhToGXJzJsu6eU=",

@@ -25,9 +25,9 @@ type platform struct {
 	Disabled bool
 }
 
-type platformList struct{}
+type PlatformList struct{}
 
-func (platformList) Run(context *cmd.Context, client *cmd.Client) error {
+func (PlatformList) Run(context *cmd.Context, client *cmd.Client) error {
 	url, err := cmd.GetURL("/platforms")
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (platformList) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
-func (platformList) Info() *cmd.Info {
+func (PlatformList) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "platform-list",
 		Usage:   "platform-list",
