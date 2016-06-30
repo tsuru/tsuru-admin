@@ -18,69 +18,6 @@ import (
 	"github.com/tsuru/tsuru/cmd"
 )
 
-type platformAdd struct {
-	name       string
-	dockerfile string
-	image      string
-	fs         *gnuflag.FlagSet
-}
-
-func (p *platformAdd) Info() *cmd.Info {
-	return &cmd.Info{
-		Name:  "platform-add",
-		Usage: "platform-add <platform name> [--dockerfile/-d Dockerfile] [--image/-i image]",
-		Desc: `Adds a new platform to tsuru.
-
-The name of the image can be automatically inferred in case you're using an
-official platform. Check https://github.com/tsuru/platforms for a list of
-official platforms and instructions on how to create a custom platform.
-
-Examples:
-
-	[[tsuru-admin platform-add java # uses official tsuru/java image from docker hub]]
-	[[tsuru-admin platform-add java -i registry.company.com/tsuru/java # uses custom Java image]]
-	[[tsuru-admin platform-add java -d /data/projects/java/Dockerfile # uses local Dockerfile]]
-	[[tsuru-admin platform-add java -d https://platforms.com/java/Dockerfile # uses remote Dockerfile]]`,
-		MinArgs: 1,
-	}
-}
-
-func (p *platformAdd) Run(context *cmd.Context, client *cmd.Client) error {
-	context.RawOutput()
-	var body bytes.Buffer
-	writer, err := serializeDockerfile(context.Args[0], &body, p.dockerfile, p.image, true)
-	if err != nil {
-		return err
-	}
-	writer.WriteField("name", context.Args[0])
-	writer.Close()
-	url, err := cmd.GetURL("/platforms")
-	request, err := http.NewRequest("POST", url, &body)
-	if err != nil {
-		return err
-	}
-	request.Header.Add("Content-Type", writer.FormDataContentType())
-	response, err := client.Do(request)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-	return cmd.StreamJSONResponse(context.Stdout, response)
-}
-
-func (p *platformAdd) Flags() *gnuflag.FlagSet {
-	dockerfileMessage := "URL or path to the Dockerfile used for building the image of the platform"
-	if p.fs == nil {
-		p.fs = gnuflag.NewFlagSet("", gnuflag.ExitOnError)
-		p.fs.StringVar(&p.dockerfile, "dockerfile", "", dockerfileMessage)
-		p.fs.StringVar(&p.dockerfile, "d", "", dockerfileMessage)
-		msg := "Name of the prebuilt Docker image"
-		p.fs.StringVar(&p.image, "image", "", msg)
-		p.fs.StringVar(&p.image, "i", "", msg)
-	}
-	return p.fs
-}
-
 type platformUpdate struct {
 	name        string
 	dockerfile  string

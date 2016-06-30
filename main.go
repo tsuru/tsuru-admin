@@ -7,6 +7,7 @@ package main
 import (
 	"os"
 
+	"github.com/tsuru/tsuru-client/tsuru/platform"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/provision"
 	_ "github.com/tsuru/tsuru/provision/docker"
@@ -20,7 +21,7 @@ const (
 func buildManager(name string) *cmd.Manager {
 	m := cmd.BuildBaseManager(name, version, header, nil)
 	m.RegisterRemoved("log-remove", "This action is no longer supported.")
-	m.Register(&platformAdd{})
+	m.Register(&platform.PlatformAdd{})
 	m.Register(&platformUpdate{})
 	m.Register(&platformRemove{})
 	m.Register(&machineList{})
