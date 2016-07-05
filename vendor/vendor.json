@@ -486,13 +486,13 @@
 		{
 			"checksumSHA1": "eAUY3/5bSmfOX35KpchP65U/sAY=",
 			"path": "github.com/tsuru/tsuru-client/tsuru/platform",
-			"revision": "c04eeb13c38b196cf75fcc4932295a749e3149a1",
+			"revision": "8346bfd5b89371f5e3233de241e1b839948b9bc4",
 			"revisionTime": "2016-07-04T19:54:05Z"
 		},
 		{
 			"checksumSHA1": "CKYXrn2qiJN99Ge9ZguvA7w1wtw=",
 			"path": "github.com/tsuru/tsuru-client/tsuru/pool",
-			"revision": "c04eeb13c38b196cf75fcc4932295a749e3149a1",
+			"revision": "8346bfd5b89371f5e3233de241e1b839948b9bc4",
 			"revisionTime": "2016-07-04T19:54:05Z"
 		},
 		{
