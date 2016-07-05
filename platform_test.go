@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	"github.com/tsuru/tsuru-client/tsuru/platform"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"github.com/tsuru/tsuru/io"
@@ -46,7 +47,7 @@ func (s *S) TestPlatformAddRun(c *check.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := platformAdd{}
+	command := platform.PlatformAdd{}
 	command.Flags().Parse(true, []string{"--dockerfile", server.URL})
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
@@ -77,7 +78,7 @@ func (s *S) TestPlatformAddRunLocalDockerFile(c *check.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := platformAdd{}
+	command := platform.PlatformAdd{}
 	command.Flags().Parse(true, []string{"--dockerfile", "testdata/Dockerfile"})
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
@@ -108,7 +109,7 @@ func (s *S) TestPlatformAddPrebuiltImage(c *check.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := platformAdd{}
+	command := platform.PlatformAdd{}
 	command.Flags().Parse(true, []string{"--image", "tsuru/python"})
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
@@ -139,7 +140,7 @@ func (s *S) TestPlatformAddRunImplicitDockerfile(c *check.C) {
 		},
 	}
 	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := platformAdd{}
+	command := platform.PlatformAdd{}
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	c.Assert(stdout.String(), check.Equals, expectedMsg)
@@ -153,7 +154,7 @@ func (s *S) TestPlatformAddRunFlagsConflict(c *check.C) {
 		Args:   []string{"teste"},
 	}
 	client := cmd.NewClient(&http.Client{}, nil, manager)
-	command := platformAdd{}
+	command := platform.PlatformAdd{}
 	command.Flags().Parse(true, []string{"--image", "tsuru/python", "--dockerfile", "testdata/Dockerfile"})
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
@@ -162,7 +163,7 @@ func (s *S) TestPlatformAddRunFlagsConflict(c *check.C) {
 
 func (s *S) TestPlatformAddFlagSet(c *check.C) {
 	message := "URL or path to the Dockerfile used for building the image of the platform"
-	command := platformAdd{}
+	command := platform.PlatformAdd{}
 	flagset := command.Flags()
 	flagset.Parse(true, []string{"--dockerfile", "dockerfile", "-i", "tsuru/python"})
 
