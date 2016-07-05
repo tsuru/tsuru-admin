@@ -7,6 +7,8 @@ package main
 import (
 	"os"
 
+	"github.com/tsuru/tsuru-client/tsuru/platform"
+	"github.com/tsuru/tsuru-client/tsuru/pool"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/provision"
 	_ "github.com/tsuru/tsuru/provision/docker"
@@ -20,7 +22,7 @@ const (
 func buildManager(name string) *cmd.Manager {
 	m := cmd.BuildBaseManager(name, version, header, nil)
 	m.RegisterRemoved("log-remove", "This action is no longer supported.")
-	m.Register(&platformAdd{})
+	m.Register(&platform.PlatformAdd{})
 	m.Register(&platformUpdate{})
 	m.Register(&platformRemove{})
 	m.Register(&machineList{})
@@ -37,7 +39,7 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(&templateAdd{})
 	m.Register(&templateRemove{})
 	m.RegisterRemoved("user-list", "You should use `tsuru user-list` instead.")
-	m.RegisterDeprecated(&addPoolToSchedulerCmd{}, "docker-pool-add")
+	m.RegisterDeprecated(&pool.AddPoolToSchedulerCmd{}, "docker-pool-add")
 	m.Register(&updatePoolToSchedulerCmd{})
 	m.RegisterDeprecated(&removePoolFromSchedulerCmd{}, "docker-pool-remove")
 	m.RegisterRemoved("pool-list", "You should use `tsuru pool-list` instead.")

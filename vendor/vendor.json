@@ -484,6 +484,18 @@
 			"revisionTime": "2016-06-01T19:15:16Z"
 		},
 		{
+			"checksumSHA1": "eAUY3/5bSmfOX35KpchP65U/sAY=",
+			"path": "github.com/tsuru/tsuru-client/tsuru/platform",
+			"revision": "c04eeb13c38b196cf75fcc4932295a749e3149a1",
+			"revisionTime": "2016-07-04T19:54:05Z"
+		},
+		{
+			"checksumSHA1": "CKYXrn2qiJN99Ge9ZguvA7w1wtw=",
+			"path": "github.com/tsuru/tsuru-client/tsuru/pool",
+			"revision": "c04eeb13c38b196cf75fcc4932295a749e3149a1",
+			"revisionTime": "2016-07-04T19:54:05Z"
+		},
+		{
 			"checksumSHA1": "ARa0YB3UDUz0FFhToGXJzJsu6eU=",
 			"path": "github.com/tsuru/tsuru/action",
 			"revision": "04238f4a25c85c7053a7511c914482ff4af2dc71",
