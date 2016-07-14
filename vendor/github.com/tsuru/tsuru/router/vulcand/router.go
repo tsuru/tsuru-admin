@@ -8,6 +8,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/tsuru/config"
 	"github.com/tsuru/tsuru/hc"
@@ -159,7 +160,7 @@ func (r *vulcandRouter) AddRoute(name string, address *url.URL) error {
 		return err
 	}
 	serverKey := engine.ServerKey{
-		Id:         r.serverName(address.String()),
+		Id:         r.serverName(address.Host),
 		BackendKey: engine.BackendKey{Id: r.backendName(usedName)},
 	}
 	if found, _ := r.client.GetServer(serverKey); found != nil {
@@ -183,7 +184,7 @@ func (r *vulcandRouter) AddRoutes(name string, addresses []*url.URL) error {
 	}
 	for _, addr := range addresses {
 		serverKey := engine.ServerKey{
-			Id:         r.serverName(addr.String()),
+			Id:         r.serverName(addr.Host),
 			BackendKey: engine.BackendKey{Id: r.backendName(usedName)},
 		}
 		server, err := engine.NewServer(serverKey.Id, addr.String())
@@ -204,7 +205,7 @@ func (r *vulcandRouter) RemoveRoute(name string, address *url.URL) error {
 		return err
 	}
 	serverKey := engine.ServerKey{
-		Id:         r.serverName(address.String()),
+		Id:         r.serverName(address.Host),
 		BackendKey: engine.BackendKey{Id: r.backendName(usedName)},
 	}
 	err = r.client.DeleteServer(serverKey)
@@ -224,7 +225,7 @@ func (r *vulcandRouter) RemoveRoutes(name string, addresses []*url.URL) error {
 	}
 	for _, addr := range addresses {
 		serverKey := engine.ServerKey{
-			Id:         r.serverName(addr.String()),
+			Id:         r.serverName(addr.Host),
 			BackendKey: engine.BackendKey{Id: r.backendName(usedName)},
 		}
 		err = r.client.DeleteServer(serverKey)
@@ -236,6 +237,27 @@ func (r *vulcandRouter) RemoveRoutes(name string, addresses []*url.URL) error {
 		}
 	}
 	return nil
+}
+
+func (r *vulcandRouter) CNames(name string) ([]*url.URL, error) {
+	fes, err := r.client.GetFrontends()
+	if err != nil {
+		return nil, err
+	}
+	backendName := r.backendName(name)
+	address, err := r.Addr(name)
+	if err != nil {
+		return nil, err
+	}
+	address = r.backendName(address)
+	urls := []*url.URL{}
+	for _, f := range fes {
+		host := strings.Replace(f.Id, "tsuru_", "", 1)
+		if f.BackendId == backendName && f.Id != address {
+			urls = append(urls, &url.URL{Host: host})
+		}
+	}
+	return urls, nil
 }
 
 func (r *vulcandRouter) SetCName(cname, name string) error {
@@ -292,8 +314,8 @@ func (r *vulcandRouter) Addr(name string) (string, error) {
 	return frontendHostname, nil
 }
 
-func (r *vulcandRouter) Swap(backend1, backend2 string) error {
-	return router.Swap(r, backend1, backend2)
+func (r *vulcandRouter) Swap(backend1, backend2 string, cnameOnly bool) error {
+	return router.Swap(r, backend1, backend2, cnameOnly)
 }
 
 func (r *vulcandRouter) Routes(name string) ([]*url.URL, error) {

@@ -34,6 +34,7 @@ import (
 	"github.com/tsuru/tsuru/provision/docker/healer"
 	"github.com/tsuru/tsuru/provision/docker/nodecontainer"
 	"github.com/tsuru/tsuru/router"
+	_ "github.com/tsuru/tsuru/router/fusis"
 	_ "github.com/tsuru/tsuru/router/galeb"
 	_ "github.com/tsuru/tsuru/router/hipache"
 	_ "github.com/tsuru/tsuru/router/routertest"
@@ -284,6 +285,9 @@ func (p *dockerProvisioner) Provision(app provision.App) error {
 		log.Fatalf("Failed to get router: %s", err)
 		return err
 	}
+	if optsRouter, ok := r.(router.OptsRouter); ok {
+		return optsRouter.AddBackendOpts(app.GetName(), app.GetRouterOpts())
+	}
 	return r.AddBackend(app.GetName())
 }
 
@@ -366,12 +370,12 @@ func (p *dockerProvisioner) Sleep(app provision.App, process string) error {
 	}, nil, true)
 }
 
-func (p *dockerProvisioner) Swap(app1, app2 provision.App) error {
+func (p *dockerProvisioner) Swap(app1, app2 provision.App, cnameOnly bool) error {
 	r, err := getRouterForApp(app1)
 	if err != nil {
 		return err
 	}
-	err = r.Swap(app1.GetName(), app2.GetName())
+	err = r.Swap(app1.GetName(), app2.GetName(), cnameOnly)
 	if err != nil {
 		routesRebuildOrEnqueue(app1.GetName())
 		routesRebuildOrEnqueue(app2.GetName())
@@ -379,8 +383,22 @@ func (p *dockerProvisioner) Swap(app1, app2 provision.App) error {
 	return err
 }
 
-func (p *dockerProvisioner) Rollback(app provision.App, imageId string, w io.Writer) (string, error) {
-	return imageId, p.deploy(app, imageId, w)
+func (p *dockerProvisioner) Rollback(a provision.App, imageId string, w io.Writer) (string, error) {
+	validImgs, err := p.ValidAppImages(a.GetName())
+	if err != nil {
+		return "", err
+	}
+	valid := false
+	for _, img := range validImgs {
+		if img == imageId {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return "", fmt.Errorf("Image %q not found in app", imageId)
+	}
+	return imageId, p.deploy(a, imageId, w)
 }
 
 func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.Writer) (string, error) {
@@ -410,12 +428,12 @@ func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.
 	cmd := "cat /home/application/current/Procfile || cat /app/user/Procfile || cat /Procfile"
 	output, _ := p.runCommandInContainer(imageId, cmd, app)
 	procfile := getProcessesFromProcfile(output.String())
+	imageInspect, err := cluster.InspectImage(imageId)
+	if err != nil {
+		return "", err
+	}
 	if len(procfile) == 0 {
 		fmt.Fprintln(w, "  ---> Procfile not found, trying to get entrypoint")
-		imageInspect, inspectErr := cluster.InspectImage(imageId)
-		if inspectErr != nil {
-			return "", inspectErr
-		}
 		if len(imageInspect.Config.Entrypoint) == 0 {
 			return "", ErrEntrypointOrProcfileNotFound
 		}
@@ -454,6 +472,12 @@ func (p *dockerProvisioner) ImageDeploy(app provision.App, imageId string, w io.
 		return "", err
 	}
 	imageData := createImageMetadata(newImage, procfile)
+	if len(imageInspect.Config.ExposedPorts) > 1 {
+		return "", stderr.New("Too many ports. You should especify which one you want to.")
+	}
+	for k := range imageInspect.Config.ExposedPorts {
+		imageData.CustomData["exposedPort"] = string(k)
+	}
 	err = saveImageCustomData(newImage, imageData.CustomData)
 	if err != nil {
 		return "", err
@@ -604,7 +628,7 @@ func (p *dockerProvisioner) deploy(a provision.App, imageId string, w io.Writer)
 		if err = setQuota(a, toAdd); err != nil {
 			return err
 		}
-		_, err = p.runCreateUnitsPipeline(w, a, toAdd, imageId)
+		_, err = p.runCreateUnitsPipeline(w, a, toAdd, imageId, imageData.ExposedPort)
 	} else {
 		toAdd := getContainersToAdd(imageData, containers)
 		if err = setQuota(a, toAdd); err != nil {
@@ -781,7 +805,7 @@ func addContainersWithHost(args *changeUnitsPipelineArgs) ([]container.Container
 		m                 sync.Mutex
 	)
 	err := runInContainers(oldContainers, func(c *container.Container, toRollback chan *container.Container) error {
-		c, startErr := args.provisioner.start(c, a, imageId, w, destinationHost...)
+		c, startErr := args.provisioner.start(c, a, imageId, w, args.exposedPort, destinationHost...)
 		if startErr != nil {
 			return startErr
 		}
@@ -819,7 +843,11 @@ func (p *dockerProvisioner) AddUnits(a provision.App, units uint, process string
 	if err != nil {
 		return nil, err
 	}
-	conts, err := p.runCreateUnitsPipeline(writer, a, map[string]*containersToAdd{process: {Quantity: int(units)}}, imageId)
+	imageData, err := getImageCustomData(imageId)
+	if err != nil {
+		return nil, err
+	}
+	conts, err := p.runCreateUnitsPipeline(writer, a, map[string]*containersToAdd{process: {Quantity: int(units)}}, imageId, imageData.ExposedPort)
 	routesRebuildOrEnqueue(a.GetName())
 	if err != nil {
 		return nil, err
@@ -899,7 +927,6 @@ func (p *dockerProvisioner) RemoveUnits(a provision.App, units uint, processName
 
 func (p *dockerProvisioner) SetUnitStatus(unit provision.Unit, status provision.Status) error {
 	cont, err := p.GetContainer(unit.ID)
-
 	if _, ok := err.(*provision.UnitNotFoundError); ok && unit.Name != "" {
 		cont, err = p.GetContainerByName(unit.Name)
 	}
@@ -908,6 +935,9 @@ func (p *dockerProvisioner) SetUnitStatus(unit provision.Unit, status provision.
 	}
 	if cont.Status == provision.StatusBuilding.String() || cont.Status == provision.StatusAsleep.String() {
 		return nil
+	}
+	if status == provision.StatusStopped && cont.Status != provision.StatusStopped.String() {
+		status = provision.StatusError
 	}
 	if unit.AppName != "" && cont.AppName != unit.AppName {
 		return stderr.New("wrong app name")
@@ -953,7 +983,11 @@ func (p *dockerProvisioner) SetCName(app provision.App, cname string) error {
 	if err != nil {
 		return err
 	}
-	err = r.SetCName(cname, app.GetName())
+	cnameRouter, ok := r.(router.CNameRouter)
+	if !ok {
+		return fmt.Errorf("router %T does not allow cnames", r)
+	}
+	err = cnameRouter.SetCName(cname, app.GetName())
 	if err != nil {
 		routesRebuildOrEnqueue(app.GetName())
 	}
@@ -965,7 +999,11 @@ func (p *dockerProvisioner) UnsetCName(app provision.App, cname string) error {
 	if err != nil {
 		return err
 	}
-	err = r.UnsetCName(cname, app.GetName())
+	cnameRouter, ok := r.(router.CNameRouter)
+	if !ok {
+		return fmt.Errorf("router %T does not allow cnames", r)
+	}
+	err = cnameRouter.UnsetCName(cname, app.GetName())
 	if err != nil {
 		routesRebuildOrEnqueue(app.GetName())
 	}

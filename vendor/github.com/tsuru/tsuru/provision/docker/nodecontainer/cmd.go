@@ -9,10 +9,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 
-	"github.com/cezarsa/form"
+	"github.com/ajg/form"
 	"github.com/docker/go-connections/nat"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/tsuru/gnuflag"
@@ -21,6 +22,10 @@ import (
 
 const (
 	emptyPoolLabel = "<all>"
+)
+
+var (
+	reKeyWithIndex = regexp.MustCompile(`^(.+)\.\d+$`)
 )
 
 type NodeContainerList struct {
@@ -151,6 +156,11 @@ func (c *dockerCmd) toValues() (url.Values, error) {
 		delete(val, k)
 	}
 	for k, v := range c.raw {
+		k = strings.ToLower(k)
+		matches := reKeyWithIndex.FindStringSubmatch(k)
+		if len(matches) >= 1 {
+			val.Del(matches[1])
+		}
 		val.Set(strings.ToLower(k), v)
 	}
 	return val, nil

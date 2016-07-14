@@ -6,7 +6,6 @@ package container
 
 import (
 	"crypto"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -22,6 +21,7 @@ import (
 	"github.com/tsuru/tsuru/log"
 	"github.com/tsuru/tsuru/net"
 	"github.com/tsuru/tsuru/provision"
+	"github.com/tsuru/tsuru/router"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -99,38 +99,25 @@ type CreateArgs struct {
 	ImageID          string
 	Commands         []string
 	App              provision.App
-	Deploy           bool
 	Provisioner      DockerProvisioner
 	DestinationHosts []string
 	ProcessName      string
+	Deploy           bool
 	Building         bool
 }
 
 func (c *Container) Create(args *CreateArgs) error {
-	var err error
+	securityOpts, _ := config.GetList("docker:security-opts")
+	var exposedPorts map[docker.Port]struct{}
 	if !args.Deploy {
-		imageData, inspectErr := args.Provisioner.Cluster().InspectImage(args.ImageID)
-		if inspectErr != nil {
-			return err
-		}
-		if len(imageData.Config.ExposedPorts) > 1 {
-			return errors.New("Too many ports. You should especify which one you want to.")
-		}
-		for k := range imageData.Config.ExposedPorts {
-			c.ExposedPort = string(k)
-		}
 		if c.ExposedPort == "" {
 			port, portErr := getPort()
 			if portErr != nil {
 				log.Errorf("error on getting port for container %s - %s", c.AppName, port)
-				return err
+				return portErr
 			}
 			c.ExposedPort = port + "/tcp"
 		}
-	}
-	securityOpts, _ := config.GetList("docker:security-opts")
-	var exposedPorts map[docker.Port]struct{}
-	if !args.Deploy {
 		exposedPorts = map[docker.Port]struct{}{
 			docker.Port(c.ExposedPort): {},
 		}
@@ -138,6 +125,14 @@ func (c *Container) Create(args *CreateArgs) error {
 	var user string
 	if args.Building {
 		user = c.user()
+	}
+	routerName, err := args.App.GetRouter()
+	if err != nil {
+		return err
+	}
+	routerType, _, err := router.Type(routerName)
+	if err != nil {
+		return err
 	}
 	conf := docker.Config{
 		Image:        args.ImageID,
@@ -152,6 +147,14 @@ func (c *Container) Create(args *CreateArgs) error {
 		CPUShares:    int64(args.App.GetCpuShare()),
 		SecurityOpts: securityOpts,
 		User:         user,
+		Labels: map[string]string{
+			"tsuru.container":    strconv.FormatBool(true),
+			"tsuru.app.name":     args.App.GetName(),
+			"tsuru.app.platform": args.App.GetPlatform(),
+			"tsuru.process.name": c.ProcessName,
+			"tsuru.router.name":  routerName,
+			"tsuru.router.type":  routerType,
+		},
 	}
 	c.addEnvsToConfig(args, strings.TrimSuffix(c.ExposedPort, "/tcp"), &conf)
 	opts := docker.CreateContainerOptions{Name: c.Name, Config: &conf}

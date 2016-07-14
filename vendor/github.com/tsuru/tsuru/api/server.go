@@ -32,7 +32,7 @@ import (
 	"gopkg.in/tylerb/graceful.v1"
 )
 
-const Version = "1.0.0-rc7"
+const Version = "1.1.0-dev"
 
 func getProvisioner() (string, error) {
 	provisioner, err := config.GetString("provisioner")
@@ -164,6 +164,9 @@ func RunServer(dry bool) http.Handler {
 
 	m.Add("1.0", "Get", "/deploys", AuthorizationRequiredHandler(deploysList))
 	m.Add("1.0", "Get", "/deploys/{deploy}", AuthorizationRequiredHandler(deployInfo))
+
+	m.Add("1.1", "Get", "/events", AuthorizationRequiredHandler(eventList))
+	m.Add("1.1", "Get", "/events/kinds", AuthorizationRequiredHandler(kindList))
 
 	m.Add("1.0", "Get", "/platforms", AuthorizationRequiredHandler(platformList))
 	m.Add("1.0", "Post", "/platforms", AuthorizationRequiredHandler(platformAdd))

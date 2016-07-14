@@ -155,6 +155,7 @@ func (r *hipacheRouter) AddRoute(name string, address *url.URL) error {
 	if err != nil {
 		return err
 	}
+	address.Scheme = "http"
 	domain, err := config.GetString(r.prefix + ":domain")
 	if err != nil {
 		log.Errorf("error on getting hipache domain in add route for %s - %s", backendName, address)
@@ -208,8 +209,9 @@ func (r *hipacheRouter) AddRoutes(name string, addresses []*url.URL) error {
 	toAdd := make([]string, 0, len(addresses))
 addresses:
 	for _, addr := range addresses {
+		addr.Scheme = router.HttpScheme
 		for _, r := range routes {
-			if r.String() == addr.String() {
+			if r.Host == addr.Host {
 				continue addresses
 			}
 		}
@@ -272,6 +274,7 @@ func (r *hipacheRouter) RemoveRoute(name string, address *url.URL) error {
 		return &router.RouterError{Op: "remove", Err: err}
 	}
 	frontend := "frontend:" + backendName + "." + domain
+	address.Scheme = router.HttpScheme
 	count, err := r.removeElement(frontend, address.String())
 	if err != nil {
 		return err
@@ -306,6 +309,7 @@ func (r *hipacheRouter) RemoveRoutes(name string, addresses []*url.URL) error {
 	}
 	toRemove := make([]string, len(addresses))
 	for i := range addresses {
+		addresses[i].Scheme = router.HttpScheme
 		toRemove[i] = addresses[i].String()
 	}
 	frontend := "frontend:" + backendName + "." + domain
@@ -342,6 +346,18 @@ func (r *hipacheRouter) HealthCheck() error {
 		return fmt.Errorf("unexpected PING response from Redis server, want %q, got %q", "PONG", result)
 	}
 	return nil
+}
+
+func (r *hipacheRouter) CNames(name string) ([]*url.URL, error) {
+	cnames, err := r.getCNames(name)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*url.URL, len(cnames))
+	for i, cname := range cnames {
+		result[i] = &url.URL{Host: cname}
+	}
+	return result, nil
 }
 
 func (r *hipacheRouter) getCNames(name string) ([]string, error) {
@@ -541,8 +557,8 @@ func (r *hipacheRouter) removeElements(name string, addresses []string) error {
 	return nil
 }
 
-func (r *hipacheRouter) Swap(backend1, backend2 string) error {
-	return router.Swap(r, backend1, backend2)
+func (r *hipacheRouter) Swap(backend1, backend2 string, cnameOnly bool) error {
+	return router.Swap(r, backend1, backend2, cnameOnly)
 }
 
 func (r *hipacheRouter) StartupMessage() (string, error) {

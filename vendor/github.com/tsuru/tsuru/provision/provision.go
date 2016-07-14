@@ -205,6 +205,8 @@ type App interface {
 	GetIp() string
 
 	GetLock() AppLock
+
+	GetRouterOpts() map[string]string
 }
 
 type AppLock interface {
@@ -312,7 +314,7 @@ type Provisioner interface {
 	Addr(App) (string, error)
 
 	// Swap change the router between two apps.
-	Swap(App, App) error
+	Swap(app1, app2 App, cnameOnly bool) error
 
 	// Units returns information about units by App.
 	Units(App) ([]Unit, error)

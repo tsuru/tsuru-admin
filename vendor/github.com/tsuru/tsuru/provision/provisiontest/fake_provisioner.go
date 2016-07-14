@@ -82,6 +82,10 @@ func NewFakeApp(name, platform string, units int) *FakeApp {
 	return &app
 }
 
+func (a *FakeApp) GetRouterOpts() map[string]string {
+	return nil
+}
+
 func (a *FakeApp) GetMemory() int64 {
 	return a.Memory
 }
@@ -345,14 +349,15 @@ type failure struct {
 
 // Fake implementation for provision.Provisioner.
 type FakeProvisioner struct {
-	cmds     []Cmd
-	cmdMut   sync.Mutex
-	outputs  chan []byte
-	failures chan failure
-	apps     map[string]provisionedApp
-	mut      sync.RWMutex
-	shells   map[string][]provision.ShellOptions
-	shellMut sync.Mutex
+	cmds      []Cmd
+	cmdMut    sync.Mutex
+	outputs   chan []byte
+	failures  chan failure
+	apps      map[string]provisionedApp
+	mut       sync.RWMutex
+	shells    map[string][]provision.ShellOptions
+	shellMut  sync.Mutex
+	validImgs map[string][]string
 }
 
 func NewFakeProvisioner() *FakeProvisioner {
@@ -501,8 +506,8 @@ func (p *FakeProvisioner) Reset() {
 	}
 }
 
-func (p *FakeProvisioner) Swap(app1, app2 provision.App) error {
-	return routertest.FakeRouter.Swap(app1.GetName(), app2.GetName())
+func (p *FakeProvisioner) Swap(app1, app2 provision.App, cnameOnly bool) error {
+	return routertest.FakeRouter.Swap(app1.GetName(), app2.GetName(), cnameOnly)
 }
 
 func (p *FakeProvisioner) ArchiveDeploy(app provision.App, archiveURL string, w io.Writer) (string, error) {
@@ -1048,9 +1053,19 @@ func (p *FakeProvisioner) Shell(opts provision.ShellOptions) error {
 	return nil
 }
 
+func (p *FakeProvisioner) SetValidImagesForApp(appName string, imgs []string) {
+	if p.validImgs == nil {
+		p.validImgs = map[string][]string{}
+	}
+	p.validImgs[appName] = imgs
+}
+
 func (p *FakeProvisioner) ValidAppImages(appName string) ([]string, error) {
 	if err := p.getError("ValidAppImages"); err != nil {
 		return nil, err
+	}
+	if p.validImgs != nil && p.validImgs[appName] != nil {
+		return p.validImgs[appName], nil
 	}
 	return []string{"app-image-old", "app-image"}, nil
 }

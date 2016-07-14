@@ -15,6 +15,7 @@ import (
 	"github.com/tsuru/monsterqueue"
 	"github.com/tsuru/tsuru/db"
 	"github.com/tsuru/tsuru/db/storage"
+	"github.com/tsuru/tsuru/event"
 	"github.com/tsuru/tsuru/iaas"
 	"github.com/tsuru/tsuru/log"
 	"github.com/tsuru/tsuru/net"
@@ -152,28 +153,37 @@ func (h *NodeHealer) healNode(node *cluster.Node) (cluster.Node, error) {
 	return createdNode, nil
 }
 
-func (h *NodeHealer) tryHealingNode(node *cluster.Node, reason string, extra interface{}) error {
+func (h *NodeHealer) tryHealingNode(node *cluster.Node, reason string, lastCheck *nodeChecks) error {
 	_, hasIaas := node.Metadata["iaas"]
 	if !hasIaas {
 		log.Debugf("node %q doesn't have IaaS information, healing (%s) won't run on it.", node.Address, reason)
 		return nil
 	}
-	evt, err := NewHealingEventWithReason(*node, reason, extra)
+	evt, err := event.NewInternal(&event.Opts{
+		Target:       event.Target{Name: "node", Value: node.Address},
+		InternalKind: "healer",
+		CustomData: map[string]interface{}{
+			"node":      *node,
+			"reason":    reason,
+			"lastCheck": lastCheck,
+		},
+	})
 	if err != nil {
-		if err == errHealingInProgress {
+		if _, ok := err.(event.ErrEventLocked); ok {
 			// Healing in progress.
 			return nil
 		}
-		return fmt.Errorf("error trying to insert healing event: %s", err.Error())
+		return fmt.Errorf("Error trying to insert nodee healing event, healing aborted: %s", err.Error())
 	}
 	var createdNode cluster.Node
 	var evtErr error
 	defer func() {
-		var created interface{}
-		if createdNode.Address != "" {
-			created = createdNode
+		var updateErr error
+		if createdNode.Address == "" {
+			updateErr = evt.Abort()
+		} else {
+			updateErr = evt.DoneCustomData(evtErr, createdNode)
 		}
-		updateErr := evt.Update(created, evtErr)
 		if updateErr != nil {
 			log.Errorf("error trying to update healing event: %s", updateErr.Error())
 		}
@@ -183,17 +193,15 @@ func (h *NodeHealer) tryHealingNode(node *cluster.Node, reason string, extra int
 		if err == clusterStorage.ErrNoSuchNode {
 			return nil
 		}
-		evtErr = fmt.Errorf("unable to check if not still exists: %s", err)
+		evtErr = fmt.Errorf("unable to check if node still exists: %s", err)
 		return evtErr
 	}
-	healingCounter, err := healingCountFor("node", node.Address, consecutiveHealingsTimeframe)
+	shouldHeal, err := h.shouldHealNode(node)
 	if err != nil {
-		evtErr = fmt.Errorf("couldn't verify number of previous healings for %s: %s", node.Address, err)
+		evtErr = fmt.Errorf("unable to check if node should be healed: %s", err)
 		return evtErr
 	}
-	if healingCounter > consecutiveHealingsLimitInTimeframe {
-		log.Debugf("number of healings for node %s in the last %d minutes exceeds limit of %d: %d",
-			node.Address, consecutiveHealingsTimeframe/time.Minute, consecutiveHealingsLimitInTimeframe, healingCounter)
+	if !shouldHeal {
 		return nil
 	}
 	log.Errorf("initiating healing process for node %q due to: %s", node.Address, reason)
@@ -385,6 +393,32 @@ func (h *NodeHealer) queryPartForConfig(nodes []*cluster.Node, config NodeHealer
 	}, nil
 }
 
+func (h *NodeHealer) shouldHealNode(node *cluster.Node) (bool, error) {
+	conf := healerConfig()
+	var configEntry NodeHealerConfig
+	err := conf.Load(node.Metadata["pool"], &configEntry)
+	if err != nil {
+		return false, err
+	}
+	queryPart, err := h.queryPartForConfig([]*cluster.Node{node}, configEntry)
+	if err != nil {
+		return false, err
+	}
+	if queryPart == nil {
+		return false, nil
+	}
+	coll, err := nodeDataCollection()
+	if err != nil {
+		return false, fmt.Errorf("unable to get node data collection: %s", err)
+	}
+	defer coll.Close()
+	count, err := coll.Find(queryPart).Count()
+	if err != nil {
+		return false, fmt.Errorf("unable to find nodes to heal: %s", err)
+	}
+	return count > 0, nil
+}
+
 func (h *NodeHealer) findNodesForHealing() ([]nodeStatusData, map[string]*cluster.Node, error) {
 	nodes, err := h.provisioner.Cluster().UnfilteredNodes()
 	if err != nil {
@@ -456,7 +490,7 @@ func (h *NodeHealer) runActiveHealing() {
 		sinceSuccess := time.Since(n.LastSuccess)
 		err = h.tryHealingNode(nodesAddrMap[n.Address],
 			fmt.Sprintf("last update %v ago, last success %v ago", sinceUpdate, sinceSuccess),
-			n.Checks[len(n.Checks)-1],
+			&n.Checks[len(n.Checks)-1],
 		)
 		if err != nil {
 			log.Errorf("[node healer active] %s", err)

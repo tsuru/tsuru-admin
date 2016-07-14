@@ -31,7 +31,7 @@ type appImages struct {
 	Count   int
 }
 
-var procfileRegex = regexp.MustCompile("^([A-Za-z0-9_-]+):\\s*(.+)$")
+var procfileRegex = regexp.MustCompile(`^([A-Za-z0-9_-]+):\s*(.+)$`)
 var errNoImagesAvailable = errors.New("no images available for app")
 
 func MigrateImages() error {
@@ -124,9 +124,10 @@ func imageCustomDataColl() (*dbStorage.Collection, error) {
 }
 
 type ImageMetadata struct {
-	Name       string `bson:"_id"`
-	CustomData map[string]interface{}
-	Processes  map[string]string
+	Name        string `bson:"_id"`
+	CustomData  map[string]interface{}
+	Processes   map[string]string
+	ExposedPort string
 }
 
 func saveImageCustomData(imageName string, customData map[string]interface{}) error {
@@ -157,6 +158,9 @@ func saveImageCustomData(imageName string, customData map[string]interface{}) er
 		Name:       imageName,
 		CustomData: customData,
 		Processes:  processes,
+	}
+	if exposedPort, ok := customData["exposedPort"]; ok {
+		data.ExposedPort = exposedPort.(string)
 	}
 	return coll.Insert(data)
 }
@@ -242,6 +246,10 @@ func appCurrentImageName(appName string) (string, error) {
 	err = coll.FindId(appName).One(&imgs)
 	if err != nil {
 		log.Errorf("Couldn't find images for app %q, fallback to old image names. Error: %s", appName, err.Error())
+		return appBasicImageName(appName), nil
+	}
+	if len(imgs.Images) == 0 && imgs.Count > 0 {
+		log.Errorf("Couldn't find valid images for app %q", appName)
 		return appBasicImageName(appName), nil
 	}
 	if len(imgs.Images) == 0 {
