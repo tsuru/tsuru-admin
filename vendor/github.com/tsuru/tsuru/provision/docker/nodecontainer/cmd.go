@@ -161,7 +161,7 @@ func (c *dockerCmd) toValues() (url.Values, error) {
 		if len(matches) >= 1 {
 			val.Del(matches[1])
 		}
-		val.Set(strings.ToLower(k), v)
+		val.Set(k, v)
 	}
 	return val, nil
 }
