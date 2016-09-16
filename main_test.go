@@ -5,7 +5,7 @@
 package main
 
 import (
-	"github.com/tsuru/tsuru-client/tsuru/platform"
+	"github.com/tsuru/tsuru-client/tsuru/admin"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/provision/provisiontest"
@@ -16,7 +16,7 @@ func (s *S) TestPlatformAddIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	token, ok := manager.Commands["platform-add"]
 	c.Assert(ok, check.Equals, true)
-	c.Assert(token, check.FitsTypeOf, &platform.PlatformAdd{})
+	c.Assert(token, check.FitsTypeOf, &admin.PlatformAdd{})
 }
 
 func (s *S) TestCommandsFromBaseManagerAreRegistered(c *check.C) {
@@ -31,8 +31,8 @@ func (s *S) TestCommandsFromBaseManagerAreRegistered(c *check.C) {
 
 func (s *S) TestShouldRegisterAllCommandsFromProvisioners(c *check.C) {
 	fp := provisiontest.NewFakeProvisioner()
-	p := AdminCommandableProvisioner{FakeProvisioner: *fp}
-	provision.Register("fakeAdminProvisioner", &p)
+	p := AdminCommandableProvisioner{FakeProvisioner: fp}
+	provision.Register("fakeAdminProvisioner", func() (provision.Provisioner, error) { return &p, nil })
 	manager := buildManager("tsuru-admin")
 	fake, ok := manager.Commands["fake-admin"]
 	c.Assert(ok, check.Equals, true)

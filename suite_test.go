@@ -16,13 +16,12 @@ import (
 
 type S struct {
 	recover []string
+	manager *cmd.Manager
 }
-
-var manager *cmd.Manager
 
 func (s *S) SetUpSuite(c *check.C) {
 	var stdout, stderr bytes.Buffer
-	manager = cmd.NewManager("glb", version, header, &stdout, &stderr, os.Stdin, nil)
+	s.manager = cmd.NewManager("glb", version, header, &stdout, &stderr, os.Stdin, nil)
 	os.Setenv("TSURU_TARGET", "http://localhost")
 }
 
@@ -35,7 +34,7 @@ var _ = check.Suite(&S{})
 func Test(t *testing.T) { check.TestingT(t) }
 
 type AdminCommandableProvisioner struct {
-	provisiontest.FakeProvisioner
+	*provisiontest.FakeProvisioner
 }
 
 func (p *AdminCommandableProvisioner) AdminCommands() []cmd.Command {

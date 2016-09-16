@@ -47,7 +47,7 @@ func (s *S) TestMachineListRun(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/iaas/machines") && req.Method == "GET"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := machineList{}
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
@@ -67,7 +67,7 @@ func (s *S) TestMachineDestroyRun(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/iaas/machines/myid1") && req.Method == "DELETE"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := machineDestroy{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
@@ -106,7 +106,7 @@ func (s *S) TestTemplateListRun(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/iaas/templates") && req.Method == "GET"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := templateList{}
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)

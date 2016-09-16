@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
+	"github.com/tsuru/tsuru/router/rebuild"
 	"gopkg.in/check.v1"
 )
 
@@ -29,7 +29,7 @@ func (s *S) TestAppLockDeleteRun(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/apps/app1/lock") && req.Method == "DELETE"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := appLockDelete{}
 	command.Flags().Parse(true, []string{"--app", "app1", "-y"})
 	err := command.Run(&context, client)
@@ -57,7 +57,7 @@ func (s *S) TestAppRoutesRebuildRun(c *check.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
-	rebuildResult := app.RebuildRoutesResult{
+	rebuildResult := rebuild.RebuildRoutesResult{
 		Added:   []string{"r1", "r2"},
 		Removed: []string{"r9"},
 	}
@@ -69,7 +69,7 @@ func (s *S) TestAppRoutesRebuildRun(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/apps/app1/routes") && req.Method == "POST"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := appRoutesRebuild{}
 	command.Flags().Parse(true, []string{"--app", "app1"})
 	err = command.Run(&context, client)
@@ -90,7 +90,7 @@ func (s *S) TestAppRoutesRebuildRunNothingToDo(c *check.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
-	rebuildResult := app.RebuildRoutesResult{}
+	rebuildResult := rebuild.RebuildRoutesResult{}
 	data, err := json.Marshal(rebuildResult)
 	c.Assert(err, check.IsNil)
 	trans := &cmdtest.ConditionalTransport{
@@ -99,7 +99,7 @@ func (s *S) TestAppRoutesRebuildRunNothingToDo(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/apps/app1/routes") && req.Method == "POST"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := appRoutesRebuild{}
 	command.Flags().Parse(true, []string{"--app", "app1"})
 	err = command.Run(&context, client)

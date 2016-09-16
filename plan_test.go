@@ -35,10 +35,10 @@ func (s *S) TestPlanCreate(c *check.C) {
 			method := req.Method == "POST"
 			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
 			url := strings.HasSuffix(req.URL.Path, "/plans")
-			return method && url && contentType && name && memory && method && swap && cpuShare && deflt && router
+			return method && url && contentType && name && memory && swap && cpuShare && deflt && router
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := planCreate{}
 	command.Flags().Parse(true, []string{"-c", "100"})
 	err := command.Run(&context, client)
@@ -65,10 +65,10 @@ func (s *S) TestPlanCreateFlags(c *check.C) {
 			method := req.Method == "POST"
 			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
 			url := strings.HasSuffix(req.URL.Path, "/plans")
-			return method && url && contentType && name && memory && method && swap && cpuShare && deflt && router
+			return method && url && contentType && name && memory && swap && cpuShare && deflt && router
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := planCreate{}
 	command.Flags().Parse(true, []string{"-c", "100", "-m", "4194304", "-s", "512", "-d", "-r", "myrouter"})
 	err := command.Run(&context, client)
@@ -95,10 +95,10 @@ func (s *S) TestPlanCreateMemoryAndSwapUnits(c *check.C) {
 			method := req.Method == "POST"
 			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
 			url := strings.HasSuffix(req.URL.Path, "/plans")
-			return method && url && contentType && name && memory && method && swap && cpuShare && deflt && router
+			return method && url && contentType && name && memory && swap && cpuShare && deflt && router
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := planCreate{}
 	command.Flags().Parse(true, []string{"-c", "100", "-m", "100M", "-s", "512K", "-d", "-r", "myrouter"})
 	err := command.Run(&context, client)
@@ -119,7 +119,7 @@ func (s *S) TestPlanCreateError(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/plans") && req.Method == "POST"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := planCreate{}
 	command.Flags().Parse(true, []string{"-c", "5"})
 	err := command.Run(&context, client)
@@ -146,10 +146,10 @@ func (s *S) TestPlanCreateInvalidMemory(c *check.C) {
 			method := req.Method == "POST"
 			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
 			url := strings.HasSuffix(req.URL.Path, "/plans")
-			return method && url && contentType && name && memory && method && swap && cpuShare && deflt && router
+			return method && url && contentType && name && memory && swap && cpuShare && deflt && router
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := planCreate{}
 	command.Flags().Parse(true, []string{"-c", "100", "-m", "4"})
 	err := command.Run(&context, client)
@@ -176,10 +176,10 @@ func (s *S) TestPlanCreateInvalidCpushare(c *check.C) {
 			method := req.Method == "POST"
 			contentType := req.Header.Get("Content-Type") == "application/x-www-form-urlencoded"
 			url := strings.HasSuffix(req.URL.Path, "/plans")
-			return method && url && contentType && name && memory && method && swap && cpuShare && deflt && router
+			return method && url && contentType && name && memory && swap && cpuShare && deflt && router
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := planCreate{}
 	command.Flags().Parse(true, []string{"-c", "1", "-m", "4194304"})
 	err := command.Run(&context, client)
@@ -200,7 +200,7 @@ func (s *S) TestPlanRemove(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/plans/myplan") && req.Method == "DELETE"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := planRemove{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.IsNil)
@@ -220,7 +220,7 @@ func (s *S) TestPlanRemoveError(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/plans/myplan") && req.Method == "DELETE"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := planRemove{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
@@ -252,7 +252,7 @@ func (s *S) TestPlanRoutersListRun(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/plans/routers") && req.Method == "GET"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := planRoutersList{}
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)

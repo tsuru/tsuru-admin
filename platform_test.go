@@ -12,7 +12,7 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/tsuru/tsuru-client/tsuru/platform"
+	"github.com/tsuru/tsuru-client/tsuru/admin"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/cmd/cmdtest"
 	"github.com/tsuru/tsuru/io"
@@ -36,18 +36,18 @@ func (s *S) TestPlatformAddRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			file, header, err := req.FormFile("dockerfile_content")
-			c.Assert(err, check.IsNil)
+			file, header, transErr := req.FormFile("dockerfile_content")
+			c.Assert(transErr, check.IsNil)
 			defer file.Close()
 			c.Assert(header.Filename, check.Equals, "Dockerfile")
-			data, err := ioutil.ReadAll(file)
-			c.Assert(err, check.IsNil)
+			data, transErr := ioutil.ReadAll(file)
+			c.Assert(transErr, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/java")
 			return strings.HasSuffix(req.URL.Path, "/platforms") && req.Method == "POST"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := platform.PlatformAdd{}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
+	command := admin.PlatformAdd{}
 	command.Flags().Parse(true, []string{"--dockerfile", server.URL})
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
@@ -67,18 +67,18 @@ func (s *S) TestPlatformAddRunLocalDockerFile(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			file, header, err := req.FormFile("dockerfile_content")
-			c.Assert(err, check.IsNil)
+			file, header, transErr := req.FormFile("dockerfile_content")
+			c.Assert(transErr, check.IsNil)
 			defer file.Close()
 			c.Assert(header.Filename, check.Equals, "Dockerfile")
-			data, err := ioutil.ReadAll(file)
-			c.Assert(err, check.IsNil)
+			data, transErr := ioutil.ReadAll(file)
+			c.Assert(transErr, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM\ttsuru/java\nRUN\ttrue\n")
 			return strings.HasSuffix(req.URL.Path, "/platforms") && req.Method == "POST"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := platform.PlatformAdd{}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
+	command := admin.PlatformAdd{}
 	command.Flags().Parse(true, []string{"--dockerfile", "testdata/Dockerfile"})
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
@@ -98,18 +98,18 @@ func (s *S) TestPlatformAddPrebuiltImage(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			file, header, err := req.FormFile("dockerfile_content")
-			c.Assert(err, check.IsNil)
+			file, header, transErr := req.FormFile("dockerfile_content")
+			c.Assert(transErr, check.IsNil)
 			defer file.Close()
 			c.Assert(header.Filename, check.Equals, "Dockerfile")
-			data, err := ioutil.ReadAll(file)
-			c.Assert(err, check.IsNil)
+			data, transErr := ioutil.ReadAll(file)
+			c.Assert(transErr, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/python")
 			return strings.HasSuffix(req.URL.Path, "/platforms") && req.Method == "POST"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := platform.PlatformAdd{}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
+	command := admin.PlatformAdd{}
 	command.Flags().Parse(true, []string{"--image", "tsuru/python"})
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
@@ -129,18 +129,18 @@ func (s *S) TestPlatformAddRunImplicitDockerfile(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			file, header, err := req.FormFile("dockerfile_content")
-			c.Assert(err, check.IsNil)
+			file, header, transErr := req.FormFile("dockerfile_content")
+			c.Assert(transErr, check.IsNil)
 			defer file.Close()
 			c.Assert(header.Filename, check.Equals, "Dockerfile")
-			data, err := ioutil.ReadAll(file)
-			c.Assert(err, check.IsNil)
+			data, transErr := ioutil.ReadAll(file)
+			c.Assert(transErr, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/teste")
 			return strings.HasSuffix(req.URL.Path, "/platforms") && req.Method == "POST"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
-	command := platform.PlatformAdd{}
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
+	command := admin.PlatformAdd{}
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
 	c.Assert(stdout.String(), check.Equals, expectedMsg)
@@ -153,8 +153,8 @@ func (s *S) TestPlatformAddRunFlagsConflict(c *check.C) {
 		Stderr: &stderr,
 		Args:   []string{"teste"},
 	}
-	client := cmd.NewClient(&http.Client{}, nil, manager)
-	command := platform.PlatformAdd{}
+	client := cmd.NewClient(&http.Client{}, nil, s.manager)
+	command := admin.PlatformAdd{}
 	command.Flags().Parse(true, []string{"--image", "tsuru/python", "--dockerfile", "testdata/Dockerfile"})
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
@@ -163,7 +163,7 @@ func (s *S) TestPlatformAddRunFlagsConflict(c *check.C) {
 
 func (s *S) TestPlatformAddFlagSet(c *check.C) {
 	message := "URL or path to the Dockerfile used for building the image of the platform"
-	command := platform.PlatformAdd{}
+	command := admin.PlatformAdd{}
 	flagset := command.Flags()
 	flagset.Parse(true, []string{"--dockerfile", "dockerfile", "-i", "tsuru/python"})
 
@@ -233,17 +233,17 @@ func (s *S) TestPlatformUpdateRun(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			file, header, err := req.FormFile("dockerfile_content")
-			c.Assert(err, check.IsNil)
+			file, header, transErr := req.FormFile("dockerfile_content")
+			c.Assert(transErr, check.IsNil)
 			defer file.Close()
 			c.Assert(header.Filename, check.Equals, "Dockerfile")
-			data, err := ioutil.ReadAll(file)
-			c.Assert(err, check.IsNil)
+			data, transErr := ioutil.ReadAll(file)
+			c.Assert(transErr, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/java")
 			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--dockerfile", server.URL})
 	err = command.Run(&context, client)
@@ -265,17 +265,17 @@ func (s *S) TestPlatformUpdateRunLocalDockerfile(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			file, header, err := req.FormFile("dockerfile_content")
-			c.Assert(err, check.IsNil)
+			file, header, transErr := req.FormFile("dockerfile_content")
+			c.Assert(transErr, check.IsNil)
 			defer file.Close()
 			c.Assert(header.Filename, check.Equals, "Dockerfile")
-			data, err := ioutil.ReadAll(file)
-			c.Assert(err, check.IsNil)
+			data, transErr := ioutil.ReadAll(file)
+			c.Assert(transErr, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM\ttsuru/java\nRUN\ttrue\n")
 			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--dockerfile", "testdata/Dockerfile"})
 	err = command.Run(&context, client)
@@ -297,17 +297,17 @@ func (s *S) TestPlatformUpdateRunPrebuiltImage(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			file, header, err := req.FormFile("dockerfile_content")
-			c.Assert(err, check.IsNil)
+			file, header, transErr := req.FormFile("dockerfile_content")
+			c.Assert(transErr, check.IsNil)
 			defer file.Close()
 			c.Assert(header.Filename, check.Equals, "Dockerfile")
-			data, err := ioutil.ReadAll(file)
-			c.Assert(err, check.IsNil)
+			data, transErr := ioutil.ReadAll(file)
+			c.Assert(transErr, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/python")
 			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--image", "tsuru/python"})
 	err = command.Run(&context, client)
@@ -329,17 +329,17 @@ func (s *S) TestPlatformUpdateRunImplicitImage(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			file, header, err := req.FormFile("dockerfile_content")
-			c.Assert(err, check.IsNil)
+			file, header, transErr := req.FormFile("dockerfile_content")
+			c.Assert(transErr, check.IsNil)
 			defer file.Close()
 			c.Assert(header.Filename, check.Equals, "Dockerfile")
-			data, err := ioutil.ReadAll(file)
-			c.Assert(err, check.IsNil)
+			data, transErr := ioutil.ReadAll(file)
+			c.Assert(transErr, check.IsNil)
 			c.Assert(string(data), check.Equals, "FROM tsuru/teste")
 			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := platformUpdate{}
 	err = command.Run(&context, client)
 	c.Assert(err, check.IsNil)
@@ -360,13 +360,13 @@ func (s *S) TestPlatformUpdateWithFlagDisableTrue(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			_, _, err := req.FormFile("dockerfile_content")
+			_, _, err = req.FormFile("dockerfile_content")
 			c.Assert(err, check.NotNil)
 			c.Assert(req.FormValue("disabled"), check.Equals, "true")
 			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--disable"})
 	err = command.Run(&context, client)
@@ -388,13 +388,13 @@ func (s *S) TestPlatformUpdateWithFlagEnabledTrue(c *check.C) {
 	trans := &cmdtest.ConditionalTransport{
 		Transport: cmdtest.Transport{Message: string(result), Status: http.StatusOK},
 		CondFunc: func(req *http.Request) bool {
-			_, _, err := req.FormFile("dockerfile_content")
+			_, _, err = req.FormFile("dockerfile_content")
 			c.Assert(err, check.NotNil)
 			c.Assert(req.FormValue("disabled"), check.Equals, "false")
 			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "PUT"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--enable"})
 	err = command.Run(&context, client)
@@ -411,7 +411,7 @@ func (s *S) TestPlatformUpdateImageAndDockerfile(c *check.C) {
 		Args:   []string{name},
 	}
 	expected := "Conflicting options: --image and --dockerfile"
-	client := cmd.NewClient(&http.Client{}, nil, manager)
+	client := cmd.NewClient(&http.Client{}, nil, s.manager)
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--image", "tsuru/python", "--dockerfile", "testdata/Dockerfile"})
 	err := command.Run(&context, client)
@@ -428,7 +428,7 @@ func (s *S) TestPlatformUpdateEnableAndDisable(c *check.C) {
 		Args:   []string{name},
 	}
 	expected := "Conflicting options: --enable and --disable"
-	client := cmd.NewClient(&http.Client{}, nil, manager)
+	client := cmd.NewClient(&http.Client{}, nil, s.manager)
 	command := platformUpdate{}
 	command.Flags().Parse(true, []string{"--disable", "--enable"})
 	err := command.Run(&context, client)
@@ -451,7 +451,7 @@ func (s *S) TestPlatformRemoveRun(c *check.C) {
 			return strings.HasSuffix(req.URL.Path, "/platforms/"+name) && req.Method == "DELETE"
 		},
 	}
-	client := cmd.NewClient(&http.Client{Transport: trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: trans}, nil, s.manager)
 	command := platformRemove{}
 	command.Flags().Parse(true, []string{"-y"})
 	err := command.Run(&context, client)

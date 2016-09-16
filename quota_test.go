@@ -42,7 +42,7 @@ Apps usage: 3/4
 func (s *S) TestUserQuotaViewRunFailure(c *check.C) {
 	context := cmd.Context{Args: []string{"fss@corp.globo.com"}}
 	trans := cmdtest.Transport{Message: "user not found", Status: http.StatusNotFound}
-	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, s.manager)
 	command := userQuotaView{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
@@ -160,7 +160,7 @@ Units usage: 3/4
 func (s *S) TestAppQuotaViewRunFailure(c *check.C) {
 	context := cmd.Context{Args: []string{"hybria"}}
 	trans := cmdtest.Transport{Message: "app not found", Status: http.StatusNotFound}
-	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, manager)
+	client := cmd.NewClient(&http.Client{Transport: &trans}, nil, s.manager)
 	command := appQuotaView{}
 	err := command.Run(&context, client)
 	c.Assert(err, check.NotNil)
