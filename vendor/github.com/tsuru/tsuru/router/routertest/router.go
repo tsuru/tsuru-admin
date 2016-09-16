@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/tsuru/tsuru/router"
@@ -96,6 +97,13 @@ func (r *fakeRouter) HasCName(name string) bool {
 	return ok
 }
 
+func (r *fakeRouter) HasCNameFor(name, cname string) bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	stored, ok := r.cnames[cname]
+	return ok && stored == name
+}
+
 func (r *fakeRouter) HasRoute(name, address string) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -129,6 +137,9 @@ func (r *fakeRouter) AddBackend(name string) error {
 }
 
 func (r *fakeRouter) RemoveBackend(name string) error {
+	if r.failuresByIp[name] {
+		return ErrForcedFailure
+	}
 	backendName, err := router.Retrieve(name)
 	if err != nil {
 		return err
@@ -259,6 +270,9 @@ func (r *fakeRouter) RemoveRoute(name string, address *url.URL) error {
 }
 
 func (r *fakeRouter) SetCName(cname, name string) error {
+	if r.failuresByIp[cname] {
+		return ErrForcedFailure
+	}
 	backendName, err := router.Retrieve(name)
 	if err != nil {
 		return err
@@ -279,6 +293,9 @@ func (r *fakeRouter) SetCName(cname, name string) error {
 }
 
 func (r *fakeRouter) UnsetCName(cname, name string) error {
+	if r.failuresByIp[cname] {
+		return ErrForcedFailure
+	}
 	backendName, err := router.Retrieve(name)
 	if err != nil {
 		return err
@@ -347,6 +364,14 @@ func (r *hcRouter) SetErr(err error) {
 
 func (r *hcRouter) HealthCheck() error {
 	return r.err
+}
+
+func (r *hcRouter) Addr(name string) (string, error) {
+	addr, err := r.fakeRouter.Addr(name)
+	if err != nil {
+		return "", err
+	}
+	return strings.Replace(addr, ".fakerouter.com", ".fakehcrouter.com", -1), nil
 }
 
 func (r *fakeRouter) SetHealthcheck(name string, data router.HealthcheckData) error {

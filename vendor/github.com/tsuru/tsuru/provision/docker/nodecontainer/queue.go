@@ -37,18 +37,23 @@ func (t *runBs) Name() string {
 func (t *runBs) Run(job monsterqueue.Job) {
 	params := job.Parameters()
 	dockerEndpoint := params["endpoint"].(string)
-	err := t.waitDocker(dockerEndpoint)
-	if err != nil {
-		job.Error(err)
-		return
-	}
 	node, err := t.provisioner.Cluster().GetNode(dockerEndpoint)
 	if err != nil {
 		job.Error(err)
 		return
 	}
+	client, err := node.Client()
+	if err != nil {
+		job.Error(err)
+		return
+	}
+	err = t.waitDocker(client)
+	if err != nil {
+		job.Error(err)
+		return
+	}
 	node.CreationStatus = cluster.NodeCreationStatusCreated
-	err = RecreateContainers(t.provisioner, nil, node)
+	err = recreateContainers(t.provisioner, nil, node)
 	if err != nil {
 		t.provisioner.Cluster().UpdateNode(node)
 		job.Error(err)
@@ -63,11 +68,7 @@ func (t *runBs) Run(job monsterqueue.Job) {
 	job.Success(nil)
 }
 
-func (t *runBs) waitDocker(endpoint string) error {
-	client, err := dockerClient(endpoint)
-	if err != nil {
-		return err
-	}
+func (t *runBs) waitDocker(client *docker.Client) error {
 	timeout, _ := config.GetInt("docker:api-timeout")
 	if timeout == 0 {
 		timeout = 600
@@ -77,19 +78,19 @@ func (t *runBs) waitDocker(endpoint string) error {
 	exit := make(chan struct{})
 	go func() {
 		for {
+			err := client.Ping()
+			if err == nil {
+				pong <- nil
+				return
+			}
+			if e, ok := err.(*docker.Error); ok && e.Status > 499 {
+				pong <- err
+				return
+			}
 			select {
 			case <-exit:
 				return
-			default:
-				err := client.Ping()
-				if err == nil {
-					pong <- nil
-					return
-				}
-				if e, ok := err.(*docker.Error); ok && e.Status > 499 {
-					pong <- err
-					return
-				}
+			case <-time.After(time.Second):
 			}
 		}
 	}()
@@ -98,6 +99,6 @@ func (t *runBs) waitDocker(endpoint string) error {
 		return err
 	case <-timeoutChan:
 		close(exit)
-		return fmt.Errorf("Docker API at %q didn't respond after %d seconds", endpoint, timeout)
+		return fmt.Errorf("Docker API at %q didn't respond after %d seconds", client.Endpoint(), timeout)
 	}
 }

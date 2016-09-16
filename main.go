@@ -5,10 +5,10 @@
 package main
 
 import (
+	"log"
 	"os"
 
-	"github.com/tsuru/tsuru-client/tsuru/platform"
-	"github.com/tsuru/tsuru-client/tsuru/pool"
+	"github.com/tsuru/tsuru-client/tsuru/admin"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/provision"
 	_ "github.com/tsuru/tsuru/provision/docker"
@@ -22,7 +22,7 @@ const (
 func buildManager(name string) *cmd.Manager {
 	m := cmd.BuildBaseManager(name, version, header, nil)
 	m.RegisterRemoved("log-remove", "This action is no longer supported.")
-	m.Register(&platform.PlatformAdd{})
+	m.Register(&admin.PlatformAdd{})
 	m.Register(&platformUpdate{})
 	m.Register(&platformRemove{})
 	m.Register(&machineList{})
@@ -39,7 +39,7 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(&templateAdd{})
 	m.Register(&templateRemove{})
 	m.RegisterRemoved("user-list", "You should use `tsuru user-list` instead.")
-	m.RegisterDeprecated(&pool.AddPoolToSchedulerCmd{}, "docker-pool-add")
+	m.RegisterDeprecated(&admin.AddPoolToSchedulerCmd{}, "docker-pool-add")
 	m.Register(&updatePoolToSchedulerCmd{})
 	m.RegisterDeprecated(&removePoolFromSchedulerCmd{}, "docker-pool-remove")
 	m.RegisterRemoved("pool-list", "You should use `tsuru pool-list` instead.")
@@ -48,12 +48,19 @@ func buildManager(name string) *cmd.Manager {
 	m.Register(&cmd.ShellToContainerCmd{})
 	m.Register(&appRoutesRebuild{})
 	m.Register(&templateUpdate{})
+	m.RegisterDeprecated(&admin.AddNodeCmd{}, "docker-node-add")
+	m.RegisterDeprecated(&admin.RemoveNodeCmd{}, "docker-node-remove")
+	m.RegisterDeprecated(&admin.UpdateNodeCmd{}, "docker-node-update")
+	m.RegisterDeprecated(&admin.ListNodesCmd{}, "docker-node-list")
 	registerProvisionersCommands(m)
 	return m
 }
 
 func registerProvisionersCommands(m *cmd.Manager) {
-	provisioners := provision.Registry()
+	provisioners, err := provision.Registry()
+	if err != nil {
+		log.Fatalf("unable to load provisioners: %s", err)
+	}
 	for _, p := range provisioners {
 		if c, ok := p.(cmd.AdminCommandable); ok {
 			commands := c.AdminCommands()

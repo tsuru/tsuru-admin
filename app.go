@@ -10,8 +10,8 @@ import (
 	"net/http"
 
 	"github.com/tsuru/gnuflag"
-	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/cmd"
+	"github.com/tsuru/tsuru/router/rebuild"
 )
 
 type appLockDelete struct {
@@ -97,7 +97,7 @@ func (c *appRoutesRebuild) Run(ctx *cmd.Context, client *cmd.Client) error {
 		return err
 	}
 	defer rsp.Body.Close()
-	var rebuildResult app.RebuildRoutesResult
+	var rebuildResult rebuild.RebuildRoutesResult
 	err = json.NewDecoder(rsp.Body).Decode(&rebuildResult)
 	if err != nil {
 		return err

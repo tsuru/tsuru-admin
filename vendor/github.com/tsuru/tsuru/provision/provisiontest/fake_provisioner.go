@@ -16,6 +16,8 @@ import (
 	"github.com/tsuru/tsuru/action"
 	"github.com/tsuru/tsuru/app/bind"
 	"github.com/tsuru/tsuru/db"
+	"github.com/tsuru/tsuru/event"
+	"github.com/tsuru/tsuru/net"
 	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/quota"
 	"github.com/tsuru/tsuru/router"
@@ -23,12 +25,27 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-var errNotProvisioned = &provision.Error{Reason: "App is not provisioned."}
+var (
+	ProvisionerInstance *FakeProvisioner
+	ExtensibleInstance  *ExtensibleFakeProvisioner
 
-var uniqueIpCounter int32 = 0
+	errNotProvisioned       = &provision.Error{Reason: "App is not provisioned."}
+	uniqueIpCounter   int32 = 0
+
+	_ provision.NodeProvisioner = &FakeProvisioner{}
+)
 
 func init() {
-	provision.Register("fake", &FakeProvisioner{})
+	ProvisionerInstance = NewFakeProvisioner()
+	ExtensibleInstance = &ExtensibleFakeProvisioner{
+		FakeProvisioner: ProvisionerInstance,
+	}
+	provision.Register("fake", func() (provision.Provisioner, error) {
+		return ProvisionerInstance, nil
+	})
+	provision.Register("fake-extensible", func() (provision.Provisioner, error) {
+		return ExtensibleInstance, nil
+	})
 }
 
 // Fake implementation for provision.App.
@@ -65,7 +82,9 @@ func NewFakeApp(name, platform string, units int) *FakeApp {
 		units:     make([]provision.Unit, units),
 		instances: make(map[string][]bind.ServiceInstance),
 		Quota:     quota.Unlimited,
+		Pool:      "test-default",
 	}
+	routertest.FakeRouter.AddBackend(name)
 	namefmt := "%s-%d"
 	for i := 0; i < units; i++ {
 		val := atomic.AddInt32(&uniqueIpCounter, 1)
@@ -358,6 +377,7 @@ type FakeProvisioner struct {
 	shells    map[string][]provision.ShellOptions
 	shellMut  sync.Mutex
 	validImgs map[string][]string
+	nodes     map[string]fakeNode
 }
 
 func NewFakeProvisioner() *FakeProvisioner {
@@ -366,6 +386,7 @@ func NewFakeProvisioner() *FakeProvisioner {
 	p.failures = make(chan failure, 8)
 	p.apps = make(map[string]provisionedApp)
 	p.shells = make(map[string][]provision.ShellOptions)
+	p.nodes = make(map[string]fakeNode)
 	return &p
 }
 
@@ -378,6 +399,117 @@ func (p *FakeProvisioner) getError(method string) error {
 		p.failures <- fail
 	default:
 	}
+	return nil
+}
+
+type fakeNode struct {
+	address  string
+	pool     string
+	metadata map[string]string
+	status   string
+	p        *FakeProvisioner
+}
+
+func (n *fakeNode) Pool() string {
+	return n.pool
+}
+
+func (n *fakeNode) Address() string {
+	return n.address
+}
+
+func (n *fakeNode) Metadata() map[string]string {
+	return n.metadata
+}
+
+func (n *fakeNode) Units() ([]provision.Unit, error) {
+	n.p.mut.Lock()
+	defer n.p.mut.Unlock()
+	var units []provision.Unit
+	for _, a := range n.p.apps {
+		for _, u := range a.units {
+			if net.URLToHost(u.Address.String()) == net.URLToHost(n.address) {
+				units = append(units, u)
+			}
+		}
+	}
+	return units, nil
+}
+
+func (n *fakeNode) Status() string {
+	return n.status
+}
+
+func (p *FakeProvisioner) AddNode(opts provision.AddNodeOptions) error {
+	p.nodes[opts.Address] = fakeNode{
+		address:  opts.Address,
+		pool:     opts.Metadata["pool"],
+		metadata: opts.Metadata,
+		p:        p,
+	}
+	return nil
+}
+
+func (p *FakeProvisioner) GetNode(address string) (provision.Node, error) {
+	if n, ok := p.nodes[address]; ok {
+		return &n, nil
+	}
+	return nil, provision.ErrNodeNotFound
+}
+
+func (p *FakeProvisioner) RemoveNode(opts provision.RemoveNodeOptions) error {
+	_, ok := p.nodes[opts.Address]
+	if !ok {
+		return provision.ErrNodeNotFound
+	}
+	delete(p.nodes, opts.Address)
+	if opts.Writer != nil {
+		if opts.Rebalance {
+			opts.Writer.Write([]byte("rebalancing..."))
+		}
+		opts.Writer.Write([]byte("remove done!"))
+	}
+	return nil
+}
+
+func (p *FakeProvisioner) UpdateNode(opts provision.UpdateNodeOptions) error {
+	n, ok := p.nodes[opts.Address]
+	if !ok {
+		return provision.ErrNodeNotFound
+	}
+	if opts.Metadata != nil {
+		n.metadata = opts.Metadata
+	}
+	if opts.Enable {
+		n.status = "enabled"
+	}
+	if opts.Disable {
+		n.status = "disabled"
+	}
+	p.nodes[opts.Address] = n
+	return nil
+}
+
+func (p *FakeProvisioner) ListNodes(addressFilter []string) ([]provision.Node, error) {
+	var result []provision.Node
+	if addressFilter != nil {
+		result = make([]provision.Node, 0, len(addressFilter))
+		for _, a := range addressFilter {
+			n := p.nodes[a]
+			result = append(result, &n)
+		}
+	} else {
+		result = make([]provision.Node, 0, len(p.nodes))
+		for a := range p.nodes {
+			n := p.nodes[a]
+			result = append(result, &n)
+		}
+	}
+	return result, nil
+}
+
+// SetNodeStatus defines the node status
+func (p *FakeProvisioner) SetNodeStatus(provision.NodeStatusData) error {
 	return nil
 }
 
@@ -460,6 +592,20 @@ func (p *FakeProvisioner) GetUnits(app provision.App) []provision.Unit {
 	return pApp.units
 }
 
+// GetAppFromUnitID returns an app from unitID
+func (p *FakeProvisioner) GetAppFromUnitID(unitID string) (provision.App, error) {
+	p.mut.RLock()
+	defer p.mut.RUnlock()
+	for _, a := range p.apps {
+		for _, u := range a.units {
+			if u.GetID() == unitID {
+				return a.app, nil
+			}
+		}
+	}
+	return nil, errors.New("app not found")
+}
+
 // PrepareOutput sends the given slice of bytes to a queue of outputs.
 //
 // Each prepared output will be used in the ExecuteCommand. It might be sent to
@@ -496,6 +642,9 @@ func (p *FakeProvisioner) Reset() {
 	p.shells = make(map[string][]provision.ShellOptions)
 	p.shellMut.Unlock()
 
+	p.nodes = make(map[string]fakeNode)
+	uniqueIpCounter = 0
+
 	for {
 		select {
 		case <-p.outputs:
@@ -510,7 +659,7 @@ func (p *FakeProvisioner) Swap(app1, app2 provision.App, cnameOnly bool) error {
 	return routertest.FakeRouter.Swap(app1.GetName(), app2.GetName(), cnameOnly)
 }
 
-func (p *FakeProvisioner) ArchiveDeploy(app provision.App, archiveURL string, w io.Writer) (string, error) {
+func (p *FakeProvisioner) ArchiveDeploy(app provision.App, archiveURL string, evt *event.Event) (string, error) {
 	if err := p.getError("ArchiveDeploy"); err != nil {
 		return "", err
 	}
@@ -520,13 +669,13 @@ func (p *FakeProvisioner) ArchiveDeploy(app provision.App, archiveURL string, w 
 	if !ok {
 		return "", errNotProvisioned
 	}
-	w.Write([]byte("Archive deploy called"))
+	evt.Write([]byte("Archive deploy called"))
 	pApp.lastArchive = archiveURL
 	p.apps[app.GetName()] = pApp
 	return "app-image", nil
 }
 
-func (p *FakeProvisioner) UploadDeploy(app provision.App, file io.ReadCloser, fileSize int64, build bool, w io.Writer) (string, error) {
+func (p *FakeProvisioner) UploadDeploy(app provision.App, file io.ReadCloser, fileSize int64, build bool, evt *event.Event) (string, error) {
 	if err := p.getError("UploadDeploy"); err != nil {
 		return "", err
 	}
@@ -536,13 +685,13 @@ func (p *FakeProvisioner) UploadDeploy(app provision.App, file io.ReadCloser, fi
 	if !ok {
 		return "", errNotProvisioned
 	}
-	w.Write([]byte("Upload deploy called"))
+	evt.Write([]byte("Upload deploy called"))
 	pApp.lastFile = file
 	p.apps[app.GetName()] = pApp
 	return "app-image", nil
 }
 
-func (p *FakeProvisioner) ImageDeploy(app provision.App, img string, w io.Writer) (string, error) {
+func (p *FakeProvisioner) ImageDeploy(app provision.App, img string, evt *event.Event) (string, error) {
 	if err := p.getError("ImageDeploy"); err != nil {
 		return "", err
 	}
@@ -553,12 +702,12 @@ func (p *FakeProvisioner) ImageDeploy(app provision.App, img string, w io.Writer
 		return "", errNotProvisioned
 	}
 	pApp.image = img
-	w.Write([]byte("Image deploy called"))
+	evt.Write([]byte("Image deploy called"))
 	p.apps[app.GetName()] = pApp
 	return img, nil
 }
 
-func (p *FakeProvisioner) Rollback(app provision.App, img string, w io.Writer) (string, error) {
+func (p *FakeProvisioner) Rollback(app provision.App, img string, evt *event.Event) (string, error) {
 	if err := p.getError("ImageDeploy"); err != nil {
 		return "", err
 	}
@@ -568,7 +717,7 @@ func (p *FakeProvisioner) Rollback(app provision.App, img string, w io.Writer) (
 	if !ok {
 		return "", errNotProvisioned
 	}
-	w.Write([]byte("Rollback deploy called"))
+	evt.Write([]byte("Rollback deploy called"))
 	p.apps[app.GetName()] = pApp
 	return img, nil
 }
@@ -579,10 +728,6 @@ func (p *FakeProvisioner) Provision(app provision.App) error {
 	}
 	if p.Provisioned(app) {
 		return &provision.Error{Reason: "App already provisioned."}
-	}
-	err := routertest.FakeRouter.AddBackend(app.GetName())
-	if err != nil {
-		return err
 	}
 	p.mut.Lock()
 	defer p.mut.Unlock()
@@ -713,16 +858,25 @@ func (p *FakeProvisioner) AddUnits(app provision.App, n uint, process string, w 
 	length := uint(len(pApp.units))
 	for i := uint(0); i < n; i++ {
 		val := atomic.AddInt32(&uniqueIpCounter, 1)
+		var hostAddr string
+		if len(p.nodes) > 0 {
+			for _, n := range p.nodes {
+				hostAddr = net.URLToHost(n.Address())
+				break
+			}
+		} else {
+			hostAddr = fmt.Sprintf("10.10.10.%d", val)
+		}
 		unit := provision.Unit{
 			ID:          fmt.Sprintf("%s-%d", name, pApp.unitLen),
 			AppName:     name,
 			Type:        platform,
 			Status:      provision.StatusStarted,
-			Ip:          fmt.Sprintf("10.10.10.%d", val),
+			Ip:          hostAddr,
 			ProcessName: process,
 			Address: &url.URL{
 				Scheme: "http",
-				Host:   fmt.Sprintf("10.10.10.%d:%d", val, val),
+				Host:   fmt.Sprintf("%s:%d", hostAddr, val),
 			},
 		}
 		err := routertest.FakeRouter.AddRoute(name, unit.Address)
@@ -1084,6 +1238,10 @@ func (p *FakeProvisioner) FilterAppsByUnitStatus(apps []provision.App, status []
 	return filteredApps, nil
 }
 
+func (p *FakeProvisioner) GetName() string {
+	return "fake"
+}
+
 func stringInArray(value string, array []string) bool {
 	for _, str := range array {
 		if str == value {
@@ -1174,6 +1332,11 @@ func (p *ExtensibleFakeProvisioner) PlatformUpdate(opts provision.PlatformOption
 	platform.Args = opts.Args
 	p.platforms[index] = *platform
 	return nil
+}
+
+func (p *ExtensibleFakeProvisioner) Reset() {
+	p.FakeProvisioner.Reset()
+	p.platforms = nil
 }
 
 func (p *ExtensibleFakeProvisioner) PlatformRemove(name string) error {

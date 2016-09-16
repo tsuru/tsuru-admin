@@ -28,19 +28,12 @@ import (
 	"github.com/tsuru/tsuru/log"
 	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/router"
+	"github.com/tsuru/tsuru/router/rebuild"
 	"golang.org/x/net/websocket"
 	"gopkg.in/tylerb/graceful.v1"
 )
 
-const Version = "1.1.0-dev"
-
-func getProvisioner() (string, error) {
-	provisioner, err := config.GetString("provisioner")
-	if provisioner == "" {
-		provisioner = "docker"
-	}
-	return provisioner, err
-}
+const Version = "1.1.0"
 
 type TsuruHandler struct {
 	method string
@@ -168,6 +161,7 @@ func RunServer(dry bool) http.Handler {
 	m.Add("1.1", "Get", "/events", AuthorizationRequiredHandler(eventList))
 	m.Add("1.1", "Get", "/events/kinds", AuthorizationRequiredHandler(kindList))
 	m.Add("1.1", "Get", "/events/{uuid}", AuthorizationRequiredHandler(eventInfo))
+	m.Add("1.1", "Post", "/events/{uuid}/cancel", AuthorizationRequiredHandler(eventCancel))
 
 	m.Add("1.0", "Get", "/platforms", AuthorizationRequiredHandler(platformList))
 	m.Add("1.0", "Post", "/platforms", AuthorizationRequiredHandler(platformAdd))
@@ -261,6 +255,35 @@ func RunServer(dry bool) http.Handler {
 	m.Add("1.0", "Get", "/debug/pprof/threadcreate", AuthorizationRequiredHandler(indexHandler))
 	m.Add("1.0", "Get", "/debug/pprof/block", AuthorizationRequiredHandler(indexHandler))
 
+	m.Add("1.2", "GET", "/node", AuthorizationRequiredHandler(listNodesHandler))
+	m.Add("1.2", "GET", "/node/apps/{appname}/containers", AuthorizationRequiredHandler(listUnitsByApp))
+	m.Add("1.2", "GET", "/node/{address:.*}/containers", AuthorizationRequiredHandler(listUnitsByNode))
+	m.Add("1.2", "POST", "/node", AuthorizationRequiredHandler(addNodeHandler))
+	m.Add("1.2", "PUT", "/node", AuthorizationRequiredHandler(updateNodeHandler))
+	m.Add("1.2", "DELETE", "/node/{address:.*}", AuthorizationRequiredHandler(removeNodeHandler))
+
+	m.Add("1.2", "GET", "/nodecontainers", AuthorizationRequiredHandler(nodeContainerList))
+	m.Add("1.2", "POST", "/nodecontainers", AuthorizationRequiredHandler(nodeContainerCreate))
+	m.Add("1.2", "GET", "/nodecontainers/{name}", AuthorizationRequiredHandler(nodeContainerInfo))
+	m.Add("1.2", "DELETE", "/nodecontainers/{name}", AuthorizationRequiredHandler(nodeContainerDelete))
+	m.Add("1.2", "POST", "/nodecontainers/{name}", AuthorizationRequiredHandler(nodeContainerUpdate))
+	m.Add("1.2", "POST", "/nodecontainers/{name}/upgrade", AuthorizationRequiredHandler(nodeContainerUpgrade))
+
+	// Handlers for compatibility reasons, should be removed on tsuru 2.0.
+	m.Add("1.0", "GET", "/docker/node", AuthorizationRequiredHandler(listNodesHandler))
+	m.Add("1.0", "GET", "/docker/node/apps/{appname}/containers", AuthorizationRequiredHandler(listUnitsByApp))
+	m.Add("1.0", "GET", "/docker/node/{address:.*}/containers", AuthorizationRequiredHandler(listUnitsByNode))
+	m.Add("1.0", "POST", "/docker/node", AuthorizationRequiredHandler(addNodeHandler))
+	m.Add("1.0", "PUT", "/docker/node", AuthorizationRequiredHandler(updateNodeHandler))
+	m.Add("1.0", "DELETE", "/docker/node/{address:.*}", AuthorizationRequiredHandler(removeNodeHandler))
+
+	m.Add("1.0", "GET", "/docker/nodecontainers", AuthorizationRequiredHandler(nodeContainerList))
+	m.Add("1.0", "POST", "/docker/nodecontainers", AuthorizationRequiredHandler(nodeContainerCreate))
+	m.Add("1.0", "GET", "/docker/nodecontainers/{name}", AuthorizationRequiredHandler(nodeContainerInfo))
+	m.Add("1.0", "DELETE", "/docker/nodecontainers/{name}", AuthorizationRequiredHandler(nodeContainerDelete))
+	m.Add("1.0", "POST", "/docker/nodecontainers/{name}", AuthorizationRequiredHandler(nodeContainerUpdate))
+	m.Add("1.0", "POST", "/docker/nodecontainers/{name}/upgrade", AuthorizationRequiredHandler(nodeContainerUpgrade))
+
 	n := negroni.New()
 	n.Use(negroni.NewRecovery())
 	n.Use(negroni.HandlerFunc(contextClearerMiddleware))
@@ -284,145 +307,144 @@ func RunServer(dry bool) http.Handler {
 	n.UseHandler(http.HandlerFunc(runDelayedHandler))
 
 	if !dry {
-		shutdownChan := make(chan bool)
-		shutdownTimeout, _ := config.GetInt("shutdown-timeout")
-		if shutdownTimeout == 0 {
-			shutdownTimeout = 10 * 60
-		}
-		idleTracker := newIdleTracker()
-		shutdown.Register(idleTracker)
-		shutdown.Register(&logTracker)
-		readTimeout, _ := config.GetInt("server:read-timeout")
-		writeTimeout, _ := config.GetInt("server:write-timeout")
-		listen, err := config.GetString("listen")
-		if err != nil {
-			fatal(err)
-		}
-		srv := &graceful.Server{
-			Timeout: time.Duration(shutdownTimeout) * time.Second,
-			Server: &http.Server{
-				ReadTimeout:  time.Duration(readTimeout) * time.Second,
-				WriteTimeout: time.Duration(writeTimeout) * time.Second,
-				Addr:         listen,
-				Handler:      n,
-			},
-			ConnState: func(conn net.Conn, state http.ConnState) {
-				idleTracker.trackConn(conn, state)
-			},
-			NoSignalHandling: true,
-			ShutdownInitiated: func() {
-				fmt.Println("tsuru is shutting down, waiting for pending connections to finish.")
-				handlers := shutdown.All()
-				wg := sync.WaitGroup{}
-				for _, h := range handlers {
-					wg.Add(1)
-					go func(h shutdown.Shutdownable) {
-						defer wg.Done()
-						fmt.Printf("running shutdown handler for %v...\n", h)
-						h.Shutdown()
-						fmt.Printf("running shutdown handler for %v. DONE.\n", h)
-					}(h)
-				}
-				wg.Wait()
-				close(shutdownChan)
-			},
-		}
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			<-sigChan
-			srv.Stop(srv.Timeout)
-		}()
-		var startupMessage string
-		routers, err := router.List()
-		if err != nil {
-			fatal(err)
-		}
-		for _, routerDesc := range routers {
-			var r router.Router
-			r, err = router.Get(routerDesc.Name)
-			if err != nil {
-				fatal(err)
-			}
-			fmt.Printf("Registered router %q", routerDesc.Name)
-			if messageRouter, ok := r.(router.MessageRouter); ok {
-				startupMessage, err = messageRouter.StartupMessage()
-				if err == nil && startupMessage != "" {
-					fmt.Printf(": %s", startupMessage)
-				}
-			}
-			fmt.Println()
-		}
-		defaultRouter, _ := config.GetString("docker:router")
-		fmt.Printf("Default router is %q.\n", defaultRouter)
-		repoManager, err := config.GetString("repo-manager")
-		if err != nil {
-			repoManager = "gandalf"
-			fmt.Println("Warning: configuration didn't declare a repository manager, using default manager.")
-		}
-		fmt.Printf("Using %q repository manager.\n", repoManager)
-		provisioner, err := getProvisioner()
-		if err != nil {
-			fmt.Println("Warning: configuration didn't declare a provisioner, using default provisioner.")
-		}
-		app.Provisioner, err = provision.Get(provisioner)
-		if err != nil {
-			fatal(err)
-		}
-		fmt.Printf("Using %q provisioner.\n", provisioner)
-		if initializableProvisioner, ok := app.Provisioner.(provision.InitializableProvisioner); ok {
-			err = initializableProvisioner.Initialize()
-			if err != nil {
-				fatal(err)
-			}
-		}
-		if messageProvisioner, ok := app.Provisioner.(provision.MessageProvisioner); ok {
-			startupMessage, err = messageProvisioner.StartupMessage()
-			if err == nil && startupMessage != "" {
-				fmt.Print(startupMessage)
-			}
-		}
-		scheme, err := getAuthScheme()
-		if err != nil {
-			fmt.Printf("Warning: configuration didn't declare auth:scheme, using default scheme.\n")
-		}
-		app.AuthScheme, err = auth.GetScheme(scheme)
-		if err != nil {
-			fatal(err)
-		}
-		fmt.Printf("Using %q auth scheme.\n", scheme)
-		fmt.Println("Checking components status:")
-		results := hc.Check()
-		for _, result := range results {
-			if result.Status != hc.HealthCheckOK {
-				fmt.Printf("    WARNING: %q is not working: %s\n", result.Name, result.Status)
-			}
-		}
-		fmt.Println("    Components checked.")
-		tls, _ := config.GetBool("use-tls")
-		if tls {
-			var (
-				certFile string
-				keyFile  string
-			)
-			certFile, err = config.GetString("tls:cert-file")
-			if err != nil {
-				fatal(err)
-			}
-			keyFile, err = config.GetString("tls:key-file")
-			if err != nil {
-				fatal(err)
-			}
-			fmt.Printf("tsuru HTTP/TLS server listening at %s...\n", listen)
-			err = srv.ListenAndServeTLS(certFile, keyFile)
-		} else {
-			fmt.Printf("tsuru HTTP server listening at %s...\n", listen)
-			err = srv.ListenAndServe()
-		}
-		if err != nil {
-			fmt.Printf("Listening stopped: %s\n", err)
-		}
-		<-shutdownChan
+		startServer(n)
 	}
 	return n
+}
+
+func appFinder(appName string) (rebuild.RebuildApp, error) {
+	a, err := app.GetByName(appName)
+	if err == app.ErrAppNotFound {
+		return nil, nil
+	}
+	return a, err
+}
+
+func startServer(handler http.Handler) {
+	shutdownChan := make(chan bool)
+	shutdownTimeout, _ := config.GetInt("shutdown-timeout")
+	if shutdownTimeout == 0 {
+		shutdownTimeout = 10 * 60
+	}
+	idleTracker := newIdleTracker()
+	shutdown.Register(idleTracker)
+	shutdown.Register(&logTracker)
+	readTimeout, _ := config.GetInt("server:read-timeout")
+	writeTimeout, _ := config.GetInt("server:write-timeout")
+	listen, err := config.GetString("listen")
+	if err != nil {
+		fatal(err)
+	}
+	srv := &graceful.Server{
+		Timeout: time.Duration(shutdownTimeout) * time.Second,
+		Server: &http.Server{
+			ReadTimeout:  time.Duration(readTimeout) * time.Second,
+			WriteTimeout: time.Duration(writeTimeout) * time.Second,
+			Addr:         listen,
+			Handler:      handler,
+		},
+		ConnState: func(conn net.Conn, state http.ConnState) {
+			idleTracker.trackConn(conn, state)
+		},
+		NoSignalHandling: true,
+		ShutdownInitiated: func() {
+			fmt.Println("tsuru is shutting down, waiting for pending connections to finish.")
+			handlers := shutdown.All()
+			wg := sync.WaitGroup{}
+			for _, h := range handlers {
+				wg.Add(1)
+				go func(h shutdown.Shutdownable) {
+					defer wg.Done()
+					fmt.Printf("running shutdown handler for %v...\n", h)
+					h.Shutdown()
+					fmt.Printf("running shutdown handler for %v. DONE.\n", h)
+				}(h)
+			}
+			wg.Wait()
+			close(shutdownChan)
+		},
+	}
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		srv.Stop(srv.Timeout)
+	}()
+	var startupMessage string
+	routers, err := router.List()
+	if err != nil {
+		fatal(err)
+	}
+	for _, routerDesc := range routers {
+		var r router.Router
+		r, err = router.Get(routerDesc.Name)
+		if err != nil {
+			fatal(err)
+		}
+		fmt.Printf("Registered router %q", routerDesc.Name)
+		if messageRouter, ok := r.(router.MessageRouter); ok {
+			startupMessage, err = messageRouter.StartupMessage()
+			if err == nil && startupMessage != "" {
+				fmt.Printf(": %s", startupMessage)
+			}
+		}
+		fmt.Println()
+	}
+	defaultRouter, _ := config.GetString("docker:router")
+	fmt.Printf("Default router is %q.\n", defaultRouter)
+	repoManager, err := config.GetString("repo-manager")
+	if err != nil {
+		repoManager = "gandalf"
+		fmt.Println("Warning: configuration didn't declare a repository manager, using default manager.")
+	}
+	fmt.Printf("Using %q repository manager.\n", repoManager)
+	err = rebuild.RegisterTask(appFinder)
+	if err != nil {
+		fatal(err)
+	}
+	scheme, err := getAuthScheme()
+	if err != nil {
+		fmt.Printf("Warning: configuration didn't declare auth:scheme, using default scheme.\n")
+	}
+	app.AuthScheme, err = auth.GetScheme(scheme)
+	if err != nil {
+		fatal(err)
+	}
+	fmt.Printf("Using %q auth scheme.\n", scheme)
+	err = provision.InitializeAll()
+	if err != nil {
+		fatal(err)
+	}
+	fmt.Println("Checking components status:")
+	results := hc.Check()
+	for _, result := range results {
+		if result.Status != hc.HealthCheckOK {
+			fmt.Printf("    WARNING: %q is not working: %s\n", result.Name, result.Status)
+		}
+	}
+	fmt.Println("    Components checked.")
+	tls, _ := config.GetBool("use-tls")
+	if tls {
+		var (
+			certFile string
+			keyFile  string
+		)
+		certFile, err = config.GetString("tls:cert-file")
+		if err != nil {
+			fatal(err)
+		}
+		keyFile, err = config.GetString("tls:key-file")
+		if err != nil {
+			fatal(err)
+		}
+		fmt.Printf("tsuru HTTP/TLS server listening at %s...\n", listen)
+		err = srv.ListenAndServeTLS(certFile, keyFile)
+	} else {
+		fmt.Printf("tsuru HTTP server listening at %s...\n", listen)
+		err = srv.ListenAndServe()
+	}
+	if err != nil {
+		fmt.Printf("Listening stopped: %s\n", err)
+	}
+	<-shutdownChan
 }
