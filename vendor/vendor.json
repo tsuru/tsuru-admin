@@ -450,6 +450,12 @@
 			"revisionTime": "2016-09-15T21:46:03Z"
 		},
 		{
+			"checksumSHA1": "QoVjlQFru1ixgV8vh63T4/JAtLI=",
+			"path": "github.com/pkg/errors",
+			"revision": "a22138067af1c4942683050411a841ade67fe1eb",
+			"revisionTime": "2016-08-08T15:55:40+10:00"
+		},
+		{
 			"checksumSHA1": "MFhThRtm31QmjCpB2OR6vqsuT60=",
 			"origin": "github.com/tsuru/tsuru-client/vendor/github.com/sajari/fuzzy",
 			"path": "github.com/sajari/fuzzy",
@@ -657,6 +663,12 @@
 			"path": "github.com/tsuru/tsuru/hc",
 			"revision": "e3de0514411819c7e3f4109b3ae83d6cdc8d147d",
 			"revisionTime": "2016-09-16T14:06:00Z"
+		},
+		{
+			"checksumSHA1": "2PXNjSTVZr2f3k+9Sb0FJnrQ1D0=",
+			"path": "github.com/tsuru/tsuru/healer",
+			"revision": "5bfdf0de6ae313488200e4b3cfad95f00b35b83e",
+			"revisionTime": "2016-10-28T16:18:46-02:00"
 		},
 		{
 			"checksumSHA1": "IeBc1Qq5d/um1xPKnFD4wN32420=",
