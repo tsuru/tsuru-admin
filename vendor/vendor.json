@@ -51,12 +51,6 @@
 			"revisionTime": "2016-10-28T11:31:11-07:00"
 		},
 		{
-			"checksumSHA1": "23FJUX+AInYeEM2hoUMvYZtXZd4=",
-			"path": "github.com/Azure/go-ansiterm",
-			"revision": "fa152c58bc15761d0200cb75fe958b89a9d4888e",
-			"revisionTime": "2016-06-22T10:32:16-07:00"
-		},
-		{
 			"checksumSHA1": "jBimnggjIiFUjaImNoJhSVLtdzw=",
 			"path": "github.com/Azure/go-ansiterm/winterm",
 			"revision": "fa152c58bc15761d0200cb75fe958b89a9d4888e",
@@ -91,12 +85,6 @@
 			"path": "github.com/Azure/go-autorest/autorest/validation",
 			"revision": "8a25372bbfec739b8719a9e3987400d15ef9e179",
 			"revisionTime": "2016-10-25T11:07:34-07:00"
-		},
-		{
-			"checksumSHA1": "vzPNBiOJFecKT9FA6aAtmOjRlgs=",
-			"path": "github.com/Microsoft/go-winio",
-			"revision": "ce2922f643c8fd76b46cadc7f404a06282678b34",
-			"revisionTime": "2016-06-21T14:14:38-07:00"
 		},
 		{
 			"checksumSHA1": "BNGAvGVjYU0XA+7dU4ROjT0xzds=",
@@ -409,13 +397,6 @@
 			"revisionTime": "2016-10-31T13:39:59-07:00"
 		},
 		{
-			"checksumSHA1": "ndnAFCfsGC3upNQ6jAEwzxcurww=",
-			"origin": "github.com/tsuru/tsuru/vendor/github.com/docker/docker/pkg/longpath",
-			"path": "github.com/docker/docker/pkg/longpath",
-			"revision": "4b981a96144172b4a31f014bf73367e28bd5d2d3",
-			"revisionTime": "2016-10-31T16:11:15-02:00"
-		},
-		{
 			"checksumSHA1": "l4lJIW9JIddsKRqsoqRt9zXu/7M=",
 			"origin": "github.com/tsuru/tsuru/vendor/github.com/docker/docker/pkg/pools",
 			"path": "github.com/docker/docker/pkg/pools",
@@ -448,26 +429,6 @@
 			"path": "github.com/docker/docker/pkg/term",
 			"revision": "a13fc3fd367437a779d3562093bbc9f499816733",
 			"revisionTime": "2016-10-31T13:39:59-07:00"
-		},
-		{
-			"checksumSHA1": "k1RJrQuAMExp5VUDOXlnLBN47vE=",
-			"path": "github.com/docker/docker/pkg/term/windows",
-			"revision": "a13fc3fd367437a779d3562093bbc9f499816733",
-			"revisionTime": "2016-10-31T13:39:59-07:00"
-		},
-		{
-			"checksumSHA1": "d5BuQrBPAQwmU/WjUSfYBZTKnFA=",
-			"origin": "github.com/tsuru/tsuru/vendor/github.com/docker/engine-api/types/mount",
-			"path": "github.com/docker/engine-api/types/mount",
-			"revision": "b33d24f7d170fc0021829fba97d3e070c921f18a",
-			"revisionTime": "2016-09-15T21:46:03Z"
-		},
-		{
-			"checksumSHA1": "Rpn/9dRkExFqAHIrytBY4jKc+bk=",
-			"origin": "github.com/tsuru/tsuru/vendor/github.com/docker/engine-api/types/swarm",
-			"path": "github.com/docker/engine-api/types/swarm",
-			"revision": "b33d24f7d170fc0021829fba97d3e070c921f18a",
-			"revisionTime": "2016-09-15T21:46:03Z"
 		},
 		{
 			"checksumSHA1": "kktbWelM0xVH61fOWltCEOR/87E=",
@@ -1016,18 +977,6 @@
 		{
 			"checksumSHA1": "nZvGpVUe3zTfT5nhKkJloOud2/I=",
 			"path": "github.com/rackspace/gophercloud/rackspace/identity/v2/tokens",
-			"revision": "e00690e87603abe613e9f02c816c7c4bef82e063",
-			"revisionTime": "2016-10-13T18:24:34-05:00"
-		},
-		{
-			"checksumSHA1": "g+/FqpymOvSMVXRozZsiZixb070=",
-			"path": "github.com/rackspace/gophercloud/testhelper",
-			"revision": "e00690e87603abe613e9f02c816c7c4bef82e063",
-			"revisionTime": "2016-10-13T18:24:34-05:00"
-		},
-		{
-			"checksumSHA1": "fXtvTbQBML8QLu/qpD9sAt53J00=",
-			"path": "github.com/rackspace/gophercloud/testhelper/client",
 			"revision": "e00690e87603abe613e9f02c816c7c4bef82e063",
 			"revisionTime": "2016-10-13T18:24:34-05:00"
 		},
@@ -1972,18 +1921,6 @@
 			"revisionTime": "2016-10-25T17:59:40Z"
 		},
 		{
-			"checksumSHA1": "fpW2dhGFC6SrVzipJx7fjg2DIH8=",
-			"path": "golang.org/x/sys/windows",
-			"revision": "c200b10b5d5e122be351b67af224adc6128af5bf",
-			"revisionTime": "2016-10-22T20:22:21+02:00"
-		},
-		{
-			"checksumSHA1": "PjYlbMS0ttyZYlaevvjA/gV3g1c=",
-			"path": "golang.org/x/sys/windows/registry",
-			"revision": "c200b10b5d5e122be351b67af224adc6128af5bf",
-			"revisionTime": "2016-10-22T20:22:21+02:00"
-		},
-		{
 			"checksumSHA1": "JynP157ZBIZCFU+p8Lc8CbLb+a8=",
 			"path": "google.golang.org/api/compute/v1",
 			"revision": "2262cc95b9819d2d038c72a2d6007aa7b9e12767",
@@ -2006,85 +1943,6 @@
 			"path": "google.golang.org/api/googleapi/internal/uritemplates",
 			"revision": "2262cc95b9819d2d038c72a2d6007aa7b9e12767",
 			"revisionTime": "2016-10-29T04:47:54-04:00"
-		},
-		{
-			"checksumSHA1": "BYNXzv50n5HWU4OpKBw9JlrKIRI=",
-			"path": "google.golang.org/appengine",
-			"revision": "46239ca616842c00f41b8cbc6bbf2bd6ffbfcdad",
-			"revisionTime": "2016-10-25T09:43:32-07:00"
-		},
-		{
-			"checksumSHA1": "gsE/AYe//KmaiuMoXwjSxDfHaQU=",
-			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal",
-			"path": "google.golang.org/appengine/internal",
-			"revision": "4b981a96144172b4a31f014bf73367e28bd5d2d3",
-			"revisionTime": "2016-10-31T16:11:15-02:00"
-		},
-		{
-			"checksumSHA1": "x6Thdfyasqd68dWZWqzWWeIfAfI=",
-			"path": "google.golang.org/appengine/internal/app_identity",
-			"revision": "46239ca616842c00f41b8cbc6bbf2bd6ffbfcdad",
-			"revisionTime": "2016-10-25T09:43:32-07:00"
-		},
-		{
-			"checksumSHA1": "TsNO8P0xUlLNyh3Ic/tzSp/fDWM=",
-			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal/base",
-			"path": "google.golang.org/appengine/internal/base",
-			"revision": "4b981a96144172b4a31f014bf73367e28bd5d2d3",
-			"revisionTime": "2016-10-31T16:11:15-02:00"
-		},
-		{
-			"checksumSHA1": "5QsV5oLGSfKZqTCVXP6NRz5T4Tw=",
-			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal/datastore",
-			"path": "google.golang.org/appengine/internal/datastore",
-			"revision": "4b981a96144172b4a31f014bf73367e28bd5d2d3",
-			"revisionTime": "2016-10-31T16:11:15-02:00"
-		},
-		{
-			"checksumSHA1": "Gep2T9zmVYV8qZfK2gu3zrmG6QE=",
-			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal/log",
-			"path": "google.golang.org/appengine/internal/log",
-			"revision": "4b981a96144172b4a31f014bf73367e28bd5d2d3",
-			"revisionTime": "2016-10-31T16:11:15-02:00"
-		},
-		{
-			"checksumSHA1": "eLZVX1EHLclFtQnjDIszsdyWRHo=",
-			"path": "google.golang.org/appengine/internal/modules",
-			"revision": "46239ca616842c00f41b8cbc6bbf2bd6ffbfcdad",
-			"revisionTime": "2016-10-25T09:43:32-07:00"
-		},
-		{
-			"checksumSHA1": "a1XY7rz3BieOVqVI2Et6rKiwQCk=",
-			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal/remote_api",
-			"path": "google.golang.org/appengine/internal/remote_api",
-			"revision": "4b981a96144172b4a31f014bf73367e28bd5d2d3",
-			"revisionTime": "2016-10-31T16:11:15-02:00"
-		},
-		{
-			"checksumSHA1": "QtAbHtHmDzcf6vOV9eqlCpKgjiw=",
-			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/internal/urlfetch",
-			"path": "google.golang.org/appengine/internal/urlfetch",
-			"revision": "4b981a96144172b4a31f014bf73367e28bd5d2d3",
-			"revisionTime": "2016-10-31T16:11:15-02:00"
-		},
-		{
-			"checksumSHA1": "akOV9pYnCbcPA8wJUutSQVibdyg=",
-			"origin": "github.com/tsuru/tsuru/vendor/google.golang.org/appengine/urlfetch",
-			"path": "google.golang.org/appengine/urlfetch",
-			"revision": "4b981a96144172b4a31f014bf73367e28bd5d2d3",
-			"revisionTime": "2016-10-31T16:11:15-02:00"
-		},
-		{
-			"checksumSHA1": "mMebELv59OxT1L/YjNhwkLI/uCo=",
-			"path": "google.golang.org/cloud/compute/metadata",
-			"revision": "bd8a5e8b5d233a78bb4ef057f38eae438f8b6f55",
-			"revisionTime": "2016-10-30T09:49:27-04:00"
-		},
-		{
-			"checksumSHA1": "Yrq6dC3qNt9aqxeOXfTvQLgdMsc=",
-			"path": "google.golang.org/cloud/internal",
-			"revision": "bd8a5e8b5d233a78bb4ef057f38eae438f8b6f55",
-			"revisionTime": "2016-10-30T09:49:27-04:00"
 		},
 		{
 			"checksumSHA1": "tGcoFB/NFIc+m/S2lMuL/ojcRnY=",
@@ -2118,20 +1976,6 @@
 			"checksumSHA1": "K/lQInTR+txzqW/I5/rDzEXDndw=",
 			"origin": "github.com/tsuru/tsuru-client/vendor/gopkg.in/mgo.v2/bson",
 			"path": "gopkg.in/mgo.v2/bson",
-			"revision": "ee43dea7b9174211dd625616b34ed34ac2e06dd8",
-			"revisionTime": "2016-10-31T17:57:33-02:00"
-		},
-		{
-			"checksumSHA1": "XQsrqoNT1U0KzLxOFcAZVvqhLfk=",
-			"origin": "github.com/tsuru/tsuru/vendor/gopkg.in/mgo.v2/internal/json",
-			"path": "gopkg.in/mgo.v2/internal/json",
-			"revision": "4b981a96144172b4a31f014bf73367e28bd5d2d3",
-			"revisionTime": "2016-10-31T16:11:15-02:00"
-		},
-		{
-			"checksumSHA1": "CkCDTsyN2Lbj1cL8+oaYKoPpI9w=",
-			"origin": "github.com/tsuru/tsuru-client/vendor/gopkg.in/mgo.v2/internal/sasl",
-			"path": "gopkg.in/mgo.v2/internal/sasl",
 			"revision": "ee43dea7b9174211dd625616b34ed34ac2e06dd8",
 			"revisionTime": "2016-10-31T17:57:33-02:00"
 		},
