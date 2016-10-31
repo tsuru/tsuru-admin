@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/docker/engine-api/types/swarm"
+	"github.com/docker/docker/api/types/swarm"
 	"golang.org/x/net/context"
 )
 
@@ -132,4 +132,19 @@ func (c *Client) UpdateSwarm(opts UpdateSwarmOptions) error {
 		}
 	}
 	return err
+}
+
+// InspectSwarm inspects a Swarm.
+// See http://goo.gl/nvwytL for more details.
+func (c *Client) InspectSwarm(ctx context.Context) (swarm.Swarm, error) {
+	response := swarm.Swarm{}
+	resp, err := c.do("GET", "/swarm", doOptions{
+		context: ctx,
+	})
+	if err != nil {
+		return response, err
+	}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	return response, err
 }

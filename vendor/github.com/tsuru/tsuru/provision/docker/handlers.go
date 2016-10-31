@@ -6,7 +6,6 @@ package docker
 
 import (
 	"encoding/json"
-	stderror "errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,13 +16,15 @@ import (
 	"time"
 
 	"github.com/ajg/form"
+	"github.com/pkg/errors"
 	"github.com/tsuru/tsuru/api"
 	"github.com/tsuru/tsuru/app"
 	"github.com/tsuru/tsuru/auth"
-	"github.com/tsuru/tsuru/errors"
+	tsuruErrors "github.com/tsuru/tsuru/errors"
 	"github.com/tsuru/tsuru/event"
 	_ "github.com/tsuru/tsuru/iaas/cloudstack"
 	_ "github.com/tsuru/tsuru/iaas/digitalocean"
+	_ "github.com/tsuru/tsuru/iaas/dockermachine"
 	_ "github.com/tsuru/tsuru/iaas/ec2"
 	tsuruIo "github.com/tsuru/tsuru/io"
 	"github.com/tsuru/tsuru/permission"
@@ -37,9 +38,6 @@ func init() {
 	api.RegisterHandler("/docker/containers/move", "POST", api.AuthorizationRequiredHandler(moveContainersHandler))
 	api.RegisterHandler("/docker/containers/rebalance", "POST", api.AuthorizationRequiredHandler(rebalanceContainersHandler))
 	api.RegisterHandler("/docker/healing", "GET", api.AuthorizationRequiredHandler(healingHistoryHandler))
-	api.RegisterHandler("/docker/healing/node", "GET", api.AuthorizationRequiredHandler(nodeHealingRead))
-	api.RegisterHandler("/docker/healing/node", "POST", api.AuthorizationRequiredHandler(nodeHealingUpdate))
-	api.RegisterHandler("/docker/healing/node", "DELETE", api.AuthorizationRequiredHandler(nodeHealingDelete))
 	api.RegisterHandler("/docker/autoscale", "GET", api.AuthorizationRequiredHandler(autoScaleHistoryHandler))
 	api.RegisterHandler("/docker/autoscale/config", "GET", api.AuthorizationRequiredHandler(autoScaleGetConfig))
 	api.RegisterHandler("/docker/autoscale/run", "POST", api.AuthorizationRequiredHandler(autoScaleRunHandler))
@@ -110,14 +108,14 @@ func autoScaleSetRule(w http.ResponseWriter, r *http.Request, t auth.Token) (err
 	}
 	err = r.ParseForm()
 	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+		return &tsuruErrors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	var rule autoScaleRule
 	dec := form.NewDecoder(nil)
 	dec.IgnoreUnknownKeys(true)
 	err = dec.DecodeValues(&rule, r.Form)
 	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+		return &tsuruErrors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	var ctxs []permission.PermissionContext
 	if rule.MetadataFilter != "" {
@@ -168,7 +166,7 @@ func autoScaleDeleteRule(w http.ResponseWriter, r *http.Request, t auth.Token) (
 	defer func() { evt.Done(err) }()
 	err = deleteAutoScaleRule(rulePool)
 	if err == mgo.ErrNotFound {
-		return &errors.HTTP{Code: http.StatusNotFound, Message: "rule not found"}
+		return &tsuruErrors.HTTP{Code: http.StatusNotFound, Message: "rule not found"}
 	}
 	return nil
 }
@@ -186,23 +184,23 @@ func autoScaleDeleteRule(w http.ResponseWriter, r *http.Request, t auth.Token) (
 func moveContainerHandler(w http.ResponseWriter, r *http.Request, t auth.Token) (err error) {
 	err = r.ParseForm()
 	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+		return &tsuruErrors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	params := map[string]string{}
 	dec := form.NewDecoder(nil)
 	dec.IgnoreUnknownKeys(true)
 	err = dec.DecodeValues(&params, r.Form)
 	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+		return &tsuruErrors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	contId := r.URL.Query().Get(":id")
 	to := params["to"]
 	if to == "" {
-		return fmt.Errorf("Invalid params: id: %s - to: %s", contId, to)
+		return errors.Errorf("Invalid params: id: %s - to: %s", contId, to)
 	}
 	cont, err := mainDockerProvisioner.GetContainer(contId)
 	if err != nil {
-		return &errors.HTTP{Code: http.StatusNotFound, Message: err.Error()}
+		return &tsuruErrors.HTTP{Code: http.StatusNotFound, Message: err.Error()}
 	}
 	permContexts, err := moveContainersPermissionContexts(cont.HostAddr, to)
 	if err != nil {
@@ -228,7 +226,7 @@ func moveContainerHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
 	_, err = mainDockerProvisioner.moveContainer(contId, to, writer)
 	if err != nil {
-		return fmt.Errorf("Error trying to move container: %s\n", err.Error())
+		return errors.Wrap(err, "Error trying to move container")
 	}
 	fmt.Fprintf(writer, "Containers moved successfully!\n")
 	return nil
@@ -247,19 +245,19 @@ func moveContainerHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 func moveContainersHandler(w http.ResponseWriter, r *http.Request, t auth.Token) (err error) {
 	err = r.ParseForm()
 	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+		return &tsuruErrors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	params := map[string]string{}
 	dec := form.NewDecoder(nil)
 	dec.IgnoreUnknownKeys(true)
 	err = dec.DecodeValues(&params, r.Form)
 	if err != nil {
-		return &errors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
+		return &tsuruErrors.HTTP{Code: http.StatusBadRequest, Message: err.Error()}
 	}
 	from := params["from"]
 	to := params["to"]
 	if from == "" || to == "" {
-		return fmt.Errorf("Invalid params: from: %s - to: %s", from, to)
+		return errors.Errorf("Invalid params: from: %s - to: %s", from, to)
 	}
 	permContexts, err := moveContainersPermissionContexts(from, to)
 	if err != nil {
@@ -285,7 +283,7 @@ func moveContainersHandler(w http.ResponseWriter, r *http.Request, t auth.Token)
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
 	err = mainDockerProvisioner.MoveContainers(from, to, writer)
 	if err != nil {
-		return fmt.Errorf("Error trying to move containers: %s\n", err.Error())
+		return errors.Wrap(err, "Error trying to move containers")
 	}
 	fmt.Fprintf(writer, "Containers moved successfully!\n")
 	return nil
@@ -294,11 +292,11 @@ func moveContainersHandler(w http.ResponseWriter, r *http.Request, t auth.Token)
 func moveContainersPermissionContexts(from, to string) ([]permission.PermissionContext, error) {
 	originHost, err := mainDockerProvisioner.GetNodeByHost(from)
 	if err != nil {
-		return nil, &errors.HTTP{Code: http.StatusNotFound, Message: err.Error()}
+		return nil, &tsuruErrors.HTTP{Code: http.StatusNotFound, Message: err.Error()}
 	}
 	destinationHost, err := mainDockerProvisioner.GetNodeByHost(to)
 	if err != nil {
-		return nil, &errors.HTTP{Code: http.StatusNotFound, Message: err.Error()}
+		return nil, &tsuruErrors.HTTP{Code: http.StatusNotFound, Message: err.Error()}
 	}
 	var permContexts []permission.PermissionContext
 	originPool, ok := originHost.Metadata["pool"]
@@ -334,7 +332,7 @@ func rebalanceContainersHandler(w http.ResponseWriter, r *http.Request, t auth.T
 	dec.IgnoreUnknownKeys(true)
 	err = dec.DecodeValues(&params, r.Form)
 	if err != nil {
-		return &errors.HTTP{
+		return &tsuruErrors.HTTP{
 			Code:    http.StatusBadRequest,
 			Message: err.Error(),
 		}
@@ -365,7 +363,7 @@ func rebalanceContainersHandler(w http.ResponseWriter, r *http.Request, t auth.T
 	writer := &tsuruIo.SimpleJsonMessageEncoderWriter{Encoder: json.NewEncoder(keepAliveWriter)}
 	_, err = mainDockerProvisioner.rebalanceContainersByFilter(writer, params.AppFilter, params.MetadataFilter, params.Dry)
 	if err != nil {
-		return fmt.Errorf("Error trying to rebalance containers: %s\n", err)
+		return errors.Wrap(err, "Error trying to rebalance containers")
 	}
 	fmt.Fprintf(writer, "Containers successfully rebalanced!\n")
 	return nil
@@ -386,7 +384,7 @@ func healingHistoryHandler(w http.ResponseWriter, r *http.Request, t auth.Token)
 	}
 	filter := r.URL.Query().Get("filter")
 	if filter != "" && filter != "node" && filter != "container" {
-		return &errors.HTTP{
+		return &tsuruErrors.HTTP{
 			Code:    http.StatusBadRequest,
 			Message: "invalid filter, possible values are 'node' or 'container'",
 		}
@@ -466,15 +464,15 @@ func autoScaleRunHandler(w http.ResponseWriter, r *http.Request, t auth.Token) (
 }
 
 func bsEnvSetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	return stderror.New("this route is deprecated, please use POST /docker/nodecontainer/{name} (node-container-update command)")
+	return errors.New("this route is deprecated, please use POST /docker/nodecontainer/{name} (node-container-update command)")
 }
 
 func bsConfigGetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	return stderror.New("this route is deprecated, please use GET /docker/nodecontainer/{name} (node-container-info command)")
+	return errors.New("this route is deprecated, please use GET /docker/nodecontainer/{name} (node-container-info command)")
 }
 
 func bsUpgradeHandler(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	return stderror.New("this route is deprecated, please use POST /docker/nodecontainer/{name}/upgrade (node-container-upgrade command)")
+	return errors.New("this route is deprecated, please use POST /docker/nodecontainer/{name}/upgrade (node-container-upgrade command)")
 }
 
 // title: logs config
@@ -518,7 +516,7 @@ func logsConfigGetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 func logsConfigSetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) (err error) {
 	err = r.ParseForm()
 	if err != nil {
-		return &errors.HTTP{
+		return &tsuruErrors.HTTP{
 			Code:    http.StatusBadRequest,
 			Message: fmt.Sprintf("unable to parse form values: %s", err),
 		}
@@ -532,7 +530,7 @@ func logsConfigSetHandler(w http.ResponseWriter, r *http.Request, t auth.Token) 
 	dec.IgnoreUnknownKeys(true)
 	err = dec.DecodeValues(&conf, r.Form)
 	if err != nil {
-		return &errors.HTTP{
+		return &tsuruErrors.HTTP{
 			Code:    http.StatusBadRequest,
 			Message: fmt.Sprintf("unable to parse fields in docker log config: %s", err),
 		}
@@ -605,123 +603,5 @@ func tryRestartAppsByFilter(filter *app.Filter, writer io.Writer) error {
 		}(i)
 	}
 	wg.Wait()
-	return nil
-}
-
-// title: node healing info
-// path: /docker/healing/node
-// method: GET
-// produce: application/json
-// responses:
-//   200: Ok
-//   401: Unauthorized
-func nodeHealingRead(w http.ResponseWriter, r *http.Request, t auth.Token) error {
-	pools, err := permission.ListContextValues(t, permission.PermHealingRead, true)
-	if err != nil {
-		return err
-	}
-	configMap, err := healer.GetConfig()
-	if err != nil {
-		return err
-	}
-	if len(pools) > 0 {
-		allowedPoolSet := map[string]struct{}{}
-		for _, p := range pools {
-			allowedPoolSet[p] = struct{}{}
-		}
-		for k := range configMap {
-			if k == "" {
-				continue
-			}
-			if _, ok := allowedPoolSet[k]; !ok {
-				delete(configMap, k)
-			}
-		}
-	}
-	w.Header().Set("Content-Type", "application/json")
-	return json.NewEncoder(w).Encode(configMap)
-}
-
-// title: node healing update
-// path: /docker/healing/node
-// method: POST
-// consume: application/x-www-form-urlencoded
-// responses:
-//   200: Ok
-//   401: Unauthorized
-func nodeHealingUpdate(w http.ResponseWriter, r *http.Request, t auth.Token) (err error) {
-	err = r.ParseForm()
-	if err != nil {
-		return err
-	}
-	poolName := r.FormValue("pool")
-	var ctxs []permission.PermissionContext
-	if poolName != "" {
-		ctxs = append(ctxs, permission.Context(permission.CtxPool, poolName))
-	}
-	if !permission.Check(t, permission.PermHealingUpdate, ctxs...) {
-		return permission.ErrUnauthorized
-	}
-	evt, err := event.New(&event.Opts{
-		Target:      event.Target{Type: event.TargetTypePool, Value: poolName},
-		Kind:        permission.PermHealingUpdate,
-		Owner:       t,
-		CustomData:  event.FormToCustomData(r.Form),
-		DisableLock: true,
-		Allowed:     event.Allowed(permission.PermPoolReadEvents, ctxs...),
-	})
-	if err != nil {
-		return err
-	}
-	defer func() { evt.Done(err) }()
-	var config healer.NodeHealerConfig
-	delete(r.Form, "pool")
-	dec := form.NewDecoder(nil)
-	dec.IgnoreUnknownKeys(true)
-	err = dec.DecodeValues(&config, r.Form)
-	if err != nil {
-		return err
-	}
-	return healer.UpdateConfig(poolName, config)
-}
-
-// title: remove node healing
-// path: /docker/healing/node
-// method: DELETE
-// produce: application/json
-// responses:
-//   200: Ok
-//   401: Unauthorized
-func nodeHealingDelete(w http.ResponseWriter, r *http.Request, t auth.Token) (err error) {
-	r.ParseForm()
-	poolName := r.URL.Query().Get("pool")
-	var ctxs []permission.PermissionContext
-	if poolName != "" {
-		ctxs = append(ctxs, permission.Context(permission.CtxPool, poolName))
-	}
-	if !permission.Check(t, permission.PermHealingDelete, ctxs...) {
-		return permission.ErrUnauthorized
-	}
-	evt, err := event.New(&event.Opts{
-		Target:      event.Target{Type: event.TargetTypePool, Value: poolName},
-		Kind:        permission.PermHealingDelete,
-		Owner:       t,
-		CustomData:  event.FormToCustomData(r.Form),
-		DisableLock: true,
-		Allowed:     event.Allowed(permission.PermPoolReadEvents, ctxs...),
-	})
-	if err != nil {
-		return err
-	}
-	defer func() { evt.Done(err) }()
-	if len(r.URL.Query()["name"]) == 0 {
-		return healer.RemoveConfig(poolName, "")
-	}
-	for _, v := range r.URL.Query()["name"] {
-		err := healer.RemoveConfig(poolName, v)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }

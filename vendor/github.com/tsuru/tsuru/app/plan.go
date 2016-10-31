@@ -5,10 +5,10 @@
 package app
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/tsuru/config"
 	"github.com/tsuru/tsuru/db"
 	"github.com/tsuru/tsuru/router"
@@ -52,7 +52,7 @@ func (plan *Plan) Save() error {
 	if plan.Router != "" {
 		_, err := router.Get(plan.Router)
 		if err != nil {
-			return PlanValidationError{"router"}
+			return PlanValidationError{fmt.Sprintf("router error: %v", err)}
 		}
 	}
 	conn, err := db.Conn()

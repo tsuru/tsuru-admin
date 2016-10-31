@@ -5,7 +5,6 @@
 package docker
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,8 +13,10 @@ import (
 	"time"
 
 	"github.com/fsouza/go-dockerclient"
+	"github.com/pkg/errors"
 	"github.com/tsuru/config"
 	"github.com/tsuru/tsuru/action"
+	"github.com/tsuru/tsuru/app/image"
 	"github.com/tsuru/tsuru/event"
 	"github.com/tsuru/tsuru/log"
 	"github.com/tsuru/tsuru/provision"
@@ -345,7 +346,7 @@ var provisionAddUnitsToHost = action.Action{
 		runInContainers(containers, func(cont *container.Container, _ chan *container.Container) error {
 			err := cont.Remove(args.provisioner)
 			if err != nil {
-				log.Errorf("Error removing added container %s: %s", cont.ID, err.Error())
+				log.Errorf("Error removing added container %s: %s", cont.ID, err)
 				return nil
 			}
 			fmt.Fprintf(w, " ---> Destroyed unit %s [%s]\n", cont.ShortID(), cont.ProcessName)
@@ -363,7 +364,7 @@ var bindAndHealthcheck = action.Action{
 		if err := checkCanceled(args.event); err != nil {
 			return nil, err
 		}
-		webProcessName, err := getImageWebProcessName(args.imageId)
+		webProcessName, err := image.GetImageWebProcessName(args.imageId)
 		if err != nil {
 			log.Errorf("[WARNING] cannot get the name of the web process: %s", err)
 		}
@@ -437,7 +438,7 @@ var addNewRoutes = action.Action{
 		if err := checkCanceled(args.event); err != nil {
 			return nil, err
 		}
-		webProcessName, err := getImageWebProcessName(args.imageId)
+		webProcessName, err := image.GetImageWebProcessName(args.imageId)
 		if err != nil {
 			log.Errorf("[WARNING] cannot get the name of the web process: %s", err)
 		}
@@ -483,7 +484,7 @@ var addNewRoutes = action.Action{
 		newContainers := ctx.FWResult.([]container.Container)
 		r, err := getRouterForApp(args.app)
 		if err != nil {
-			log.Errorf("[add-new-routes:Backward] Error geting router: %s", err.Error())
+			log.Errorf("[add-new-routes:Backward] Error geting router: %s", err)
 		}
 		w := args.writer
 		if w == nil {
@@ -501,7 +502,7 @@ var addNewRoutes = action.Action{
 		}
 		err = r.RemoveRoutes(args.app.GetName(), routesToRemove)
 		if err != nil {
-			log.Errorf("[add-new-routes:Backward] Error removing route for [%v]: %s", routesToRemove, err.Error())
+			log.Errorf("[add-new-routes:Backward] Error removing route for [%v]: %s", routesToRemove, err)
 			return
 		}
 		for _, c := range newContainers {
@@ -530,7 +531,7 @@ var setRouterHealthcheck = action.Action{
 		if !ok {
 			return newContainers, nil
 		}
-		yamlData, err := getImageTsuruYamlData(args.imageId)
+		yamlData, err := image.GetImageTsuruYamlData(args.imageId)
 		if err != nil {
 			return nil, err
 		}
@@ -554,22 +555,22 @@ var setRouterHealthcheck = action.Action{
 		args := ctx.Params[0].(changeUnitsPipelineArgs)
 		r, err := getRouterForApp(args.app)
 		if err != nil {
-			log.Errorf("[set-router-healthcheck:Backward] Error getting router: %s", err.Error())
+			log.Errorf("[set-router-healthcheck:Backward] Error getting router: %s", err)
 			return
 		}
 		hcRouter, ok := r.(router.CustomHealthcheckRouter)
 		if !ok {
 			return
 		}
-		currentImageName, _ := appCurrentImageName(args.app.GetName())
-		yamlData, err := getImageTsuruYamlData(currentImageName)
+		currentImageName, _ := image.AppCurrentImageName(args.app.GetName())
+		yamlData, err := image.GetImageTsuruYamlData(currentImageName)
 		if err != nil {
-			log.Errorf("[set-router-healthcheck:Backward] Error getting yaml data: %s", err.Error())
+			log.Errorf("[set-router-healthcheck:Backward] Error getting yaml data: %s", err)
 		}
 		hcData := yamlData.Healthcheck.ToRouterHC()
 		err = hcRouter.SetHealthcheck(args.app.GetName(), hcData)
 		if err != nil {
-			log.Errorf("[set-router-healthcheck:Backward] Error setting healthcheck: %s", err.Error())
+			log.Errorf("[set-router-healthcheck:Backward] Error setting healthcheck: %s", err)
 		}
 	},
 }
@@ -601,11 +602,11 @@ var removeOldRoutes = action.Action{
 		if len(args.toRemove) > 0 {
 			fmt.Fprintf(writer, "\n---- Removing routes from old units ----\n")
 		}
-		currentImageName, err := appCurrentImageName(args.app.GetName())
-		if err != nil && err != errNoImagesAvailable {
+		currentImageName, err := image.AppCurrentImageName(args.app.GetName())
+		if err != nil && err != image.ErrNoImagesAvailable {
 			return
 		}
-		webProcessName, err := getImageWebProcessName(currentImageName)
+		webProcessName, err := image.GetImageWebProcessName(currentImageName)
 		if err != nil {
 			log.Errorf("[WARNING] cannot get the name of the web process for route removal: %s", err)
 		}
@@ -640,7 +641,7 @@ var removeOldRoutes = action.Action{
 		args := ctx.Params[0].(changeUnitsPipelineArgs)
 		r, err := getRouterForApp(args.app)
 		if err != nil {
-			log.Errorf("[remove-old-routes:Backward] Error geting router: %s", err.Error())
+			log.Errorf("[remove-old-routes:Backward] Error geting router: %s", err)
 		}
 		w := args.writer
 		if w == nil {
@@ -658,7 +659,7 @@ var removeOldRoutes = action.Action{
 		}
 		err = r.AddRoutes(args.app.GetName(), routesToAdd)
 		if err != nil {
-			log.Errorf("[remove-old-routes:Backward] Error adding back route for [%v]: %s", routesToAdd, err.Error())
+			log.Errorf("[remove-old-routes:Backward] Error adding back route for [%v]: %s", routesToAdd, err)
 			return
 		}
 		for _, c := range args.toRemove {
@@ -775,7 +776,7 @@ var followLogsAndCommit = action.Action{
 				return nil, result.err
 			}
 			if result.status != 0 {
-				return nil, fmt.Errorf("Exit status %d", result.status)
+				return nil, errors.Errorf("Exit status %d", result.status)
 			}
 		}
 		fmt.Fprintf(args.writer, "\n---- Building application image ----\n")
@@ -800,17 +801,17 @@ var updateAppImage = action.Action{
 		if err := checkCanceled(args.event); err != nil {
 			return nil, err
 		}
-		currentImageName, _ := appCurrentImageName(args.app.GetName())
+		currentImageName, _ := image.AppCurrentImageName(args.app.GetName())
 		if currentImageName != args.imageId {
-			err := appendAppImageName(args.app.GetName(), args.imageId)
+			err := image.AppendAppImageName(args.app.GetName(), args.imageId)
 			if err != nil {
-				return nil, fmt.Errorf("unable to save image name: %s", err.Error())
+				return nil, errors.Wrap(err, "unable to save image name")
 			}
 		}
-		imgHistorySize := imageHistorySize()
-		allImages, err := listAppImages(args.app.GetName())
+		imgHistorySize := image.ImageHistorySize()
+		allImages, err := image.ListAppImages(args.app.GetName())
 		if err != nil {
-			log.Errorf("Couldn't list images for cleaning: %s", err.Error())
+			log.Errorf("Couldn't list images for cleaning: %s", err)
 			return ctx.Previous, nil
 		}
 		for i, imgName := range allImages {

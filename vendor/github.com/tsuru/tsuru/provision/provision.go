@@ -8,13 +8,13 @@ package provision
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/url"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/tsuru/tsuru/app/bind"
 	"github.com/tsuru/tsuru/event"
 	"github.com/tsuru/tsuru/quota"
@@ -187,6 +187,12 @@ type Named interface {
 	GetName() string
 }
 
+// RunArgs groups together the arguments to run an App.
+type RunArgs struct {
+	Once     bool
+	Isolated bool
+}
+
 // App represents a tsuru app.
 //
 // It contains only relevant information for provisioning.
@@ -211,7 +217,7 @@ type App interface {
 	// Run executes the command in app units. Commands executed with this
 	// method should have access to environment variables defined in the
 	// app.
-	Run(cmd string, w io.Writer, once bool) error
+	Run(cmd string, w io.Writer, args RunArgs) error
 
 	Envs() map[string]bind.EnvVar
 
@@ -286,10 +292,6 @@ type ImageDeployer interface {
 // previously deployed version.
 type RollbackableDeployer interface {
 	Rollback(App, string, *event.Event) (string, error)
-
-	// Returns list of valid image names for app, these can be used for
-	// rollback.
-	ValidAppImages(string) ([]string, error)
 }
 
 // Provisioner is the basic interface of this package.
@@ -309,7 +311,7 @@ type Provisioner interface {
 	// second is the number of units to be added.
 	//
 	// It returns a slice containing all added units
-	AddUnits(App, uint, string, io.Writer) ([]Unit, error)
+	AddUnits(App, uint, string, io.Writer) error
 
 	// RemoveUnits "undoes" AddUnits, removing the given number of units
 	// from the app.
@@ -337,8 +339,8 @@ type Provisioner interface {
 	// Units returns information about units by App.
 	Units(App) ([]Unit, error)
 
-	// RoutableUnits returns information about routable units by App.
-	RoutableUnits(App) ([]Unit, error)
+	// RoutableAddresses returns the addresses used to access an application.
+	RoutableAddresses(App) ([]url.URL, error)
 
 	// Register a unit after the container has been created or restarted.
 	RegisterUnit(Unit, map[string]interface{}) error
@@ -366,6 +368,9 @@ type ExecutableProvisioner interface {
 
 	// ExecuteCommandOnce runs a command in one unit of the app.
 	ExecuteCommandOnce(stdout, stderr io.Writer, app App, cmd string, args ...string) error
+
+	// ExecuteCommandIsolated runs a command in an new and ephemeral container.
+	ExecuteCommandIsolated(stdout, stderr io.Writer, app App, cmd string, args ...string) error
 }
 
 // SleepableProvisioner is a provisioner that allows putting applications to
@@ -397,9 +402,13 @@ type OptionalLogsProvisioner interface {
 }
 
 type AddNodeOptions struct {
-	Address  string
-	Metadata map[string]string
-	Register bool
+	Address    string
+	Metadata   map[string]string
+	Register   bool
+	CaCert     []byte
+	ClientCert []byte
+	ClientKey  []byte
+	WaitTO     time.Duration
 }
 
 type RemoveNodeOptions struct {
@@ -416,9 +425,6 @@ type UpdateNodeOptions struct {
 }
 
 type NodeProvisioner interface {
-	// SetNodeStatus changes the status of a node and all its units.
-	SetNodeStatus(NodeStatusData) error
-
 	// ListNodes returns a list of all nodes registered in the provisioner.
 	ListNodes(addressFilter []string) ([]Node, error)
 
@@ -458,15 +464,35 @@ type Node interface {
 	Status() string
 	Metadata() map[string]string
 	Units() ([]Unit, error)
+	Provisioner() NodeProvisioner
+}
+
+type NodeHealthChecker interface {
+	Node
+	FailureCount() int
+	HasSuccess() bool
+	ResetFailures()
+}
+
+type NodeSpec struct {
+	// BSON tag for bson serialized compatibility with cluster.Node
+	Address  string `bson:"_id"`
+	Metadata map[string]string
+	Status   string
+	Pool     string
+}
+
+func NodeToSpec(n Node) NodeSpec {
+	return NodeSpec{
+		Address:  n.Address(),
+		Metadata: n.Metadata(),
+		Status:   n.Status(),
+		Pool:     n.Pool(),
+	}
 }
 
 func NodeToJSON(n Node) ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"Address":  n.Address(),
-		"Metadata": n.Metadata(),
-		"Status":   n.Status(),
-		"Pool":     n.Pool(),
-	})
+	return json.Marshal(NodeToSpec(n))
 }
 
 type NodeStatusData struct {
@@ -522,7 +548,7 @@ func Unregister(name string) {
 func Get(name string) (Provisioner, error) {
 	pFunc, ok := provisioners[name]
 	if !ok {
-		return nil, fmt.Errorf("unknown provisioner: %q", name)
+		return nil, errors.Errorf("unknown provisioner: %q", name)
 	}
 	return pFunc()
 }

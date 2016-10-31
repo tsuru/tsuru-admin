@@ -1,10 +1,10 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package cmdtest
 
-import "errors"
+import "github.com/pkg/errors"
 
 // FakeGuesser represents a fake implementation of the Guesser described in the
 // cmd package.

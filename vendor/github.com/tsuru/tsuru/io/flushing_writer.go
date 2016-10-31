@@ -1,4 +1,4 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,12 +6,12 @@ package io
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/tsuru/tsuru/log"
 )
 
@@ -42,7 +42,7 @@ func (w *FlushingWriter) Write(data []byte) (written int, err error) {
 			if r := recover(); r != nil {
 				msg := fmt.Sprintf("Error recovered on flushing writer: %#v", r)
 				log.Debugf(msg)
-				err = fmt.Errorf(msg)
+				err = errors.Errorf(msg)
 			}
 		}()
 		f.Flush()

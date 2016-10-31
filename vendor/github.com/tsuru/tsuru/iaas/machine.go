@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package provision provides interfaces that need to be satisfied in order to
+// Package iaas provides interfaces that need to be satisfied in order to
 // implement a new iaas on tsuru.
 package iaas
 
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/tsuru/config"
 	"github.com/tsuru/tsuru/db"
 	"github.com/tsuru/tsuru/db/storage"
@@ -23,7 +24,12 @@ type Machine struct {
 	Status         string
 	Address        string
 	Port           int
+	Protocol       string
 	CreationParams map[string]string
+	CustomData     map[string]interface{}
+	CaCert         []byte
+	ClientCert     []byte
+	ClientKey      []byte
 }
 
 func CreateMachine(params map[string]string) (*Machine, error) {
@@ -35,9 +41,9 @@ func CreateMachineForIaaS(iaasName string, params map[string]string) (*Machine, 
 		iaasName, _ = params["iaas"]
 	}
 	if iaasName == "" {
-		defaultIaaS, err := config.GetString("iaas:default")
+		defaultIaaS, err := getDefaultIaasName()
 		if err != nil {
-			defaultIaaS = defaultIaaSProviderName
+			return nil, err
 		}
 		iaasName = defaultIaaS
 	}
@@ -126,7 +132,10 @@ func (m *Machine) Destroy() error {
 }
 
 func (m *Machine) FormatNodeAddress() string {
-	protocol, _ := config.GetString("iaas:node-protocol")
+	protocol := m.Protocol
+	if protocol == "" {
+		protocol, _ = config.GetString("iaas:node-protocol")
+	}
 	if protocol == "" {
 		protocol = "http"
 	}
@@ -184,7 +193,7 @@ func collectionEnsureIdx() (*storage.Collection, error) {
 	err = coll.EnsureIndex(index)
 	if err != nil {
 		coll.Close()
-		return nil, fmt.Errorf(`Could not create index on address for machines collection.
+		return nil, errors.Errorf(`Could not create index on address for machines collection.
 This can be caused by multiple machines with the same address, please run
 "tsuru-admin machine-list" to check for duplicated entries and "tsuru-admin
 machine-destroy" to remove them.

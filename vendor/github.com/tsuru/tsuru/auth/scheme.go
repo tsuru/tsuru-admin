@@ -1,10 +1,10 @@
-// Copyright 2015 tsuru authors. All rights reserved.
+// Copyright 2016 tsuru authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
 package auth
 
-import "fmt"
+import "github.com/pkg/errors"
 
 type SchemeInfo map[string]interface{}
 
@@ -51,7 +51,7 @@ func UnregisterScheme(name string) {
 func GetScheme(name string) (Scheme, error) {
 	scheme, ok := schemes[name]
 	if !ok {
-		return nil, fmt.Errorf("Unknown auth scheme: %q.", name)
+		return nil, errors.Errorf("Unknown auth scheme: %q.", name)
 	}
 	return scheme, nil
 }

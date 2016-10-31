@@ -1,4 +1,4 @@
-// Copyright 2015 go-dockerclient authors. All rights reserved.
+// Copyright 2013 go-dockerclient authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/gorilla/mux"
@@ -62,6 +63,15 @@ type DockerServer struct {
 	cChan          chan<- *docker.Container
 	volStore       map[string]*volumeCounter
 	volMut         sync.RWMutex
+	swarmMut       sync.RWMutex
+	swarm          *swarm.Swarm
+	swarmServer    *swarmServer
+	nodes          []swarm.Node
+	nodeID         string
+	tasks          []*swarm.Task
+	services       []*swarm.Service
+	nodeRR         int
+	servicePorts   int
 }
 
 type volumeCounter struct {
@@ -106,12 +116,14 @@ func NewServer(bind string, containerChan chan<- *docker.Container, hook func(*h
 	return server, nil
 }
 
+// TLSConfig is the set of options to start the TLS-enabled testing server.
 type TLSConfig struct {
 	CertPath    string
 	CertKeyPath string
 	RootCAPath  string
 }
 
+// NewTLSServer creates and starts a TLS-enabled testing server.
 func NewTLSServer(bind string, containerChan chan<- *docker.Container, hook func(*http.Request), tlsConfig TLSConfig) (*DockerServer, error) {
 	listener, err := net.Listen("tcp", bind)
 	if err != nil {
@@ -179,13 +191,29 @@ func (s *DockerServer) buildMuxer() {
 	s.mux.Path("/images/{id:.*}/get").Methods("GET").HandlerFunc(s.handlerWrapper(s.getImage))
 	s.mux.Path("/networks").Methods("GET").HandlerFunc(s.handlerWrapper(s.listNetworks))
 	s.mux.Path("/networks/{id:.*}").Methods("GET").HandlerFunc(s.handlerWrapper(s.networkInfo))
-	s.mux.Path("/networks").Methods("POST").HandlerFunc(s.handlerWrapper(s.createNetwork))
+	s.mux.Path("/networks/{id:.*}").Methods("DELETE").HandlerFunc(s.handlerWrapper(s.removeNetwork))
+	s.mux.Path("/networks/create").Methods("POST").HandlerFunc(s.handlerWrapper(s.createNetwork))
 	s.mux.Path("/volumes").Methods("GET").HandlerFunc(s.handlerWrapper(s.listVolumes))
 	s.mux.Path("/volumes/create").Methods("POST").HandlerFunc(s.handlerWrapper(s.createVolume))
 	s.mux.Path("/volumes/{name:.*}").Methods("GET").HandlerFunc(s.handlerWrapper(s.inspectVolume))
 	s.mux.Path("/volumes/{name:.*}").Methods("DELETE").HandlerFunc(s.handlerWrapper(s.removeVolume))
 	s.mux.Path("/info").Methods("GET").HandlerFunc(s.handlerWrapper(s.infoDocker))
 	s.mux.Path("/version").Methods("GET").HandlerFunc(s.handlerWrapper(s.versionDocker))
+	s.mux.Path("/swarm/init").Methods("POST").HandlerFunc(s.handlerWrapper(s.swarmInit))
+	s.mux.Path("/swarm").Methods("GET").HandlerFunc(s.handlerWrapper(s.swarmInspect))
+	s.mux.Path("/swarm/join").Methods("POST").HandlerFunc(s.handlerWrapper(s.swarmJoin))
+	s.mux.Path("/swarm/leave").Methods("POST").HandlerFunc(s.handlerWrapper(s.swarmLeave))
+	s.mux.Path("/nodes/{id:.+}/update").Methods("POST").HandlerFunc(s.handlerWrapper(s.nodeUpdate))
+	s.mux.Path("/nodes/{id:.+}").Methods("GET").HandlerFunc(s.handlerWrapper(s.nodeInspect))
+	s.mux.Path("/nodes/{id:.+}").Methods("DELETE").HandlerFunc(s.handlerWrapper(s.nodeDelete))
+	s.mux.Path("/nodes").Methods("GET").HandlerFunc(s.handlerWrapper(s.nodeList))
+	s.mux.Path("/services/create").Methods("POST").HandlerFunc(s.handlerWrapper(s.serviceCreate))
+	s.mux.Path("/services/{id:.+}").Methods("GET").HandlerFunc(s.handlerWrapper(s.serviceInspect))
+	s.mux.Path("/services").Methods("GET").HandlerFunc(s.handlerWrapper(s.serviceList))
+	s.mux.Path("/services/{id:.+}").Methods("DELETE").HandlerFunc(s.handlerWrapper(s.serviceDelete))
+	s.mux.Path("/services/{id:.+}/update").Methods("POST").HandlerFunc(s.handlerWrapper(s.serviceUpdate))
+	s.mux.Path("/tasks").Methods("GET").HandlerFunc(s.handlerWrapper(s.taskList))
+	s.mux.Path("/tasks/{id:.+}").Methods("GET").HandlerFunc(s.handlerWrapper(s.taskInspect))
 }
 
 // SetHook changes the hook function used by the server.
@@ -266,6 +294,8 @@ func (s *DockerServer) CustomHandler(path string, handler http.Handler) {
 // MutateContainer changes the state of a container, returning an error if the
 // given id does not match to any container "running" in the server.
 func (s *DockerServer) MutateContainer(id string, state docker.State) error {
+	s.cMut.Lock()
+	defer s.cMut.Unlock()
 	for _, container := range s.containers {
 		if container.ID == id {
 			container.State = state
@@ -279,6 +309,9 @@ func (s *DockerServer) MutateContainer(id string, state docker.State) error {
 func (s *DockerServer) Stop() {
 	if s.listener != nil {
 		s.listener.Close()
+	}
+	if s.swarmServer != nil {
+		s.swarmServer.listener.Close()
 	}
 }
 
@@ -349,13 +382,17 @@ func (s *DockerServer) listContainers(w http.ResponseWriter, r *http.Request) {
 	result := make([]docker.APIContainers, 0, len(s.containers))
 	for _, container := range s.containers {
 		if all == "1" || container.State.Running {
+			var ports []docker.APIPort
+			if container.NetworkSettings != nil {
+				ports = container.NetworkSettings.PortMappingAPI()
+			}
 			result = append(result, docker.APIContainers{
 				ID:      container.ID,
 				Image:   container.Image,
 				Command: fmt.Sprintf("%s %s", container.Path, strings.Join(container.Args, " ")),
 				Created: container.Created.Unix(),
 				Status:  container.State.String(),
-				Ports:   container.NetworkSettings.PortMappingAPI(),
+				Ports:   ports,
 				Names:   []string{fmt.Sprintf("/%s", container.Name)},
 			})
 		}
@@ -1199,6 +1236,20 @@ func (s *DockerServer) createNetwork(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(c)
 }
 
+func (s *DockerServer) removeNetwork(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	_, index, err := s.findNetwork(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	s.netMut.Lock()
+	defer s.netMut.Unlock()
+	s.networks[index] = s.networks[len(s.networks)-1]
+	s.networks = s.networks[:len(s.networks)-1]
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *DockerServer) listVolumes(w http.ResponseWriter, r *http.Request) {
 	s.volMut.RLock()
 	result := make([]docker.Volume, 0, len(s.volStore))
@@ -1208,7 +1259,7 @@ func (s *DockerServer) listVolumes(w http.ResponseWriter, r *http.Request) {
 	s.volMut.RUnlock()
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(result)
+	json.NewEncoder(w).Encode(map[string][]docker.Volume{"Volumes": result})
 }
 
 func (s *DockerServer) createVolume(w http.ResponseWriter, r *http.Request) {
@@ -1311,6 +1362,18 @@ func (s *DockerServer) infoDocker(w http.ResponseWriter, r *http.Request) {
 			paused++
 		}
 	}
+	var swarmInfo *swarm.Info
+	if s.swarm != nil {
+		swarmInfo = &swarm.Info{
+			NodeID: s.nodeID,
+		}
+		for _, n := range s.nodes {
+			swarmInfo.RemoteManagers = append(swarmInfo.RemoteManagers, swarm.Peer{
+				NodeID: n.ID,
+				Addr:   n.ManagerStatus.Addr,
+			})
+		}
+	}
 	envs := map[string]interface{}{
 		"ID":                "AAAA:XXXX:0000:BBBB:AAAA:XXXX:0000:BBBB:AAAA:XXXX:0000:BBBB",
 		"Containers":        len(s.containers),
@@ -1373,6 +1436,7 @@ func (s *DockerServer) infoDocker(w http.ResponseWriter, r *http.Request) {
 		"ServerVersion":     "1.10.1",
 		"ClusterStore":      "",
 		"ClusterAdvertise":  "",
+		"Swarm":             swarmInfo,
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(envs)
@@ -1392,4 +1456,43 @@ func (s *DockerServer) versionDocker(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(envs)
+}
+
+// SwarmAddress returns the address if there's a fake swarm server enabled.
+func (s *DockerServer) SwarmAddress() string {
+	if s.swarmServer == nil {
+		return ""
+	}
+	return s.swarmServer.listener.Addr().String()
+}
+
+func (s *DockerServer) initSwarmNode(listenAddr, advertiseAddr string) (swarm.Node, error) {
+	if listenAddr == "" {
+		listenAddr = "127.0.0.1:0"
+	}
+	var err error
+	s.swarmServer, err = newSwarmServer(s, listenAddr)
+	if err != nil {
+		return swarm.Node{}, err
+	}
+	if advertiseAddr == "" {
+		advertiseAddr = s.SwarmAddress()
+	}
+	hostPart, portPart, err := net.SplitHostPort(advertiseAddr)
+	if err != nil {
+		hostPart = advertiseAddr
+	}
+	if portPart == "" || portPart == "0" {
+		_, portPart, _ = net.SplitHostPort(s.SwarmAddress())
+	}
+	s.nodeID = s.generateID()
+	return swarm.Node{
+		ID: s.nodeID,
+		Status: swarm.NodeStatus{
+			State: swarm.NodeStateReady,
+		},
+		ManagerStatus: &swarm.ManagerStatus{
+			Addr: fmt.Sprintf("%s:%s", hostPart, portPart),
+		},
+	}, nil
 }

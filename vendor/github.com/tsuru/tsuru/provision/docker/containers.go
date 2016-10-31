@@ -5,8 +5,6 @@
 package docker
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,8 +12,10 @@ import (
 	"sync"
 
 	"github.com/fsouza/go-dockerclient"
+	"github.com/pkg/errors"
 	"github.com/tsuru/tsuru/action"
 	"github.com/tsuru/tsuru/app"
+	"github.com/tsuru/tsuru/app/image"
 	tsuruErrors "github.com/tsuru/tsuru/errors"
 	"github.com/tsuru/tsuru/event"
 	"github.com/tsuru/tsuru/log"
@@ -67,9 +67,9 @@ var containerMovementErr = errors.New("Error moving some containers.")
 func (p *dockerProvisioner) HandleMoveErrors(moveErrors chan error, writer io.Writer) error {
 	hasError := false
 	for err := range moveErrors {
-		errMsg := fmt.Sprintf("Error moving container: %s", err.Error())
-		log.Error(errMsg)
-		fmt.Fprintf(writer, "%s\n", errMsg)
+		err = errors.Wrap(err, "Error moving container")
+		log.Error(err)
+		fmt.Fprintf(writer, "%s\n", err)
 		hasError = true
 	}
 	if hasError {
@@ -150,27 +150,27 @@ func (p *dockerProvisioner) runCreateUnitsPipeline(w io.Writer, a provision.App,
 	return pipeline.Result().([]container.Container), nil
 }
 
-func (p *dockerProvisioner) MoveOneContainer(c container.Container, toHost string, errors chan error, wg *sync.WaitGroup, writer io.Writer, locker container.AppLocker) container.Container {
+func (p *dockerProvisioner) MoveOneContainer(c container.Container, toHost string, errCh chan error, wg *sync.WaitGroup, writer io.Writer, locker container.AppLocker) container.Container {
 	if wg != nil {
 		defer wg.Done()
 	}
 	locked := locker.Lock(c.AppName)
 	if !locked {
-		errors <- fmt.Errorf("couldn't move %s, unable to lock %q", c.ID, c.AppName)
+		errCh <- errors.Errorf("couldn't move %s, unable to lock %q", c.ID, c.AppName)
 		return container.Container{}
 	}
 	defer locker.Unlock(c.AppName)
 	a, err := app.GetByName(c.AppName)
 	if err != nil {
-		errors <- &tsuruErrors.CompositeError{
+		errCh <- &tsuruErrors.CompositeError{
 			Base:    err,
 			Message: fmt.Sprintf("error getting app %q for unit %s", c.AppName, c.ID),
 		}
 		return container.Container{}
 	}
-	imageId, err := appCurrentImageName(a.GetName())
+	imageId, err := image.AppCurrentImageName(a.GetName())
 	if err != nil {
-		errors <- &tsuruErrors.CompositeError{
+		errCh <- &tsuruErrors.CompositeError{
 			Base:    err,
 			Message: fmt.Sprintf("error getting app %q image name for unit %s", c.AppName, c.ID),
 		}
@@ -188,7 +188,7 @@ func (p *dockerProvisioner) MoveOneContainer(c container.Container, toHost strin
 	toAdd := map[string]*containersToAdd{c.ProcessName: {Quantity: 1, Status: c.ExpectedStatus()}}
 	addedContainers, err := p.runReplaceUnitsPipeline(nil, a, toAdd, []container.Container{c}, imageId, destHosts...)
 	if err != nil {
-		errors <- &tsuruErrors.CompositeError{
+		errCh <- &tsuruErrors.CompositeError{
 			Base:    err,
 			Message: fmt.Sprintf("Error moving unit %s", c.ID),
 		}
@@ -315,8 +315,13 @@ func (p *dockerProvisioner) rebalanceContainers(writer io.Writer, dryRun bool) e
 	return err
 }
 
-func (p *dockerProvisioner) runCommandInContainer(image string, command string, app provision.App) (bytes.Buffer, error) {
-	var output bytes.Buffer
+func (p *dockerProvisioner) runCommandInContainer(image string, command string, app provision.App, stdout, stderr io.Writer) error {
+	if stdout == nil {
+		stdout = ioutil.Discard
+	}
+	if stderr == nil {
+		stderr = ioutil.Discard
+	}
 	createOptions := docker.CreateContainerOptions{
 		Config: &docker.Config{
 			AttachStdout: true,
@@ -337,7 +342,7 @@ func (p *dockerProvisioner) runCommandInContainer(image string, command string, 
 		schedOpts.LimiterDone()
 	}
 	if err != nil {
-		return output, err
+		return err
 	}
 	defer func() {
 		done := p.ActionLimiter().Start(hostAddr)
@@ -346,14 +351,16 @@ func (p *dockerProvisioner) runCommandInContainer(image string, command string, 
 	}()
 	attachOptions := docker.AttachToContainerOptions{
 		Container:    cont.ID,
-		OutputStream: &output,
+		OutputStream: stdout,
+		ErrorStream:  stderr,
 		Stream:       true,
 		Stdout:       true,
+		Stderr:       true,
 		Success:      make(chan struct{}),
 	}
 	waiter, err := cluster.AttachToContainerNonBlocking(attachOptions)
 	if err != nil {
-		return output, err
+		return err
 	}
 	<-attachOptions.Success
 	close(attachOptions.Success)
@@ -361,8 +368,8 @@ func (p *dockerProvisioner) runCommandInContainer(image string, command string, 
 	err = cluster.StartContainer(cont.ID, nil)
 	done()
 	if err != nil {
-		return output, err
+		return err
 	}
 	waiter.Wait()
-	return output, nil
+	return nil
 }

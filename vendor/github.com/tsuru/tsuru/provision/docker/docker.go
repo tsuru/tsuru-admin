@@ -13,15 +13,18 @@ import (
 	"time"
 
 	"github.com/fsouza/go-dockerclient"
+	"github.com/pkg/errors"
 	"github.com/tsuru/config"
 	"github.com/tsuru/docker-cluster/cluster"
 	"github.com/tsuru/docker-cluster/storage/mongodb"
 	"github.com/tsuru/tsuru/action"
+	"github.com/tsuru/tsuru/app/image"
 	"github.com/tsuru/tsuru/event"
 	"github.com/tsuru/tsuru/log"
 	"github.com/tsuru/tsuru/net"
 	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/provision/docker/container"
+	"github.com/tsuru/tsuru/provision/dockercommon"
 	"github.com/tsuru/tsuru/safe"
 )
 
@@ -29,11 +32,11 @@ func buildClusterStorage() (cluster.Storage, error) {
 	mongoUrl, _ := config.GetString("docker:cluster:mongo-url")
 	mongoDatabase, _ := config.GetString("docker:cluster:mongo-database")
 	if mongoUrl == "" || mongoDatabase == "" {
-		return nil, fmt.Errorf("Cluster Storage: docker:cluster:{mongo-url,mongo-database} must be set.")
+		return nil, errors.Errorf("Cluster Storage: docker:cluster:{mongo-url,mongo-database} must be set.")
 	}
 	storage, err := mongodb.Mongodb(mongoUrl, mongoDatabase)
 	if err != nil {
-		return nil, fmt.Errorf("Cluster Storage: Unable to connect to mongodb: %s (docker:cluster:mongo-url = %q; docker:cluster:mongo-database = %q)",
+		return nil, errors.Errorf("Cluster Storage: Unable to connect to mongodb: %s (docker:cluster:mongo-url = %q; docker:cluster:mongo-database = %q)",
 			err.Error(), mongoUrl, mongoDatabase)
 	}
 	return storage, nil
@@ -49,7 +52,7 @@ func (p *dockerProvisioner) GetNodeByHost(host string) (cluster.Node, error) {
 			return node, nil
 		}
 	}
-	return cluster.Node{}, fmt.Errorf("node with host %q not found", host)
+	return cluster.Node{}, errors.Errorf("node with host %q not found", host)
 }
 
 func randomString() string {
@@ -60,10 +63,7 @@ func randomString() string {
 }
 
 func (p *dockerProvisioner) archiveDeploy(app provision.App, image, archiveURL string, evt *event.Event) (string, error) {
-	commands, err := archiveDeployCmds(app, archiveURL)
-	if err != nil {
-		return "", err
-	}
+	commands := dockercommon.ArchiveDeployCmds(app, archiveURL)
 	return p.deployPipeline(app, image, commands, evt)
 }
 
@@ -77,9 +77,9 @@ func (p *dockerProvisioner) deployPipeline(app provision.App, imageId string, co
 		&followLogsAndCommit,
 	}
 	pipeline := action.NewPipeline(actions...)
-	buildingImage, err := appNewImageName(app.GetName())
+	buildingImage, err := image.AppNewImageName(app.GetName())
 	if err != nil {
-		return "", log.WrapError(fmt.Errorf("error getting new image name for app %s", app.GetName()))
+		return "", log.WrapError(errors.Errorf("error getting new image name for app %s", app.GetName()))
 	}
 	var writer io.Writer = evt
 	if evt == nil {
@@ -104,7 +104,7 @@ func (p *dockerProvisioner) deployPipeline(app provision.App, imageId string, co
 }
 
 func (p *dockerProvisioner) start(oldContainer *container.Container, app provision.App, imageId string, w io.Writer, exposedPort string, destinationHosts ...string) (*container.Container, error) {
-	commands, processName, err := runLeanContainerCmds(oldContainer.ProcessName, imageId, app)
+	commands, processName, err := dockercommon.LeanContainerCmds(oldContainer.ProcessName, imageId, app)
 	if err != nil {
 		return nil, err
 	}
