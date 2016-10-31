@@ -1,8 +1,8 @@
-// Copyright 2016 tsuru-admin authors. All rights reserved.
+// Copyright 2016 tsuru-client authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package admin
 
 import (
 	"bytes"
@@ -17,9 +17,9 @@ import (
 	"github.com/tsuru/tsuru/iaas"
 )
 
-type machineList struct{}
+type MachineList struct{}
 
-func (c *machineList) Info() *cmd.Info {
+func (c *MachineList) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:  "machine-list",
 		Usage: "machine-list",
@@ -29,7 +29,7 @@ These machines were created with the [[docker-node-add]] command.`,
 	}
 }
 
-func (c *machineList) Run(context *cmd.Context, client *cmd.Client) error {
+func (c *MachineList) Run(context *cmd.Context, client *cmd.Client) error {
 	url, err := cmd.GetURL("/iaas/machines")
 	if err != nil {
 		return err
@@ -63,9 +63,9 @@ func (c *machineList) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
-type machineDestroy struct{}
+type MachineDestroy struct{}
 
-func (c *machineDestroy) Info() *cmd.Info {
+func (c *MachineDestroy) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "machine-destroy",
 		Usage:   "machine-destroy <machine id>",
@@ -73,7 +73,7 @@ func (c *machineDestroy) Info() *cmd.Info {
 		MinArgs: 1,
 	}
 }
-func (c *machineDestroy) Run(context *cmd.Context, client *cmd.Client) error {
+func (c *MachineDestroy) Run(context *cmd.Context, client *cmd.Client) error {
 	machineId := context.Args[0]
 	url, err := cmd.GetURL("/iaas/machines/" + machineId)
 	if err != nil {
@@ -91,9 +91,9 @@ func (c *machineDestroy) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
-type templateList struct{}
+type TemplateList struct{}
 
-func (c *templateList) Info() *cmd.Info {
+func (c *TemplateList) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "machine-template-list",
 		Usage:   "machine-template-list",
@@ -102,7 +102,7 @@ func (c *templateList) Info() *cmd.Info {
 	}
 }
 
-func (c *templateList) Run(context *cmd.Context, client *cmd.Client) error {
+func (c *TemplateList) Run(context *cmd.Context, client *cmd.Client) error {
 	url, err := cmd.GetURL("/iaas/templates")
 	if err != nil {
 		return err
@@ -136,9 +136,9 @@ func (c *templateList) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
-type templateAdd struct{}
+type TemplateAdd struct{}
 
-func (c *templateAdd) Info() *cmd.Info {
+func (c *TemplateAdd) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:  "machine-template-add",
 		Usage: "machine-template-add <name> <iaas> <param>=<value>...",
@@ -151,7 +151,7 @@ parameters that will be sent to the IaaS provider.`,
 	}
 }
 
-func (c *templateAdd) Run(context *cmd.Context, client *cmd.Client) error {
+func (c *TemplateAdd) Run(context *cmd.Context, client *cmd.Client) error {
 	var template iaas.Template
 	template.Name = context.Args[0]
 	template.IaaSName = context.Args[1]
@@ -186,9 +186,9 @@ func (c *templateAdd) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
-type templateRemove struct{}
+type TemplateRemove struct{}
 
-func (c *templateRemove) Info() *cmd.Info {
+func (c *TemplateRemove) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "machine-template-remove",
 		Usage:   "machine-template-remove <name>",
@@ -197,7 +197,7 @@ func (c *templateRemove) Info() *cmd.Info {
 	}
 }
 
-func (c *templateRemove) Run(context *cmd.Context, client *cmd.Client) error {
+func (c *TemplateRemove) Run(context *cmd.Context, client *cmd.Client) error {
 	url, err := cmd.GetURL("/iaas/templates/" + context.Args[0])
 	if err != nil {
 		return err
@@ -215,9 +215,9 @@ func (c *templateRemove) Run(context *cmd.Context, client *cmd.Client) error {
 	return nil
 }
 
-type templateUpdate struct{}
+type TemplateUpdate struct{}
 
-func (c *templateUpdate) Info() *cmd.Info {
+func (c *TemplateUpdate) Info() *cmd.Info {
 	return &cmd.Info{
 		Name:    "machine-template-update",
 		Usage:   "machine-template-update <name> <param>=<value>...",
@@ -226,7 +226,7 @@ func (c *templateUpdate) Info() *cmd.Info {
 	}
 }
 
-func (c *templateUpdate) Run(context *cmd.Context, client *cmd.Client) error {
+func (c *TemplateUpdate) Run(context *cmd.Context, client *cmd.Client) error {
 	template := iaas.Template{Name: context.Args[0]}
 	for _, param := range context.Args[1:] {
 		if strings.Contains(param, "=") {

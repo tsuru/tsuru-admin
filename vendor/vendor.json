@@ -526,10 +526,11 @@
 			"revisionTime": "2016-09-15T21:46:03Z"
 		},
 		{
-			"checksumSHA1": "fQplgZLDPKBiDofJblwJXTiy2iE=",
+			"checksumSHA1": "/z0EpZmtNohUkuSi9Z5dYyd8DY4=",
+			"origin": "github.com/tsuru/tsuru-admin/vendor/github.com/tsuru/tsuru-client/tsuru/admin",
 			"path": "github.com/tsuru/tsuru-client/tsuru/admin",
-			"revision": "c5184560dfe2faddf3231335f69e814fc6aa1745",
-			"revisionTime": "2016-09-15T19:11:12Z"
+			"revision": "d6bd1382e9d1b15d5e9875a6fadc99929c1226a4",
+			"revisionTime": "2016-10-28T18:44:08-02:00"
 		},
 		{
 			"checksumSHA1": "ARa0YB3UDUz0FFhToGXJzJsu6eU=",
