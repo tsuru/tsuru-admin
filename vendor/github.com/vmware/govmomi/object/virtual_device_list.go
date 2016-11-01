@@ -84,9 +84,6 @@ func (l VirtualDeviceList) Select(f func(device types.BaseVirtualDevice) bool) V
 // SelectByType returns a new list with devices that are equal to or extend the given type.
 func (l VirtualDeviceList) SelectByType(deviceType types.BaseVirtualDevice) VirtualDeviceList {
 	dtype := reflect.TypeOf(deviceType)
-	if dtype == nil {
-		return nil
-	}
 	dname := dtype.Elem().Name()
 
 	return l.Select(func(device types.BaseVirtualDevice) bool {
@@ -245,7 +242,6 @@ func (l VirtualDeviceList) CreateSCSIController(name string) (types.BaseVirtualD
 	scsi := c.GetVirtualSCSIController()
 	scsi.BusNumber = l.newSCSIBusNumber()
 	scsi.Key = l.NewKey()
-	scsi.ScsiCtlrUnitNumber = 7
 	return c.(types.BaseVirtualDevice), nil
 }
 
@@ -314,31 +310,20 @@ func (l VirtualDeviceList) PickController(kind types.BaseVirtualController) type
 
 // newUnitNumber returns the unit number to use for attaching a new device to the given controller.
 func (l VirtualDeviceList) newUnitNumber(c types.BaseVirtualController) int32 {
-	units := make([]bool, 30)
-
-	switch sc := c.(type) {
-	case types.BaseVirtualSCSIController:
-		//  The SCSI controller sits on its own bus
-		units[sc.GetVirtualSCSIController().ScsiCtlrUnitNumber] = true
-	}
-
 	key := c.GetVirtualController().Key
+	var max int32 = -1
 
 	for _, device := range l {
 		d := device.GetVirtualDevice()
 
-		if d.ControllerKey == key && d.UnitNumber != nil {
-			units[int(*d.UnitNumber)] = true
+		if d.ControllerKey == key {
+			if d.UnitNumber != nil && *d.UnitNumber > max {
+				max = *d.UnitNumber
+			}
 		}
 	}
 
-	for unit, used := range units {
-		if !used {
-			return int32(unit)
-		}
-	}
-
-	return -1
+	return max + 1
 }
 
 // NewKey returns the key to use for adding a new device to the device list.
@@ -610,7 +595,7 @@ func (l VirtualDeviceList) CreateSerialPort() (*types.VirtualSerialPort, error) 
 }
 
 // ConnectSerialPort connects a serial port to a server or client uri.
-func (l VirtualDeviceList) ConnectSerialPort(device *types.VirtualSerialPort, uri string, client bool, proxyuri string) *types.VirtualSerialPort {
+func (l VirtualDeviceList) ConnectSerialPort(device *types.VirtualSerialPort, uri string, client bool) *types.VirtualSerialPort {
 	direction := types.VirtualDeviceURIBackingOptionDirectionServer
 	if client {
 		direction = types.VirtualDeviceURIBackingOptionDirectionClient
@@ -620,7 +605,6 @@ func (l VirtualDeviceList) ConnectSerialPort(device *types.VirtualSerialPort, ur
 		VirtualDeviceURIBackingInfo: types.VirtualDeviceURIBackingInfo{
 			Direction:  string(direction),
 			ServiceURI: uri,
-			ProxyURI:   proxyuri,
 		},
 	}
 
@@ -744,11 +728,7 @@ func (l VirtualDeviceList) SelectBootOrder(order []types.BaseVirtualMachineBootO
 
 // TypeName returns the vmodl type name of the device
 func (l VirtualDeviceList) TypeName(device types.BaseVirtualDevice) string {
-	dtype := reflect.TypeOf(device)
-	if dtype == nil {
-		return ""
-	}
-	return dtype.Elem().Name()
+	return reflect.TypeOf(device).Elem().Name()
 }
 
 var deviceNameRegexp = regexp.MustCompile(`(?:Virtual)?(?:Machine)?(\w+?)(?:Card|Device|Controller)?$`)

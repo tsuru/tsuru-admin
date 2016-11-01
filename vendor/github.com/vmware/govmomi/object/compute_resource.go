@@ -17,7 +17,6 @@ limitations under the License.
 package object
 
 import (
-	"context"
 	"path"
 
 	"github.com/vmware/govmomi/property"
@@ -25,10 +24,13 @@ import (
 	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
+	"golang.org/x/net/context"
 )
 
 type ComputeResource struct {
 	Common
+
+	InventoryPath string
 }
 
 func NewComputeResource(c *vim25.Client, ref types.ManagedObjectReference) *ComputeResource {

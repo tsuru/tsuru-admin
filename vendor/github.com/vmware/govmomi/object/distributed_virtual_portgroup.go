@@ -17,22 +17,27 @@ limitations under the License.
 package object
 
 import (
-	"context"
+	"path"
 
 	"github.com/vmware/govmomi/vim25"
-	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
+	"golang.org/x/net/context"
 )
 
 type DistributedVirtualPortgroup struct {
 	Common
+
+	InventoryPath string
 }
 
 func NewDistributedVirtualPortgroup(c *vim25.Client, ref types.ManagedObjectReference) *DistributedVirtualPortgroup {
 	return &DistributedVirtualPortgroup{
 		Common: NewCommon(c, ref),
 	}
+}
+func (p DistributedVirtualPortgroup) Name() string {
+	return path.Base(p.InventoryPath)
 }
 
 // EthernetCardBackingInfo returns the VirtualDeviceBackingInfo for this DistributedVirtualPortgroup
@@ -56,18 +61,4 @@ func (p DistributedVirtualPortgroup) EthernetCardBackingInfo(ctx context.Context
 	}
 
 	return backing, nil
-}
-
-func (p DistributedVirtualPortgroup) Reconfigure(ctx context.Context, spec types.DVPortgroupConfigSpec) (*Task, error) {
-	req := types.ReconfigureDVPortgroup_Task{
-		This: p.Reference(),
-		Spec: spec,
-	}
-
-	res, err := methods.ReconfigureDVPortgroup_Task(ctx, p.Client(), &req)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewTask(p.Client(), res.Returnval), nil
 }

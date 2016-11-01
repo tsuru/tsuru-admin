@@ -71,11 +71,7 @@ func typeToString(typ reflect.Type) string {
 	case reflect.Float64:
 		return "xsd:double"
 	case reflect.String:
-		name := typ.Name()
-		if name == "string" {
-			return "xsd:string"
-		}
-		return name
+		return "xsd:string"
 	case reflect.Struct:
 		if typ == stringToTypeMap["xsd:dateTime"] {
 			return "xsd:dateTime"
