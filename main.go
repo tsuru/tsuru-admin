@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -22,37 +23,40 @@ const (
 func buildManager(name string) *cmd.Manager {
 	m := cmd.BuildBaseManager(name, version, header, nil)
 	m.RegisterRemoved("log-remove", "This action is no longer supported.")
-	m.Register(&admin.PlatformAdd{})
 	m.Register(&platformUpdate{})
 	m.Register(&platformRemove{})
-	m.Register(&admin.MachineList{})
-	m.Register(&admin.MachineDestroy{})
-	m.RegisterRemoved("app-unlock", "You should use `tsuru app-unlock` instead.")
 	m.RegisterDeprecated(&userQuotaView{}, "view-user-quota")
 	m.RegisterDeprecated(&userChangeQuota{}, "change-user-quota")
 	m.RegisterDeprecated(&appQuotaView{}, "view-app-quota")
 	m.RegisterDeprecated(&appQuotaChange{}, "change-app-quota")
-	m.RegisterRemoved("plan-create", "You should use `tsuru plan-create` instead.")
-	m.RegisterRemoved("plan-remove", "You should use `tsuru plan-remove` instead.")
-	m.RegisterRemoved("router-list", "You should use `tsuru router-list` instead.")
-	m.Register(&admin.TemplateList{})
-	m.Register(&admin.TemplateAdd{})
-	m.Register(&admin.TemplateRemove{})
-	m.RegisterRemoved("user-list", "You should use `tsuru user-list` instead.")
 	m.RegisterDeprecated(&admin.AddPoolToSchedulerCmd{}, "docker-pool-add")
 	m.Register(&updatePoolToSchedulerCmd{})
 	m.RegisterDeprecated(&removePoolFromSchedulerCmd{}, "docker-pool-remove")
-	m.RegisterRemoved("pool-list", "You should use `tsuru pool-list` instead.")
 	m.RegisterDeprecated(addTeamsToPoolCmd{}, "docker-pool-teams-add")
 	m.RegisterDeprecated(removeTeamsFromPoolCmd{}, "docker-pool-teams-remove")
 	m.Register(&cmd.ShellToContainerCmd{})
-	m.RegisterRemoved("app-routes-rebuild", "You should use `tsuru app-routes-rebuild` instead.")
-	m.Register(&admin.TemplateUpdate{})
 	m.RegisterDeprecated(&admin.AddNodeCmd{}, "docker-node-add")
 	m.RegisterDeprecated(&admin.RemoveNodeCmd{}, "docker-node-remove")
 	m.RegisterDeprecated(&admin.UpdateNodeCmd{}, "docker-node-update")
 	m.RegisterDeprecated(&admin.ListNodesCmd{}, "docker-node-list")
 	registerProvisionersCommands(m)
+	registerMigrated := func(cmd string) {
+		m.RegisterRemoved(cmd, fmt.Sprintf("You should use `tsuru %s` instead.", cmd))
+	}
+	registerMigrated("machine-list")
+	registerMigrated("machine-destroy")
+	registerMigrated("app-unlock")
+	registerMigrated("plan-create")
+	registerMigrated("plan-remove")
+	registerMigrated("router-list")
+	registerMigrated("user-list")
+	registerMigrated("pool-list")
+	registerMigrated("app-routes-rebuild")
+	registerMigrated("platform-add")
+	registerMigrated("machine-template-list")
+	registerMigrated("machine-template-add")
+	registerMigrated("machine-template-remove")
+	registerMigrated("machine-template-update")
 	return m
 }
 

@@ -5,19 +5,11 @@
 package main
 
 import (
-	"github.com/tsuru/tsuru-client/tsuru/admin"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/provision"
 	"github.com/tsuru/tsuru/provision/provisiontest"
 	"gopkg.in/check.v1"
 )
-
-func (s *S) TestPlatformAddIsRegistered(c *check.C) {
-	manager := buildManager("tsuru-admin")
-	token, ok := manager.Commands["platform-add"]
-	c.Assert(ok, check.Equals, true)
-	c.Assert(token, check.FitsTypeOf, &admin.PlatformAdd{})
-}
 
 func (s *S) TestCommandsFromBaseManagerAreRegistered(c *check.C) {
 	baseManager := cmd.BuildBaseManager("tsuru", version, header, nil)
