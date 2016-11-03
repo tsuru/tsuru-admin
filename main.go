@@ -69,7 +69,8 @@ func registerProvisionersCommands(m *cmd.Manager) {
 		if c, ok := p.(cmd.AdminCommandable); ok {
 			commands := c.AdminCommands()
 			for _, cmd := range commands {
-				m.Register(cmd)
+				name := cmd.Info().Name
+				m.RegisterRemoved(name, fmt.Sprintf("You should use `tsuru %s` instead.", name))
 			}
 		}
 	}

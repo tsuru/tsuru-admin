@@ -28,7 +28,7 @@ func (s *S) TestShouldRegisterAllCommandsFromProvisioners(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	fake, ok := manager.Commands["fake-admin"]
 	c.Assert(ok, check.Equals, true)
-	c.Assert(fake, check.FitsTypeOf, &FakeAdminCommand{})
+	c.Assert(fake, check.FitsTypeOf, &cmd.RemovedCommand{})
 }
 
 func (s *S) TestUserQuotaViewIsRegistered(c *check.C) {
