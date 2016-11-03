@@ -23,8 +23,6 @@ const (
 func buildManager(name string) *cmd.Manager {
 	m := cmd.BuildBaseManager(name, version, header, nil)
 	m.RegisterRemoved("log-remove", "This action is no longer supported.")
-	m.Register(&platformUpdate{})
-	m.Register(&platformRemove{})
 	m.RegisterDeprecated(&userQuotaView{}, "view-user-quota")
 	m.RegisterDeprecated(&userChangeQuota{}, "change-user-quota")
 	m.RegisterDeprecated(&appQuotaView{}, "view-app-quota")
@@ -43,6 +41,8 @@ func buildManager(name string) *cmd.Manager {
 	registerMigrated := func(cmd string) {
 		m.RegisterRemoved(cmd, fmt.Sprintf("You should use `tsuru %s` instead.", cmd))
 	}
+	registerMigrated("platform-update")
+	registerMigrated("platform-remove")
 	registerMigrated("machine-list")
 	registerMigrated("machine-destroy")
 	registerMigrated("app-unlock")
