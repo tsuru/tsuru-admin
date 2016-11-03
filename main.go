@@ -32,7 +32,6 @@ func buildManager(name string) *cmd.Manager {
 	m.RegisterDeprecated(&removePoolFromSchedulerCmd{}, "docker-pool-remove")
 	m.RegisterDeprecated(addTeamsToPoolCmd{}, "docker-pool-teams-add")
 	m.RegisterDeprecated(removeTeamsFromPoolCmd{}, "docker-pool-teams-remove")
-	m.Register(&cmd.ShellToContainerCmd{})
 	m.RegisterDeprecated(&admin.AddNodeCmd{}, "docker-node-add")
 	m.RegisterDeprecated(&admin.RemoveNodeCmd{}, "docker-node-remove")
 	m.RegisterDeprecated(&admin.UpdateNodeCmd{}, "docker-node-update")
@@ -41,6 +40,7 @@ func buildManager(name string) *cmd.Manager {
 	registerMigrated := func(cmd string) {
 		m.RegisterRemoved(cmd, fmt.Sprintf("You should use `tsuru %s` instead.", cmd))
 	}
+	registerMigrated("app-shell")
 	registerMigrated("platform-update")
 	registerMigrated("platform-remove")
 	registerMigrated("machine-list")
