@@ -35,26 +35,26 @@ func (s *S) TestUserQuotaViewIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	viewQuota, ok := manager.Commands["user-quota-view"]
 	c.Assert(ok, check.Equals, true)
-	c.Assert(viewQuota, check.FitsTypeOf, &userQuotaView{})
+	c.Assert(viewQuota, check.FitsTypeOf, &cmd.RemovedCommand{})
 }
 
 func (s *S) TestUserChangeQuotaIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	changeQuota, ok := manager.Commands["user-quota-change"]
 	c.Assert(ok, check.Equals, true)
-	c.Assert(changeQuota, check.FitsTypeOf, &userChangeQuota{})
+	c.Assert(changeQuota, check.FitsTypeOf, &cmd.RemovedCommand{})
 }
 
 func (s *S) TestAppQuotaViewIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	viewQuota, ok := manager.Commands["app-quota-view"]
 	c.Assert(ok, check.Equals, true)
-	c.Assert(viewQuota, check.FitsTypeOf, &appQuotaView{})
+	c.Assert(viewQuota, check.FitsTypeOf, &cmd.RemovedCommand{})
 }
 
 func (s *S) TestAppQuotaChangeIsRegistered(c *check.C) {
 	manager := buildManager("tsuru-admin")
 	changeQuota, ok := manager.Commands["app-quota-change"]
 	c.Assert(ok, check.Equals, true)
-	c.Assert(changeQuota, check.FitsTypeOf, &appQuotaChange{})
+	c.Assert(changeQuota, check.FitsTypeOf, &cmd.RemovedCommand{})
 }
