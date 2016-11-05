@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/tsuru/tsuru-client/tsuru/admin"
 	"github.com/tsuru/tsuru/cmd"
 	"github.com/tsuru/tsuru/provision"
 	_ "github.com/tsuru/tsuru/provision/docker"
@@ -23,15 +22,10 @@ const (
 func buildManager(name string) *cmd.Manager {
 	m := cmd.BuildBaseManager(name, version, header, nil)
 	m.RegisterRemoved("log-remove", "This action is no longer supported.")
-	m.RegisterDeprecated(&admin.AddPoolToSchedulerCmd{}, "docker-pool-add")
 	m.Register(&updatePoolToSchedulerCmd{})
 	m.RegisterDeprecated(&removePoolFromSchedulerCmd{}, "docker-pool-remove")
 	m.RegisterDeprecated(addTeamsToPoolCmd{}, "docker-pool-teams-add")
 	m.RegisterDeprecated(removeTeamsFromPoolCmd{}, "docker-pool-teams-remove")
-	m.RegisterDeprecated(&admin.AddNodeCmd{}, "docker-node-add")
-	m.RegisterDeprecated(&admin.RemoveNodeCmd{}, "docker-node-remove")
-	m.RegisterDeprecated(&admin.UpdateNodeCmd{}, "docker-node-update")
-	m.RegisterDeprecated(&admin.ListNodesCmd{}, "docker-node-list")
 	registerProvisionersCommands(m)
 	registerMigrated := func(cmd string, newCmd string) {
 		if newCmd == "" {
@@ -64,6 +58,12 @@ func buildManager(name string) *cmd.Manager {
 	registerMigrated("change-user-quota", "user-quota-change")
 	registerMigrated("view-app-quota", "app-quota-view")
 	registerMigrated("change-app-quota", "app-quota-change")
+	registerMigrated("docker-node-add", "node-add")
+	registerMigrated("docker-node-remove", "node-remove")
+	registerMigrated("docker-node-update", "node-update")
+	registerMigrated("docker-node-list", "node-list")
+	registerMigrated("docker-pool-add", "pool-add")
+	registerMigrated("pool-add", "")
 	return m
 }
 
