@@ -21,18 +21,14 @@ const (
 
 func buildManager(name string) *cmd.Manager {
 	m := cmd.BuildBaseManager(name, version, header, nil)
-	m.RegisterRemoved("log-remove", "This action is no longer supported.")
-	m.Register(&updatePoolToSchedulerCmd{})
-	m.RegisterDeprecated(&removePoolFromSchedulerCmd{}, "docker-pool-remove")
-	m.RegisterDeprecated(addTeamsToPoolCmd{}, "docker-pool-teams-add")
-	m.RegisterDeprecated(removeTeamsFromPoolCmd{}, "docker-pool-teams-remove")
-	registerProvisionersCommands(m)
 	registerMigrated := func(cmd string, newCmd string) {
 		if newCmd == "" {
 			newCmd = cmd
 		}
 		m.RegisterRemoved(cmd, fmt.Sprintf("You should use `tsuru %s` instead.", newCmd))
 	}
+	m.RegisterRemoved("log-remove", "This action is no longer supported.")
+	registerProvisionersCommands(m)
 	registerMigrated("app-shell", "")
 	registerMigrated("platform-update", "")
 	registerMigrated("platform-remove", "")
@@ -64,6 +60,13 @@ func buildManager(name string) *cmd.Manager {
 	registerMigrated("docker-node-list", "node-list")
 	registerMigrated("docker-pool-add", "pool-add")
 	registerMigrated("pool-add", "")
+	registerMigrated("pool-update", "")
+	registerMigrated("docker-pool-remove", "pool-remove")
+	registerMigrated("pool-remove", "")
+	registerMigrated("docker-pool-teams-add", "pool-teams-add")
+	registerMigrated("pool-teams-add", "")
+	registerMigrated("docker-pool-teams-remove", "pool-teams-remove")
+	registerMigrated("pool-teams-remove", "")
 	return m
 }
 
